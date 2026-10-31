@@ -5,6 +5,7 @@
 const { chromium } = require('playwright');
 const STAGES = [
   { name: 'Thistledown and the Meadow Ruins', maps: ['meadow', 'home', 'cave1', 'ruins1', 'grotto1'], items: ['lantern', 'bombbag'], flags: {} },
+  { name: 'Marrowgate and Willowfen', maps: ['marrowgate', 'mg_tavern', 'mg_smith', 'mg_library', 'mg_store', 'mg_chests', 'mg_elder', 'mg_gallery', 'mg_house', 'mg_clinic', 'willowfen', 'willowfen_s', 'wf_mole', 'wf_bottles', 'grotto5'], items: ['lantern', 'bombbag', 'bow', 'shovel'], flags: {} },
   { name: 'Riverhead and the Sunken Shrine', maps: ['riverhead', 'shrine'], items: ['lantern', 'bombbag', 'bow'], flags: { sluice: 1 } },
   { name: 'Highlands and the Ember Forge', maps: ['highlands', 'forge', 'grotto2'], items: ['lantern', 'bombbag', 'bow', 'grapple'], flags: { sluice: 1, pendant_shrine: 1 } },
   { name: 'Dawn Grove and Ashford Castle', maps: ['grove', 'castle'], items: ['lantern', 'bombbag', 'bow', 'grapple', 'rod', 'dawnblade'], flags: { sluice: 1, pendant_shrine: 1, barrier: 1 } },
@@ -17,7 +18,7 @@ const STAGES = [
 // secrets meant for a return visit with a later item
 // reached only by crossing with the Twin Mirror (checked by mech test 'mirror secret')
 const MIRROR = { grove: ['13,7'] };
-const LATER = { grove: ['13,7'], shrine: ['8,20'], s_meadow: ['1,9'], s_riverhead: ['13,11'] };
+const LATER = { willowfen_s: ['21,20'], grove: ['13,7'], shrine: ['8,20'], s_meadow: ['1,9'], s_riverhead: ['13,11'] };
 (async () => {
   const b = await chromium.launch(); const p = await b.newPage();
   await p.goto('file://' + process.cwd() + '/build/dev.html#mute'); await p.waitForFunction(() => window.ready);

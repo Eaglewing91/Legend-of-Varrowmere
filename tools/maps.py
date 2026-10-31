@@ -209,7 +209,10 @@ def paint(m, rows, ox=0, oy=0):
                 m.put('ground', OW, 2 + cx, 6 + cy, X, Y)
                 m.col[Y * m.w + X] = DEEP
             elif c == 'F':
-                j = Y % 6
+                yb = y
+                while at(x, yb + 1) == 'F':
+                    yb += 1
+                j = 5 - ((yb - y) % 6)          # trunks along the bottom of each band of trees, canopy above
                 m.put('over' if j < 3 else 'deco', OW, 4 + X % 4, 9 + j, X, Y)
                 m.col[Y * m.w + X] = SOLID
             elif c == 'b':
@@ -729,6 +732,7 @@ def highlands():
     """North of Thistledown: the hamlet of Cinderfold and the mountain path up to the Ember Forge.
        (0,1) Cinderfold   (0,0) mountain path   (1,0) the Forge gate   (1,1) the overlook"""
     m = Map('highlands', 32, 28, 'Cinder Highlands')
+    m.extra['world'] = [3, 2]
     m.area(0, 0)
     m.area(16, 0)
     m.area(0, 14)
@@ -1037,7 +1041,7 @@ def marrowgate():
     for y in range(22, 26):
         for x in range(12, 23):
             m.put('ground', OW, 12, 13, x, y)
-    m.sign(11, 23, 'THE DIG FIELD|Closed until the Shovel shipment arrives.')
+    m.sign(11, 23, 'THE DIG FIELD|Thirty cash, thirty seconds. Bring your own shovel.')
     people = [
         (20, 10, 'farmer', 20, [[None, ['Welcome to Marrowgate! Everything is for sale here except my opinion. That is free.', 'Well. It is five cash.']]]),
         (36, 17, 'trader', 0, [[None, ['Fresh fish! Yesterday\'s fish! Fish of uncertain age!']]]),
@@ -1046,10 +1050,10 @@ def marrowgate():
         (56, 11, 'guard', 0, [[None, ['Town watch. Nothing to report. Somebody stole a plushie from a stall, but the plushie seemed happy to go.']]]),
         (8, 18, 'elder', 10, [[None, ['In my day we walked to the hospital. Uphill. Both ways. After being mugged. Both ways.']]]),
         (52, 22, 'farmer', 0, [[None, ['Those boulders? Been there since my grandfather tried to move them. He is still trying, in a way.', 'Folk say a strong pair of gloves would shift them.']]]),
-        (16, 24, 'fisher', 0, [[None, ['This is the dig field. Pay me, dig a hole, keep what you find.', 'I have no shovels to lend, though. The last batch was "borrowed".']]]),
+        (16, 24, 'fisher', 0, [[None, ['This is the dig field.']]]),
     ]
     for (x, y, look, roam, talk) in people:
-        m.spawn('villager', x, y, look=look, roam=roam, talk=talk)
+        m.spawn('villager', x, y, look=look, roam=roam, talk=talk, digfield=(look == 'fisher'))
     m.spawn('log', 58, 24)
     m.spawn('soldier', 36, 22)
     m.entry = [23, 4]
@@ -1083,6 +1087,41 @@ def marrowgate_interiors():
         (10, 9, dict(look='farmer', roam=4, talk=[[None, ['I am not lazy. I am in energy-saving mode.']]]))], chests=[(12, 4, 'cash50')]))
     out.append(interior('mg_clinic', 'Marrowgate Clinic', back(47, 13), 'house', npcs=[
         (7, 6, dict(look='baker', roam=0, dir=2, heal=True, talk=[[None, ['Clinic! Sit down, you look like you have been through a wall. Several walls.', 'There. All patched. No charge, the Mayor pays. Well, the Mayor promises to pay.']]]))]))
+    return out
+
+
+def willowfen():
+    ns = {}
+    exec(open('tools/regions/willowfen_terrain.py').read(), ns)
+    out = []
+    m = region('willowfen', 'Willowfen', 0, 3, 3, 2, ns['NORTH'])
+    m.extra['names'] = ['Reed Shallows', 'Heron Pools', 'Old Mole Marsh', 'Fenwick Path', 'Sinkmire', 'Eastfen']
+    house(m, 3, 17, ('wf_mole', 7, 12, 0))
+    m.put('ground', OW, 8, 23, 5, 22)
+    signboard(m, 8, 22, "OLD MOLE'S|Holes dug, holes filled, holes admired. Knock first.")
+    signboard(m, 44, 19, 'WILLOWFEN|West: the marsh. North: Whisperwood (do not go in alone). Also do not go in with friends.')
+    m.extra['digs'] = {'35,23': 'heart_shard', '16,10': 'cash50', '42,11': 'cash20', '4,4': 'bombs', '15,9': 'cash5'}
+    secret_cave(m, 22, 22, 'grotto5', ['heart_shard'], 'A heron has been stashing shiny things in here for years.')
+    for (k, x, y) in [('log', 12, 13), ('log', 30, 16), ('snapjaw', 7, 9), ('snapjaw', 31, 11), ('snapjaw', 40, 5), ('soldier', 25, 17), ('archer', 40, 15)]:
+        m.spawn(k, x, y)
+    m.spawn('villager', 20, 9, look='fisher', roam=10, talk=[[None, ['The marsh is full of buried things. Coins, boots, a whole cart once.', 'Old Mole by the west pools has a shovel. Says he is retired from digging. Has said so for forty years.']]])
+    out.append(m)
+    s_ = region('willowfen_s', 'Willowfen', 0, 5, 2, 2, ns['SOUTH'])
+    s_.extra['names'] = ['Bottle Hollow', 'Mudflats', 'Lily Pond', 'Fen Fringe']
+    house(s_, 6, 3, ('wf_bottles', 7, 12, 0))
+    signboard(s_, 11, 8, "BOTTLES BY BELLAMY|Empty bottles, full bottles, bottles of regret.")
+    s_.extra['digs'] = {'5,22': 'heart_shard', '16,10': 'cash20', '7,23': 'arrows'}
+    s_.chest(21, 20, 'cash50')
+    s_.solid(21, 25, 1, 1, POST)
+    for (k, x, y) in [('snapjaw', 7, 16), ('snapjaw', 21, 4), ('log', 24, 12), ('soldierBlue', 10, 20)]:
+        s_.spawn(k, x, y)
+    out.append(s_)
+    out.append(interior('wf_mole', "Old Mole's Hut", ('willowfen', 5, 22), 'house', npcs=[
+        (7, 7, dict(look='elder', roam=4, talk=[
+            ['shovel', ['Dig where the ground looks soft and the grass grows funny. Or just dig everywhere. Worked for me.']],
+            [None, ['Old Mole. Retired. Mostly.', 'Want my shovel? Take it. My back says I am done, my heart says one more hole.', 'My back wins. It always wins.']]]))], chests=[(12, 4, 'shovel')]))
+    out.append(interior('wf_bottles', 'Bottles by Bellamy', ('willowfen_s', 8, 8), 'shop', npcs=[
+        (7, 5, dict(look='scholar', roam=0, dir=2, bottles=True, talk=[[None, ['Bellamy. Bottles. That is the whole business plan.']]]))]))
     return out
 
 
@@ -1395,7 +1434,7 @@ def shadow_keep():
 
 
 if __name__ == '__main__':
-    out = {m.id: m.json() for m in (thistledown(), home(), cave1(), meadow_ruins(), riverhead(), sunken_shrine(), highlands(), ember_forge(), grove(), ashford_castle(), *shadow_world(), drowned_vault(), hollow_quarry(), shadow_keep(), marrowgate(), *marrowgate_interiors())}
+    out = {m.id: m.json() for m in (thistledown(), home(), cave1(), meadow_ruins(), riverhead(), sunken_shrine(), highlands(), ember_forge(), grove(), ashford_castle(), *shadow_world(), drowned_vault(), hollow_quarry(), shadow_keep(), marrowgate(), *marrowgate_interiors(), *willowfen())}
     out.update({g.id: g.json() for g in GROTTOS})
     os.makedirs('src/data', exist_ok=True)
     json.dump(out, open('src/data/maps.json', 'w'), separators=(',', ':'))

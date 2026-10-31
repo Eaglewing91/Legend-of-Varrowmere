@@ -14,7 +14,7 @@ Status key: [x] done  [~] in progress  [ ] to do
 | 3-4, 2-3 | Cinder Highlands, Cinderfold | [x] |
 | 6-7, 3 | Dawn Grove, Ashford Castle | [x] |
 | 2-5, 5-6 | Marrowgate, the big town (shops, smith, tavern, library, games) | [x] town, 9 interiors, chest game, shooting gallery |
-| 0-1, 3-6 | Willowfen marsh | [ ] |
+| 0-2, 3-6 | Willowfen marsh (north 3x2, south 2x2), Old Mole, Bellamy's bottles | [x] |
 | 0-2, 0-2 | Whisperwood (the lost woods) and the hideout | [ ] |
 | 5-8, 0-1 | Frostspire Peaks (the mountain) | [ ] |
 | 8-11, 4-7 | Sunscar Desert | [ ] |
@@ -42,7 +42,8 @@ Status key: [x] done  [~] in progress  [ ] to do
 
 ## Items still to add
 
-Running Shoes (dash), Sledgehammer (pegs), Shovel (dig spots), Kazoo (call the bird: fast travel), Bug Net,
+Done: Shovel (dig spots, dig field), Bottles (Red/Green Potion, fairy revive; more bottles still to place).
+To do: Running Shoes (dash), Sledgehammer (pegs), Kazoo (call the bird: fast travel), Bug Net,
 4 Bottles (potions, fairies), Book of Old Script, Frost Rod, three Medals (Quake, Flame, Storm), Brick Wand,
 Riot Shield cane, Invisibility Cloak, Boxing Gloves (dark rocks), sword upgrades (smith, then the golden blade),
 Blue and Red Mail, bomb and quiver upgrades, the energy meter used by rods, wands, medals and the cloak.
