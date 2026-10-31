@@ -85,5 +85,8 @@ Fastest completion, fewest deaths, most secrets.
   snow, rain and leaves, pack effects and particles, item icons, pixel font, parchment dialog boxes, 8 music tracks.
 - [x] Pack chests, signs, fences, graves, barrels, merchant carts, bushes, liftable rocks, mossy-ruin dungeon gates and cave mouths,
   braziers with flames, pressure plates, push blocks, locked doors, pegs; the sleeping log is now a pack creature.
-- [ ] Left from the old pack: the fountain, Ashford's castle towers, lava, house interior walls and furniture, dungeon side rock.
+- [x] Fountains (pack water round a stone statue), Ashford's towers (pack stone with banners), lava (molten pack water),
+  house furniture (beds, tables, stools, shelves, ovens, plants, rugs), dungeon rock, HUD hearts, pickups (hearts, silver and gold
+  coins, heart containers), bombs, arrows, kunai, energy orbs, fireballs, fire bars, the grapple, wisps, statues for the Sentinels
+  and the Colossus, lizard snapjaws, Kraken bubbles, crystal gallery targets, and pack icons for every item.
 - [ ] Balance, a full human playtest, then release through Torn Arcade.

@@ -1,6 +1,6 @@
 """Patch the old art pack's sheets with Ninja Adventure art in the very slots the maps and code use, so chests, signs,
 fences, graves, barrels, dungeon gates, cave mouths and market stalls all become pack art without touching any map.
-Writes art/generated/Overworld.png, objects.png and cave.png."""
+Writes art/generated/Overworld.png, objects.png, cave.png, Inner.png and lava.png."""
 from PIL import Image
 import os
 
@@ -41,6 +41,65 @@ def build():
     put(ow, 10, 31, gate, 4, 3)
     # market stall: the pack's merchant cart with its sacks, low in the 5 x 6 plot
     put(ow, 18, 22, tile(elem, 0, 3, 3, 2), 5, 6, 16, 56)
+    # pickups: heart, silver and gold coins (centred), the heart container (a full pack heart)
+    heart, silver, gold, hearts = L('ninja-adventure/items/heart.png'), L('ninja-adventure/items/silvercoin.png'), L('ninja-adventure/items/coin.png'), L('ninja-adventure/ui/hearts.png')
+    cen = lambda im: ((16 - im.width) // 2, 16 - im.height - 2)
+    put(ob, 0, 3, heart, 1, 1, *cen(heart)); put(ob, 0, 4, silver, 1, 1, *cen(silver)); put(ob, 1, 4, gold, 1, 1, *cen(gold))
+    put(ob, 4, 0, hearts.crop((64, 0, 80, 16)))
+    # town houses that never got swapped tile by tile: the pack cottage in the old 5 x 5 plot
+    hs = Image.new('RGBA', (80, 80), (0, 0, 0, 0)); hs.alpha_composite(tile(house, 0, 0, 4, 3), (16, 32)); put(ow, 6, 0, hs, 5, 5)
+    # fountain: a pool of pack water (soft foamy rim) round the pack's stone frog statue
+    blend = L('generated/blend.png'); bt = lambda k: blend.crop(((k & 15) * 16, 4 * 256 + (k >> 4) * 16, (k & 15) * 16 + 16, 4 * 256 + (k >> 4) * 16 + 16))
+    N, E_, S_, W_, NE, SE, SW, NW_ = 1, 2, 4, 8, 16, 32, 64, 128
+    pool = Image.new('RGBA', (48, 48), (0, 0, 0, 0))
+    masks = [[E_ | S_ | SE, E_ | W_ | S_ | SE | SW, W_ | S_ | SW], [N | E_ | S_ | NE | SE, 255, N | W_ | S_ | NW_ | SW], [N | E_ | NE, N | E_ | W_ | NE | NW_, N | W_ | NW_]]
+    for j in range(3):
+        for i in range(3):
+            pool.alpha_composite(bt(masks[j][i]), (i * 16, j * 16))
+    pool.alpha_composite(tile(house, 0, 17), (16, 8))
+    put(ow, 22, 9, pool, 3, 3)
+    # Ashford's towers: stacks of the pack's grey cliff stone with a red banner on top
+    rel = L('ninja-adventure/TilesetRelief.png'); tw = Image.new('RGBA', (48, 96), (0, 0, 0, 0))
+    for j in range(6):
+        row = 0 if j == 0 else 2 if j == 5 else 1
+        tw.alpha_composite(tile(rel, 4, row, 3, 1), (0, j * 16))
+    flag = L('ninja-adventure/anim/flag.png').crop((0, 0, 16, 16)); tw.alpha_composite(flag, (16, 0))
+    put(ow, 0, 22, tw, 3, 6)
+    # lava: pack water recoloured to molten rock, four frames of the pack's ripples on top (art/generated/lava.png)
+    wat = L('ninja-adventure/TilesetWater.png').crop((16, 112, 32, 128)); rip = L('ninja-adventure/anim/ripples.png')
+    def molten(im):
+        out = im.copy(); px = out.load()
+        for y in range(out.height):
+            for x in range(out.width):
+                r, g_, b, a = px[x, y]
+                if a:
+                    v = (r + g_ + b) / 3
+                    px[x, y] = (min(255, int(v * 1.25 + 40)), int(v * 0.55), int(v * 0.12), a)
+        return out
+    lava = Image.new('RGBA', (64, 16), (0, 0, 0, 0))
+    for f in range(4):
+        fr = molten(wat); fr.alpha_composite(molten(rip.crop((f * 16, 0, f * 16 + 16, 16)))); lava.alpha_composite(fr, (f * 16, 0))
+    lava.save(os.path.join(ART, 'generated', 'lava.png'))
+    # inside houses: pack beds, tables, chairs, shelves, ovens and plants in the old furniture slots
+    inn, bed = L('pack-armm1998/Inner.png'), L('ninja-adventure/tileset_bed.png')
+    put(inn, 16, 1, tile(bed, 0, 3, 2, 3), 2, 3)                   # bed
+    put(inn, 10, 1, tile(house, 22, 9, 3, 3), 3, 3)                # dining table
+    put(inn, 6, 9, tile(house, 22, 6, 3, 3), 3, 3)                 # counter
+    for (x, y) in ((9, 4), (10, 4), (13, 4), (14, 4)):
+        put(inn, x, y, tile(elem, 11, 0), 1, 2, 0, 16)             # stools
+    put(inn, 3, 12, tile(elem, 8, 7, 3, 2), 3, 2)                  # bookshelf
+    put(inn, 12, 10, tile(house, 29, 11, 2, 3), 2, 3)              # oven
+    put(inn, 8, 12, tile(elem, 0, 8), 1, 2, 0, 16)                 # pot plant
+    put(inn, 5, 12, tile(elem, 1, 8), 1, 2, 0, 16)
+    floor = L('ninja-adventure/TilesetInteriorFloor.png')
+    put(inn, 0, 7, tile(floor, 11, 6, 3, 3), 3, 3)                 # rug
+    for (x, y) in ((5, 6), (6, 6), (7, 6), (5, 7), (6, 7), (7, 7), (5, 8), (6, 8), (7, 8)):
+        put(inn, x, y, tile(rel, x - 1, y - 6))                     # stone walls
+    inn.save(os.path.join(ART, 'generated', 'Inner.png'))
+    # dungeon rock edges: the pack's brown cliff stone
+    for j in range(3):
+        for i in range(3):
+            put(cv, 1 + i, 3 + j, tile(rel, 4 + i, 5 + j))
     # bushes (also what the hero carries) and the small liftable rocks
     put(ow, 0, 16, tile(nat, 0, 10))
     put(cv, 5, 4, tile(nat, 17, 17))
