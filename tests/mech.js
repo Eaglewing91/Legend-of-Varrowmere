@@ -111,11 +111,11 @@ const { chromium } = require('playwright');
   // 29. Villager lines change once the first Pendant is won
   r = await p.evaluate(() => { const g = LV.game; g.save.items.pendant_ruins1 = 1; const v = g.actors.find(a => a.npc && a.look === 'elder'); const l = v.lines(g)[0]; delete g.save.items.pendant_ruins1; return l; });
   check('villager lines follow the story', /Pendant of Valor/.test(r), r);
-  // 30. Title: pick an empty file, the intro plays, the file is saved; erase needs two presses
+  // 30. Title: skip the opening, pick an empty file, the intro plays, the file is saved; erase needs two presses
   r = await p.evaluate(() => { const g = LV.game; const st = [0, 1, 2].map(() => LV.memoryStore()); st[1].set(Object.assign(LV.newSave(), { maxHp: 20 })); g.showTitle(st);
-    step(30, []); step(1, [], ['menu']); const files = g.title.stage; step(1, [], ['down']); step(1, [], ['down']); step(1, [], ['menu']);
+    step(30, []); step(1, [], ['menu']); step(45, []); step(1, [], ['menu']); const files = g.title.stage; step(1, [], ['down']); step(1, [], ['down']); step(1, [], ['menu']); step(40, []);
     const mode = g.mode, intro = !!(g.dialog && /Pendants/.test(g.dialog.lines[0])), saved = !!(st[2].get() && st[2].get().flags.intro); g.dialog = null;
-    g.showTitle(st); step(30, []); step(1, [], ['menu']); step(1, [], ['up']); step(1, [], ['menu']); const er = g.title.erase; step(1, [], ['down']); step(1, [], ['down']); step(1, [], ['menu']); const still = !!st[1].get(); step(1, [], ['menu']); const gone = !st[1].get();
+    g.showTitle(st); step(45, []); step(1, [], ['menu']); step(1, [], ['up']); step(1, [], ['menu']); const er = g.title.erase; step(1, [], ['down']); step(1, [], ['down']); step(1, [], ['menu']); const still = !!st[1].get(); step(1, [], ['menu']); const gone = !st[1].get();
     g.mode = 'play'; g.title = null; return { files, mode, intro, saved, er, still, gone }; });
   check('title, file select, new game and erase', r.files === 'files' && r.mode === 'play' && r.intro && r.saved && r.er && r.still && r.gone, r);
   // 31. Shop: talk to the trader across the counter, buy with cash; refused when broke or not needed
@@ -432,7 +432,7 @@ const { chromium } = require('playwright');
     const s = { opened: {}, flags: {}, items: {}, bottles: ['empty'], bombs: 1 };
     out.zero = LV.completion({ opened: {}, flags: {}, items: {} }) === 0;
     Object.keys(LV.MAPS).forEach(id => { Object.keys(LV.MAPS[id].chests || {}).forEach(k => { s.opened[id + ':' + k] = 1; }); if (LV.MAPS[id].boss) s.flags[id + ':boss'] = 1; });
-    LV.ITEMS.forEach(it => { s.items[it.id] = 1; }); s.items.bombbag = 1;
+    LV.ITEMS.forEach(it => { s.items[it.id] = 1; }); s.items.bombbag = 1; LV.SIDEQUESTS.forEach(q => { s.flags[q[0]] = 1; });
     out.full = LV.completion(s) === 1000;
     g.save = sv; return out; });
   check('leaderboards: monsters defeated count once, completion 0 to 100%', Object.values(r).every(Boolean), r);

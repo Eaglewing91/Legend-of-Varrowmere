@@ -92,15 +92,16 @@ LV.Game.prototype.heroDown = (function (orig) {
 })(LV.Game.prototype.heroDown);
 LV.Game.prototype.bottleShop = function () {
   const self = this, s = this.save; s.bottles = s.bottles || [];
-  const opts = ['Empty Bottle  $100', 'Red Potion  $40', 'Green Potion  $30', 'Nothing'];
+  const P = function (n) { return LV.price ? LV.price(self, n) : n; };
+  const opts = ['Empty Bottle  $' + P(100), 'Red Potion  $' + P(40), 'Green Potion  $' + P(30), 'Nothing'];
   this.ask(['Bottles and what goes in them. What will it be?'], opts, function (i) {
     if (i === 3) { self.say(['Come back when you are thirsty.']); return; }
     if (i === 0) {
       if (s.flags.bellamyBottle) { self.say(['One per customer. I am a bottle merchant, not a bottle charity.']); return; }
-      if (s.cash < 100) { self.say(['A hundred cash. Bottles are an investment.']); return; }
-      s.cash -= 100; s.flags.bellamyBottle = 1; s.bottles.push('empty'); self.sfx('chest'); self.say(['You got an Empty Bottle!', 'Fill it with a potion here or in town, or catch something in it later.']); return;
+      if (s.cash < P(100)) { self.say(['A hundred cash. Bottles are an investment.']); return; }
+      s.cash -= P(100); s.flags.bellamyBottle = 1; s.bottles.push('empty'); self.sfx('chest'); self.say(['You got an Empty Bottle!', 'Fill it with a potion here or in town, or catch something in it later.']); return;
     }
-    const kind = i === 1 ? 'red' : 'green', price = i === 1 ? 40 : 30, slot = s.bottles.indexOf('empty');
+    const kind = i === 1 ? 'red' : 'green', price = P(i === 1 ? 40 : 30), slot = s.bottles.indexOf('empty');
     if (slot < 0) { self.say([s.bottles.length ? 'Your bottles are all full.' : 'You will need a bottle to carry it in.']); return; }
     if (s.cash < price) { self.say(['That is ' + price + ' cash, friend.']); return; }
     s.cash -= price; s.bottles[slot] = kind; self.sfx('cash'); self.say(['Here you go: one ' + LV.BOTTLE_NAMES[kind] + '. Shake well. Actually, do not shake it.']);

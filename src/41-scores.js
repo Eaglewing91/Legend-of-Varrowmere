@@ -12,7 +12,8 @@
     return r;
   };
 
-  // Completion, in tenths of a percent (0 to 1000): chests opened (50%), dungeon bosses beaten (30%), gear owned (20%)
+  // Completion, in tenths of a percent (0 to 1000): chests opened (45%), dungeon bosses beaten (30%), gear owned (15%),
+  // side quests finished (10%)
   let TOT = null;
   function totals() {
     if (TOT) return TOT;
@@ -30,8 +31,8 @@
     const c = T.chests.filter(function (k) { return op[k]; }).length / Math.max(1, T.chests.length);
     const b = Object.keys(T.dungeons).filter(function (dg) { return T.dungeons[dg].some(function (id) { return fl[id + ':boss']; }); }).length / Math.max(1, T.nd);
     let own = 0; LV.ITEMS.forEach(function (it) { try { if (it.need(s)) own++; } catch (e) {} });
-    const g = own / Math.max(1, LV.ITEMS.length);
-    return Math.min(1000, Math.round(1000 * (0.5 * c + 0.3 * b + 0.2 * g)));
+    const g = own / Math.max(1, LV.ITEMS.length), q = LV.SIDEQUESTS ? LV.sideDone(s) / LV.SIDEQUESTS.length : 0;
+    return Math.min(1000, Math.round(1000 * (0.45 * c + 0.3 * b + 0.15 * g + 0.1 * q)));
   };
   LV.scores = function () {
     const out = { time: 0, completion: 0, kills: 0 };

@@ -7,7 +7,7 @@ New areas are generated from the plan. The Shadow world is the light world's mir
 """
 import math
 import random
-from worldplan import SETPIECE_HALO, GW, GH, SW, SH, BIOME, SETPIECES, REGIONS, RIVERS, ROADS, TOWNS_BUILT, TOWN_HOUSES, HOMES, FOUNTAINS, DUNGEONS_NEW, LANDMARKS, CAVES, PEOPLE, QUESTS
+from worldplan import SETPIECE_HALO, GW, GH, SW, SH, BIOME, SETPIECES, REGIONS, RIVERS, ROADS, TOWNS_BUILT, TOWN_HOUSES, HOMES, FOUNTAINS, DUNGEONS_NEW, LANDMARKS, CAVES, PEOPLE, QUESTS, SHADOW_QUESTS
 
 W, H = GW * SW, GH * SH
 WALK = set('.:sw-=*bhX')          # chars the hero can walk on (bushes can be cut)
@@ -698,11 +698,20 @@ def place_features(new, shadows, M, shadow):
             m, x, y = local(new, reg, at)
             x, y = nearest_open(m, x, y, M)
             m.spawn('villager', x, y, look=look, roam=10, talk=[[None, lines]])
-        for (qid, reg, at, look, who, before, after, need, sets, reward) in QUESTS:
-            m, x, y = local(new, reg, at)
-            x, y = nearest_open(m, x, y, M)
-            m.spawn('villager', x, y, look=look, who=who, roam=0 if who != 'Dog' else 6, dir=2,
-                    quest={'id': qid, 'need': need, 'set': sets, 'reward': reward, 'before': before, 'after': after}, talk=[[None, before]])
+    for q in (QUESTS if not shadow else SHADOW_QUESTS):
+        (qid, reg, at, look, who, before, after, need, sets, reward), ex = q[:10], (q[10] if len(q) > 10 else {})
+        m, x, y = local(every, reg, at)
+        x, y = nearest_open(m, x, y, M)
+        quest = {'id': qid, 'need': need, 'set': sets, 'reward': reward, 'before': before, 'after': after}
+        quest.update({k: v for k, v in ex.items() if k not in ('dig', 'ghost')})
+        kw = {'ghost': True} if ex.get('ghost') else {}
+        m.spawn('villager', x, y, look=look, who=who, roam=0 if who != 'Dog' else 6, dir=2, quest=quest, talk=[[None, before]], **kw)
+        if ex.get('dig'):   # something buried for this quest
+            _, dx, dy = local(every, reg, ex['dig'])
+            dx, dy = nearest_open(m, dx, dy, M)
+            m.extra.setdefault('digs', {})['%d,%d' % (dx, dy)] = need
+    if not shadow:
+        pass
     for tname, t in (TOWNS_BUILT.items() if not shadow else []):
         m, tx, ty = local(new, t['region'], t['at'])
         for yy in range(24):

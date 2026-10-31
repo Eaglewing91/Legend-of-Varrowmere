@@ -48,6 +48,7 @@ LV.drawMenu = function (ctx, g) {
   if (sel) LV.text(ctx, sel.name, 28, 130, '#fff');
   if (!list.length) LV.text(ctx, 'No items yet.', 28, 70, '#aaa');
   LV.text(ctx, 'Heart Shards ' + (g.save.shards % 4) + '/4', 150, 130, '#f88');
+  if (LV.SIDEQUESTS) LV.text(ctx, 'Side quests ' + LV.sideDone(g.save) + '/' + LV.SIDEQUESTS.length, 150, 142, '#9ad0ff');
   LV.text(ctx, 'Enter: back', 160, 174, '#888');
 };
 

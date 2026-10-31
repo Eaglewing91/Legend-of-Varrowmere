@@ -16,12 +16,12 @@ LV.STOCK = {
 (function () {
   LV.Game.prototype.openShop = function (stock) {
     const list = (stock && stock.length ? stock : ['firstaid', 'arrows10', 'bombs5']).map(function (k) { return LV.STOCK[k]; }).filter(Boolean);
-    const self = this, opts = list.map(function (it) { return it.label + '  $' + it.price; }).concat(['Nothing, thanks']);
+    const self = this, cost = function (it) { return LV.price ? LV.price(self, it.price) : it.price; }, opts = list.map(function (it) { return it.label + '  $' + cost(it); }).concat(['Nothing, thanks']);
     this.ask(['What will it be?'], opts, function (i) {
       const it = list[i]; if (!it) { self.say(['Come back when your pockets are heavier.']); return; }
-      if (self.save.cash < it.price) { self.sfx('clink'); self.say(['You are short of cash. I do not do loans. Last time I did, the fellow moved abroad.']); return; }
+      if (self.save.cash < cost(it)) { self.sfx('clink'); self.say(['You are short of cash. I do not do loans. Last time I did, the fellow moved abroad.']); return; }
       const no = it.buy(self); if (no) { self.say([no]); return; }
-      self.save.cash -= it.price; self.sfx('cash'); self.say(['Thank you kindly! No refunds.']);
+      self.save.cash -= cost(it); self.sfx('cash'); self.say(['Thank you kindly! No refunds.']);
     });
   };
   const mk = LV.makeVillager;
