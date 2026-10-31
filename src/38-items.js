@@ -33,7 +33,7 @@ LV.ROD_COST.pepper = 1 / 12;
     h.state = 'item'; h.st = 0; this.sfx('spin');
     for (const a of this.actors) {
       if (a.dead || a.npc || a.boss || a.invuln || Math.hypot(a.x - cx, a.y - 8 - cy) > 22) continue;
-      if (SMALL.indexOf(a.key || a.kind) >= 0) { a.dead = true; this.pickups.push(new LV.Pickup(a.x, a.y, 'heart')); continue; }
+      if (SMALL.indexOf(a.key || a.kind) >= 0) { a.dead = true; this.save.kills = (this.save.kills || 0) + 1; this.pickups.push(new LV.Pickup(a.x, a.y, 'heart')); continue; }
       a.stun = Math.max(a.stun || 0, 3.5);
     }
     // the cloud

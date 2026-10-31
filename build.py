@@ -5,7 +5,7 @@ Art sheets are embedded as base64 PNG; maps come from tools/maps.py.
 """
 import base64, glob, json, os, subprocess
 
-VERSION = '0.37.0'
+VERSION = '0.38.0'
 os.makedirs('build', exist_ok=True)
 subprocess.run(['python3', 'tools/maps.py'], check=True)
 subprocess.run(['python3', 'tools/patch_sheets.py'], check=True)
@@ -128,9 +128,11 @@ const play = function () { return boot().then(function (LV) { if (LV.root) retur
 if (typeof GM_registerMenuCommand === 'function') GM_registerMenuCommand('Play Legend of Varrowmere', play);
 // Torn Arcade link: the two scripts talk through page events (no requests, nothing shared but these three messages).
 //   Arcade sends 'varrowmere:ping'  -> this script answers 'varrowmere:here' { version, music }   (so the phone can show the app;
-//                                      music is the Soundtrack script's version, or '' when it isn't installed)
+//                                      music is the Soundtrack script's version, or '' when it isn't installed; scores
+//                                      are the leaderboard numbers saved when the game last closed: { time, completion, kills })
+//   When the game window closes it also sends 'varrowmere:scores' with those numbers.
 //   Arcade sends 'varrowmere:open'  -> the game opens over the page; when it closes, 'varrowmere:closed' goes back
-document.addEventListener('varrowmere:ping', function () { document.dispatchEvent(new CustomEvent('varrowmere:here', { detail: JSON.stringify({ version: '""" + VERSION + """', music: document.documentElement.dataset.varrowmereMusic || '' }) })); });
+document.addEventListener('varrowmere:ping', function () { document.dispatchEvent(new CustomEvent('varrowmere:here', { detail: JSON.stringify({ version: '""" + VERSION + """', music: document.documentElement.dataset.varrowmereMusic || '', scores: (function () { try { return JSON.parse(GM_getValue('lv_scores', 'null')); } catch (e) { return null; } })() }) })); });
 document.addEventListener('varrowmere:open', function () { play().then(function () { document.documentElement.dataset.varrowmereOpen = '1'; }); });
 document.documentElement.dataset.varrowmere = '""" + VERSION + """';
 """

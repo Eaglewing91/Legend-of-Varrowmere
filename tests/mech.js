@@ -426,6 +426,16 @@ const { chromium } = require('playwright');
     out.outside = g.world.id === 'home';
     return out; });
   check('knocked out in a dungeon: wake at the last way in (outside: at home)', Object.values(r).every(Boolean), r);
+  // 77. Leaderboard numbers: each foe counts once (villagers never), completion reaches 100% with everything done
+  r = await p.evaluate(() => { const g = LV.game, out = {}, sv = JSON.parse(JSON.stringify(g.save));
+    g.save.kills = 0; const e = LV.ENEMIES.log(100, 100); g.actors.push(e); g.kill(e); g.kill(e); out.once = g.save.kills === 1;
+    const s = { opened: {}, flags: {}, items: {}, bottles: ['empty'], bombs: 1 };
+    out.zero = LV.completion({ opened: {}, flags: {}, items: {} }) === 0;
+    Object.keys(LV.MAPS).forEach(id => { Object.keys(LV.MAPS[id].chests || {}).forEach(k => { s.opened[id + ':' + k] = 1; }); if (LV.MAPS[id].boss) s.flags[id + ':boss'] = 1; });
+    LV.ITEMS.forEach(it => { s.items[it.id] = 1; }); s.items.bombbag = 1;
+    out.full = LV.completion(s) === 1000;
+    g.save = sv; return out; });
+  check('leaderboards: monsters defeated count once, completion 0 to 100%', Object.values(r).every(Boolean), r);
   console.log(results.join('\n')); console.log('errors', errs);
   await b.close();
   process.exit(results.some(x => x.startsWith('FAIL')) || errs.length ? 1 : 0);
