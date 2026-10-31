@@ -14,6 +14,13 @@ for f in sorted(glob.glob('art/ninja-adventure/monsters/*.png')):
     ART['m_' + os.path.basename(f)[:-4].lower()] = f[4:]
 for f in sorted(glob.glob('art/ninja-adventure/bosses/*.png')):
     ART['b_' + os.path.basename(f)[:-4]] = f[4:]
+for f in sorted(glob.glob('art/ninja-adventure/hero/*.png')):
+    ART['h_' + os.path.basename(f)[:-4]] = f[4:]
+for f in sorted(glob.glob('art/ninja-adventure/chars/*.png')):
+    n = os.path.basename(f)[:-4]
+    ART[('cf_' + n[:-5]) if n.endswith('_face') else ('c_' + n)] = f[4:]
+for f in sorted(glob.glob('art/ninja-adventure/fx/*.png')):
+    ART['fx_' + os.path.basename(f)[:-4]] = f[4:]
 art = {k: base64.b64encode(open('art/' + f, 'rb').read()).decode() for k, f in ART.items()}
 
 snd = {os.path.basename(f)[:-4]: base64.b64encode(open(f, 'rb').read()).decode() for f in sorted(glob.glob('art/ninja-adventure/sfx/*.mp3'))}
