@@ -131,8 +131,10 @@ def lake(m, x0, y0, x1, y1):
 
 
 def fence(m, x0, x1, y):
+    # left end post, joined middle posts, right end post (rails meet tile to tile)
     for x in range(x0, x1 + 1):
-        m.stamp(OW, 3, 17, x, y, col=LOW)
+        tx = 2 if x == x0 else 3 if x == x1 else 4
+        m.stamp(OW, tx, 17, x, y, col=LOW)
 
 
 def flowers(m, pts):
