@@ -199,6 +199,27 @@ const { chromium } = require('playwright');
     const cont = g.pickups.find(p => p.kind === 'container'); if (cont) g.collect(cont); const line = g.dialog && g.dialog.lines[1]; g.dialog = null;
     return { headHit, dead: w.dead, pendant: !!g.save.items.pendant_forge, line }; });
   check('pyrewyrm: tail only, Pendant of Embers', !r.headHit && r.dead && r.pendant && /Embers/.test(r.line), r);
+  // 45. Dawnblade: refused without three Pendants, drawn with them; doubles the blade and fires a beam at full health
+  r = await p.evaluate(() => { const g = LV.game; delete g.save.items.dawnblade; ['pendant_ruins1', 'pendant_shrine', 'pendant_forge'].forEach(k => delete g.save.items[k]); g.save.items.pendant_ruins1 = 1;
+    place('grove', 7, 6, 0); g.actors = []; step(1, [], ['action']); const refused = !g.save.items.dawnblade; g.dialog = null;
+    g.save.items.pendant_shrine = 1; g.save.items.pendant_forge = 1; step(1, [], ['action']); const got = !!g.save.items.dawnblade; g.dialog = null;
+    H().hp = H().maxHp; H().dir = 2; step(1, [], ['attack']); const beam = g.shots.some(s => s.kind === 'beam'); step(30, []);
+    return { refused, got, beam, blade: H().blade }; });
+  check('Dawnblade: needs three Pendants, beam at full health', r.refused && r.got && r.beam && r.blade === 2, r);
+  // 46. The barrier: only the Dawnblade cuts it, and it stays cut
+  r = await p.evaluate(() => { const g = LV.game; delete g.save.flags.barrier; place('grove', 23, 7, 0); g.actors = []; const sealed = g.world.c(23, 6) === 23; step(16, [], ['attack']); g.dialog = null; const cut = g.world.c(23, 6) === 0;
+    step(60, ['up']); step(30, []); return { sealed, cut, inside: g.world.id }; });
+  check('barrier cut by the Dawnblade, castle opens', r.sealed && r.cut && r.inside === 'castle', r);
+  // 47. Vex: blade can't touch him; a returned orb wounds him; beating him rolls the ending
+  r = await p.evaluate(() => { const g = LV.game; delete g.save.flags.won; place('castle', 40, 11, 0); g.area = g.world.areaAt(40 * 16, 8 * 16); g.actors = g.actors.filter(a => a.kind === 'vex'); const v = g.actors[0];
+    step(2, []); const intro = !!g.dialog; g.dialog = null; v.state = 'wait'; v.st = 0; v.x = 40 * 16 + 8; v.y = 9 * 16 + 12; H().x = v.x; H().y = v.y + 20; H().dir = 0; H().inv = 0;
+    const r1 = LV.applyHit(g, new LV.Hit({ team: 'hero', kind: 'blade', power: 2, from: { x: H().x, y: H().y }, box: { x: 0, y: 0, w: 1, h: 1 } }), v);
+    const o = new LV.Orb(v, H()); o.x = H().x; o.y = H().y - 40; o.aim(H().x, H().y - 8, 105); g.shots.push(o); g.rng = () => 0.9; step(1, [], ['attack']); let n = 0; while (!o.dead && n++ < 120) step(1, []); const reflected = o.volleys > 0;
+    const hp = v.hp; v.hp = 1; v.inv = 0; v.state = 'wait'; const o2 = new LV.Orb(v, H()); o2.reflect(g); o2.x = v.x; o2.y = v.y - 14; g.shots.push(o2); step(2, []); g.dialog && (g.dialog = { lines: [''], i: 0, then: g.dialog.then }); step(1, [], ['action']);
+    return { intro, immune: r1, reflected, hp, won: !!g.save.flags.won, mode: g.mode }; });
+  check('Vex: immune to the blade, hurt by his own orb, ending rolls', r.intro && r.immune === 'immune' && r.reflected && r.hp === 7 && r.won && r.mode === 'ending', r);
+  r = await p.evaluate(() => { const g = LV.game; g.endT = 5; step(1, [], ['menu']); const m = g.mode; g.mode = 'play'; g.title = null; return m; });
+  check('ending returns to the title', r === 'title', r);
   console.log(results.join('\n')); console.log('errors', errs);
   await b.close();
   process.exit(results.some(x => x.startsWith('FAIL')) || errs.length ? 1 : 0);

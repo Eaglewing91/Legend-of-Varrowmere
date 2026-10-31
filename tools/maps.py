@@ -11,7 +11,7 @@ Collision codes: 0 open, 1 solid, 2 deep water, 3 pit, 4 ledge (jump south), 5 l
 """
 import json, os
 OW, IN, CV, OB = 0, 1, 2, 3
-OPEN, SOLID, DEEP, PIT, LEDGE, LOW, BUSH, ROCK, SHALLOW, CRACK, TORCH, TORCH_LIT, LOCKED, BIGLOCK, BLOCK, PLATE, SHUTTER, BIGCHEST, LEVER, SWITCH, POST = range(21)
+OPEN, SOLID, DEEP, PIT, LEDGE, LOW, BUSH, ROCK, SHALLOW, CRACK, TORCH, TORCH_LIT, LOCKED, BIGLOCK, BLOCK, PLATE, SHUTTER, BIGCHEST, LEVER, SWITCH, POST, _21, PEDESTAL, BARRIER = range(24)
 
 
 
@@ -603,7 +603,10 @@ def highlands():
     for x in range(1, 31, 2):
         boulder(m, x, 0)
     for y in range(2, 27, 2):
-        boulder(m, 30, y)
+        if y != 20:
+            boulder(m, 30, y)
+    m.warp(31, 20, 'grove', 1, 7, 1)
+    m.warp(31, 21, 'grove', 1, 8, 1)
     # Cinderfold (0,1): a road from the south gate up through the hamlet
     road_ns(m, 7, 14, 27)
     m.warp(7, 27, 'meadow', 7, 1, 2)
@@ -752,8 +755,120 @@ def ember_forge():
     return m
 
 
+def grove():
+    """East of the highlands: the Dawnblade's grove, and beyond it the walls of Ashford Castle."""
+    m = Map('grove', 32, 14, 'Dawn Grove')
+    m.area(0, 0)
+    m.area(16, 0)
+    m.extra['names'] = ['Dawn Grove', 'Ashford Castle']
+    grass(m, 0, 0, 31, 13)
+    for x0 in (-2, 2, 10, 14):
+        forest(m, x0, -3)
+    for x0 in (-2, 2, 10):
+        forest(m, x0, 11)
+    m.warp(0, 7, 'highlands', 30, 20, 3)
+    m.warp(0, 8, 'highlands', 30, 21, 3)
+    for x in range(0, 6):
+        m.solid(x, 6, 1, 1, OPEN)
+    # the grove: a ring of flowers round the pedestal
+    flowers(m, [(5, 4), (6, 3), (8, 3), (9, 4), (5, 7), (9, 7), (6, 8), (8, 8)])
+    m.solid(7, 5, 1, 1, PEDESTAL)
+    m.sign(4, 9, 'DAWN GROVE|Here rests the Dawnblade, for the one who carries all three Pendants.')
+    m.spawn('log', 11, 9)
+    # Ashford Castle: towers, the gate, and Vex's barrier
+    road_ns(m, 23, 6, 13)
+    m.stamp(OW, 0, 22, 17, 0, 3, 6, col=SOLID)
+    m.stamp(OW, 0, 22, 28, 0, 3, 6, col=SOLID)
+    for x in range(20, 28):
+        for y in range(0, 3):
+            m.put('ground', OW, 8, 23, x, y)
+            m.solid(x, y, 1, 1, SOLID)
+    m.stamp(OW, 4, 31, 22, 3, 4, 3, col=SOLID)
+    m.warp(23, 5, 'castle', 23, 25, 0)
+    m.warp(24, 5, 'castle', 24, 25, 0)
+    for x in range(22, 26):
+        m.solid(x, 6, 1, 1, BARRIER)
+    m.spawn('captain', 20, 9)
+    m.spawn('soldierBlue', 27, 10)
+    m.spawn('archer', 29, 7)
+    m.entry = [1, 7]
+    return m
+
+
+def ashford_castle():
+    """The last dungeon: Ashford Castle.
+       (0,0) the castle nurse        (1,0) torches in lava open the throne door   (2,0) Chancellor Vex
+       (0,1) Small Key, fire bars    (1,1) entrance, clear it to open north        (2,1) Big Key over the pit"""
+    m = Map('castle', 48, 28, 'Ashford Castle', indoor=True, music='dungeon')
+    for ry in range(2):
+        for rx in range(3):
+            room(m, rx, ry)
+    m.extra.update({'dungeon': 'castle', 'exit': ['grove', 23, 7], 'boss': True, 'lava': []})
+    def lava(x0, y0, x1, y1):
+        for y in range(y0, y1 + 1):
+            for x in range(x0, x1 + 1):
+                m.col[y * m.w + x] = PIT
+                m.extra['lava'].append(y * m.w + x)
+    # entrance (1,1)
+    door(m, 1, 1, 's')
+    m.warp(23, 27, 'grove', 23, 7, 2)
+    m.warp(24, 27, 'grove', 24, 7, 2)
+    door(m, 1, 1, 'n', SHUTTER, 'hall')
+    door(m, 1, 0, 's')
+    m.extra.setdefault('triggers', []).append({'type': 'clear', 'area': 4, 'open': 'hall'})
+    m.spawn('captain', 20, 20)
+    m.spawn('captain', 27, 20)
+    m.spawn('soldierBlue', 23, 18)
+    m.spawn('archer', 18, 24)
+    for x in (18, 29):
+        statue_pair(m, x, 15)
+    door(m, 1, 1, 'w')
+    door(m, 0, 1, 'e')
+    door(m, 1, 1, 'e', LOCKED)
+    door(m, 2, 1, 'w', LOCKED)
+    # west room (0,1): fire bars guard the Small Key
+    m.chest(3, 17, 'key')
+    m.spawn('firebar', 6, 20, len=4, sp=2.2)
+    m.spawn('firebar', 10, 23, len=3, sp=-2.6)
+    m.spawn('wisp', 12, 18)
+    m.spawn('wisp', 4, 24)
+    # east room (2,1): the Big Key beyond a pit; grapple the chest, then the post
+    for y in (19, 20):
+        for x in range(33, 47):
+            m.col[y * m.w + x] = PIT
+    m.chest(40, 17, 'bigkey')
+    m.solid(40, 23, 1, 1, POST)
+    m.spawn('archer', 35, 24)
+    m.spawn('archer', 45, 24)
+    m.spawn('captain', 42, 25)
+    # north room (1,0): light the torches across the lava to open the throne door
+    lava(28, 3, 30, 5)
+    lava(28, 10, 30, 12)
+    lava(17, 3, 19, 5)
+    m.solid(29, 4, 1, 1, TORCH)
+    m.solid(29, 11, 1, 1, TORCH)
+    m.extra['lava'] = [i for i in m.extra['lava'] if i not in (4 * m.w + 29, 11 * m.w + 29)]
+    m.extra['triggers'].append({'type': 'torches', 'at': [[29, 4], [29, 11]], 'open': 'throne'})
+    door(m, 1, 0, 'e', SHUTTER, 'throne')
+    door(m, 2, 0, 'w', BIGLOCK)
+    door(m, 1, 0, 'w')
+    door(m, 0, 0, 'e')
+    m.spawn('firebar', 23, 8, len=5, sp=1.4)
+    m.spawn('captain', 20, 10)
+    m.spawn('wisp', 26, 6)
+    # north-west room (0,0): the castle nurse, who has seen it all
+    m.spawn('villager', 7, 6, look='baker', roam=0, dir=2, heal=True, talk=[
+        [None, ['Oh, another one. Sit still, this will sting.', 'There. Good as new. Try not to get thrown through any more windows.']]])
+    m.spawn('villager', 4, 9, look='scholar', roam=10, talk=[
+        [None, ['Vex hides behind his magic. Nothing you swing at him will land...', '...except his own spells. Strike his orbs back at him with your blade.', 'He may hit them back. Keep returning them.']]])
+    # the throne room (2,0)
+    m.spawn('vex', 40, 6)
+    m.entry = [23, 25]
+    return m
+
+
 if __name__ == '__main__':
-    out = {m.id: m.json() for m in (thistledown(), home(), cave1(), meadow_ruins(), riverhead(), sunken_shrine(), highlands(), ember_forge())}
+    out = {m.id: m.json() for m in (thistledown(), home(), cave1(), meadow_ruins(), riverhead(), sunken_shrine(), highlands(), ember_forge(), grove(), ashford_castle())}
     os.makedirs('src/data', exist_ok=True)
     json.dump(out, open('src/data/maps.json', 'w'), separators=(',', ':'))
     print('maps', {k: (v['w'], v['h']) for k, v in out.items()})
