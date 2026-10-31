@@ -417,6 +417,15 @@ const { chromium } = require('playwright');
     const cave = LV.MAPS.grotto3; out.caveRooms = cave.areas.length >= 2 && cave.warps.some(w => w.y === cave.h - 1);
     return out; });
   check('inside places: shop stock, cellars, Great Fairy gifts, multi-room secret caves', Object.values(r).every(Boolean), r);
+  // 76. Knocked out deep in a dungeon: you wake where you last came onto that floor, not at home
+  r = await p.evaluate(() => { const g = LV.game, S = g.save, out = {};
+    S.bottles = []; const m = LV.MAPS.bonehollow_b1, st = m.stairs[0]; place('bonehollow_b1', st[0], st[1] + 1, 2); g.actors = [];
+    const cp = S.checkpoint && S.checkpoint.map; H().hp = 0; g.heroDown(); while (g.dialog) step(1, [], ['action']); step(40, []);
+    out.dungeon = cp === 'bonehollow_b1' && g.world.id === 'bonehollow_b1' && H().hp > 0;
+    place('meadow', 20, 9, 0); g.actors = []; H().hp = 0; g.heroDown(); while (g.dialog) step(1, [], ['action']); step(40, []);
+    out.outside = g.world.id === 'home';
+    return out; });
+  check('knocked out in a dungeon: wake at the last way in (outside: at home)', Object.values(r).every(Boolean), r);
   console.log(results.join('\n')); console.log('errors', errs);
   await b.close();
   process.exit(results.some(x => x.startsWith('FAIL')) || errs.length ? 1 : 0);

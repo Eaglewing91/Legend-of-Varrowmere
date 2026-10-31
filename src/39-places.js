@@ -69,3 +69,24 @@ LV.STOCK = {
     return drop.call(this, x, y, chance);
   };
 })();
+
+/* ---------- knocked out in a dungeon: wake where you last came onto a floor of it (its entrance, or the last
+   stairs or hole you took), not back home. Everything opened, unlocked or beaten stays that way. ---------- */
+(function () {
+  const enter = LV.Game.prototype.enter;
+  LV.Game.prototype.enter = function (mapId, x, y, dir, first) {
+    enter.call(this, mapId, x, y, dir, first);
+    const d = this.world.def;
+    if (d.dungeon && d.indoor) this.save.checkpoint = { dungeon: d.dungeon, map: mapId, x: x, y: y };
+    else if (!d.indoor) delete this.save.checkpoint;          // back outside: the next knock-out sends you home again
+  };
+  const down = LV.Game.prototype.heroDown;
+  LV.Game.prototype.heroDown = function () {
+    const s = this.save, cp = s.checkpoint, d = this.world.def;
+    if ((s.bottles || []).indexOf('fairy') >= 0 || !cp || !d.dungeon || cp.dungeon !== d.dungeon || !LV.MAPS[cp.map]) return down.call(this);
+    const self = this; this.sfx('down');
+    this.say(['You were knocked out by a ' + (this.lastHitBy || 'nasty fall') + '.', 'You come round where you last came in. Everything you opened here is still open.'], function () {
+      self.fadeTo = function () { self.hero.hp = Math.max(12, Math.round(self.hero.maxHp / 2)); self.enter(cp.map, cp.x, cp.y, 2); self.fade = 1; };
+    });
+  };
+})();
