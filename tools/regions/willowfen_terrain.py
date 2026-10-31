@@ -1,9 +1,15 @@
 # Willowfen marsh: north part (3x2 screens at world 0-2, 3-4) and south part (2x2 at world 0-1, 5-6)
+KEEP = set()           # path cells pools must leave dry
+
+
 def blob(g, x0, y0, x1, y1, c):
-    if c == '~':           # pools are kept rectangular so their banks join cleanly
-        for y in range(y0 + 1, y1):
+    if c == '~':           # pools: rounded, slightly uneven ovals inside their old boxes (the blend tiles give soft banks)
+        cx, cy, rx, ry = (x0 + x1) / 2, (y0 + y1) / 2, (x1 - x0) / 2 + 0.6, (y1 - y0) / 2 + 0.6
+        for y in range(y0, y1 + 1):
             for x in range(x0, x1 + 1):
-                if 0 <= y < len(g) and 0 <= x < len(g[0]): g[y][x] = c
+                wob = 0.3 * (((x * 7 + y * 13 + x0 * 5) % 5) / 4 - 0.5)
+                if ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 0.98 + wob and 0 <= y < len(g) and 0 <= x < len(g[0]) and (x, y) not in KEEP:
+                    g[y][x] = c
         return
     cx, cy, rx, ry = (x0 + x1) / 2, (y0 + y1) / 2, (x1 - x0) / 2 + 0.5, (y1 - y0) / 2 + 0.5
     for y in range(y0, y1 + 1):
@@ -23,6 +29,8 @@ def north():
         for x in (46, 47): g[y][x] = 'F'
     for y in (26, 27):
         for x in range(32, W): g[y][x] = 'F'
+    KEEP.clear()
+    KEEP.update({(x, y) for x in range(10, 48) for y in (19, 20, 21)} | {(x, y) for x in (8, 9, 10) for y in range(2, 21)})
     for (a, b, c, d) in [(5, 9, 6, 13), (19, 25, 3, 7), (28, 35, 9, 13), (11, 17, 16, 20), (26, 31, 20, 24), (37, 43, 3, 7)]:
         blob(g, a, c, b, d, '~')
     for (a, b, c, d) in [(13, 18, 8, 12), (34, 40, 22, 25), (3, 7, 3, 6), (40, 45, 10, 13)]:
@@ -45,6 +53,8 @@ def south():
     for y in (26, 27):
         for x in (14, 15): g[y][x] = '.'
     for y in range(12, 26): g[y][14] = g[y][14] if g[y][14] != 'F' else '.'
+    KEEP.clear()
+    KEEP.update({(x, y) for x in range(14, 32) for y in (9, 10, 11)} | {(x, y) for x in (13, 14, 15) for y in range(0, 11)})
     for (a, b, c, d) in [(4, 11, 13, 19), (17, 25, 17, 23), (20, 27, 2, 6)]:
         blob(g, a, c, b, d, '~')
     for (a, b, c, d) in [(14, 19, 9, 12), (3, 8, 21, 24)]:

@@ -5,7 +5,7 @@ Art sheets are embedded as base64 PNG; maps come from tools/maps.py.
 """
 import base64, glob, json, os, subprocess
 
-VERSION = '0.27.0'
+VERSION = '0.27.1'
 os.makedirs('build', exist_ok=True)
 subprocess.run(['python3', 'tools/maps.py'], check=True)
 subprocess.run(['python3', 'tools/patch_sheets.py'], check=True)
