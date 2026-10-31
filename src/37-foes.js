@@ -303,8 +303,21 @@ Object.keys(LV.BIG).forEach(function (k) { LV.ENEMIES[k] = LV.makeBigFoe(LV.BIG[
   LV.Game.prototype.enter = function (mapId, x, y, dir, first) {
     enter.call(this, mapId, x, y, dir, first);
     const sc = this.world.def.bossScale; if (!sc || sc === 1) return;
-    for (const a of this.actors) if (a.boss && a.bigfoe && !a.scaled) { a.scaled = true; a.hp = Math.max(4, Math.round(a.hp * sc)); a.maxHp = a.hp; }
+    for (const a of this.actors) if (a.boss && !a.scaled && !(a.immune && a.immune.indexOf('blade') >= 0)) { a.scaled = true; a.hp = Math.max(4, Math.round(a.hp * sc)); a.maxHp = a.hp; }
   };
   const bu = LV.Bolt.prototype.update;
-  LV.Bolt.prototype.update = function (g, dt) { if (!this.tiered) { this.tiered = true; const t = g.world.def.tier || 1; if (t > 1) this.power = Math.ceil(this.power * (1 + (t - 1) * 0.5)); } return bu.call(this, g, dt); };
+  LV.Bolt.prototype.update = function (g, dt) { if (!this.tiered) { this.tiered = true; const t = g.world.def.tier || 1; if (t > 1 || g.world.def.dmgTier) this.power = Math.ceil(this.power * (g.world.def.dmgTier || (1 + (t - 1) * 0.5))); } return bu.call(this, g, dt); };
+})();
+
+/* ---------- twenty hearts at most, as in the original: a Heart Container beyond that just restores you ---------- */
+(function () {
+  const MAX = 80, collect = LV.Game.prototype.collect;
+  LV.Game.prototype.collect = function (p) {
+    const was = this.save.maxHp; collect.call(this, p);
+    if (this.save.maxHp > MAX) { this.save.maxHp = MAX; this.hero.maxHp = MAX; this.hero.hp = MAX;
+      if (this.dialog && this.dialog.lines) this.dialog.lines = this.dialog.lines.map(function (l) { return /grows by one heart/.test(l) ? 'Your heart is as strong as it can be. The Container restores you instead.' : l; }); }
+    void was;
+  };
+  const upd = LV.Game.prototype.update;
+  LV.Game.prototype.update = function (dt) { upd.call(this, dt); const s = this.save; if (s && s.maxHp > MAX) { s.maxHp = MAX; if (this.hero) { this.hero.maxHp = MAX; this.hero.hp = Math.min(this.hero.hp, MAX); } } };
 })();

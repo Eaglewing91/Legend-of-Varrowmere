@@ -42,7 +42,7 @@ LV.ENEMIES.villager = LV.makeVillager;
   const enter = LV.Game.prototype.enter;
   LV.Game.prototype.enter = function (mapId, x, y, dir, first) {
     enter.call(this, mapId, x, y, dir, first);
-    const t = this.world.def.tier || 1; if (t <= 1) return;
-    for (const a of this.actors) if (!a.npc && !a.boss && !a.invuln && a.hp > 0 && a.hp < 50 && !a.tiered) { a.tiered = true; a.hp = Math.ceil(a.hp * t); if (a.contact) a.contact = Math.ceil(a.contact * (1 + (t - 1) * 0.5)); }
+    const t = this.world.def.tier || 1; if (t <= 1 && !this.world.def.dmgTier) return;
+    for (const a of this.actors) if (!a.npc && !a.boss && !a.invuln && a.hp > 0 && a.hp < 50 && !a.tiered) { a.tiered = true; a.hp = Math.ceil(a.hp * t); if (a.contact) a.contact = Math.ceil(a.contact * (this.world.def.dmgTier || (1 + (t - 1) * 0.5))); }
   };
 })();

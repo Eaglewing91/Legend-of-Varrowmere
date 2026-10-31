@@ -2060,6 +2060,9 @@ DIFF = {
     'glassspire': (2.05, 1.0, 'glass'), 'keep': (2.2, 1.0, 'keep'), 'arcadevault': (2.4, 1.3, 'arcade'),
 }
 
+# ALttP items this game was missing, each hidden in a bombable side vault (Torn's names for two of them)
+TREASURE = {'ruins1': 'pepper', 'forge': 'fireshield', 'thievesden': 'ninjastars'}
+
 # floors in the order you go through them, the floor you come in on first; rooms; grid of one floor; Small Keys
 PLANS = {
     'barrow':        dict(floors=['1F', 'B1', 'B2'], rooms=26, grid=(5, 4), keys=3),
@@ -2443,9 +2446,12 @@ def build_full(M, mid, name, back, theme, item, crystal, mini, boss, gate, plan=
                         'floorName': f, 'floors': floors + ([plan['core']] if wing else []), 'floorIds': ids, 'stairs': [], 'drops': []})
         if wing:
             m.extra['boss'] = False; m.extra['wingOf'] = core_map.id; m.extra['shadow'] = core_map.extra.get('shadow', False)
-        tier, bscale, tune = DIFF.get(mid, (1.5, 1.0, 'dungeon'))
-        m.extra['tier'] = round(tier * (1 + min(0.15, 0.04 * fi)), 2)          # a little tougher on each floor further in
-        m.extra['bossScale'] = bscale
+        import balance
+        tune = DIFF.get(mid, (0, 0, 'dungeon'))[2]
+        cv = balance.CURVE.get(mid, {'hp': 2.0, 'dmg': 2.0, 'boss': 1.0})
+        m.extra['tier'] = round(cv['hp'] * (1 + min(0.15, 0.04 * fi)), 2)          # a little tougher on each floor further in
+        m.extra['dmgTier'] = round(cv['dmg'] * (1 + min(0.15, 0.04 * fi)), 2)
+        m.extra['bossScale'] = cv['boss']
         m.music = 'd_' + tune
         m.extra['triggers'] = []
         for y in range(m.h):
@@ -2498,6 +2504,8 @@ def build_full(M, mid, name, back, theme, item, crystal, mini, boss, gate, plan=
         elif role == 'gate':
             cands = [LIB_GATE[list(sd)[0]]]
         elif role == 'secret':
+            if r.get('treasure'):
+                return [row.replace('y', 'I') for row in LIB_SECRET]
             cands = [LIB_SECRET_KEY if r.get('spare') else LIB_SECRET]
         elif role == 'barrier':
             return BAR[(tool, r['axis'])]
@@ -2534,6 +2542,9 @@ def build_full(M, mid, name, back, theme, item, crystal, mini, boss, gate, plan=
                     t = t2
                 return t
         raise RuntimeError('no room drawing fits %s room %d (%s, doors %s, stairs %s)' % (mid, i, role, ''.join(sorted(sd)), need))
+    sec = [r for r in rooms if r['role'] == 'secret' and not r.get('spare')]
+    if mid in TREASURE and sec:
+        sec[0]['treasure'] = True
     roster = ROSTER[theme]
     nzones = max(1, L['zones'])
 
@@ -2608,6 +2619,8 @@ def build_full(M, mid, name, back, theme, item, crystal, mini, boss, gate, plan=
                 elif ch == '^':
                     if i in L['stairs']:
                         mk['stair'] = (x, y)
+                elif ch == 'I':
+                    m.chest(x, y, TREASURE[mid])
                 elif ch in 'kmp$yab':
                     if r['role'] == 'gate':
                         m.extra.setdefault('later', []).append('%d,%d' % (x, y))

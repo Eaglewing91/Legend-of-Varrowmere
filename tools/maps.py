@@ -2334,6 +2334,7 @@ if __name__ == '__main__':
         for f in getattr(m, 'floors', []):
             f.extra['shadow'] = m.extra.get('shadow', True)
             built.append(f)
+    import balance as BAL
     import dungeons as DG                                    # the story dungeons grow new floors in front of their old halls
     byid0 = {m.id: m for m in built}
     for cid, P in DG.WINGS.items():
@@ -2350,6 +2351,8 @@ if __name__ == '__main__':
                     w['to'] = wing[0].id
                     w['tx'], w['ty'] = wing[0].entry[0], wing[0].entry[1]
         built += wing
+        cv = BAL.CURVE[cid]                                  # the old halls follow the same curve
+        core.extra.update({'tier': cv['hp'], 'dmgTier': cv['dmg'], 'bossScale': cv['boss']})
     entries = {m.id: m.entry for m in built if m.id in DUNGEON_STYLE}
     for m in built + GROTTOS:
         for w in m.warps:

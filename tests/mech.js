@@ -394,6 +394,17 @@ const { chromium } = require('playwright');
     });
     return out; });
   check('new bosses and mini-bosses fight and fall', Object.values(r).length === 19 && Object.values(r).every(v => v === true), r);
+  // 74. The ALttP items that were missing: Ember Shield, Pepper Spray, Ninja Stars; two medals with Torn names
+  r = await p.evaluate(() => { const g = LV.game, S = g.save, out = {};
+    const get = it => { const m = Object.values(LV.MAPS).find(d => Object.values(d.chests).some(c => c.item === it)); const k = Object.keys(m.chests).find(k => m.chests[k].item === it); const [x, y] = k.split(',').map(Number); delete S.opened[m.id + ':' + k]; delete S.items[it]; place(m.id, x, y + 1, 0); g.actors = []; step(1, [], ['action']); g.dialog = null; return !!S.items[it]; };
+    out.shield = get('fireshield') && H().shield >= 2;
+    out.stars = get('ninjastars') && LV.ITEMS.find(i => i.id === 'dice').name === 'Ninja Stars';
+    out.pepperGot = get('pepper');
+    S.energy = 1; S.equip = 'pepper'; const sl = LV.ENEMIES.slime(H().x, H().y - 30), sk = LV.ENEMIES.skull(H().x + 4, H().y - 26); g.actors = [sl, sk]; H().dir = 0; step(1, [], ['item']); step(5, []);
+    out.pepper = sl.dead && g.pickups.some(p => p.kind === 'heart') && sk.stun > 2;
+    out.names = LV.ITEMS.find(i => i.id === 'flame').name === 'Molotov Cocktail' && LV.ITEMS.find(i => i.id === 'storm').name === 'Flash Grenade';
+    return out; });
+  check('ALttP items: Ember Shield, Pepper Spray, Ninja Stars; Molotov Cocktail, Flash Grenade', Object.values(r).every(Boolean), r);
   console.log(results.join('\n')); console.log('errors', errs);
   await b.close();
   process.exit(results.some(x => x.startsWith('FAIL')) || errs.length ? 1 : 0);
