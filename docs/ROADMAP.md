@@ -83,5 +83,7 @@ Fastest completion, fewest deaths, most secrets.
 - [x] Full Ninja Adventure pass: animated hero (walk, idle, katana, spin, roll, swim, push, hurt), every villager a pack character
   with a portrait, soldiers with katanas, pack grass, dirt paths, foamy water with ripples, cottages, cliff-walled dungeons,
   snow, rain and leaves, pack effects and particles, item icons, pixel font, parchment dialog boxes, 8 music tracks.
-- [ ] Left from the old pack: signs, chests, fences, stalls, fountain, graves, castle, dungeon doors, house furniture.
+- [x] Pack chests, signs, fences, graves, barrels, merchant carts, bushes, liftable rocks, mossy-ruin dungeon gates and cave mouths,
+  braziers with flames, pressure plates, push blocks, locked doors, pegs; the sleeping log is now a pack creature.
+- [ ] Left from the old pack: the fountain, Ashford's castle towers, lava, house interior walls and furniture, dungeon side rock.
 - [ ] Balance, a full human playtest, then release through Torn Arcade.

@@ -49,3 +49,43 @@ LV.itemIcon = (function (orig) {
     ctx.drawImage(im, Math.round(x + 8 - im.width * s / 2), Math.round(y + 8 - im.height * s / 2), im.width * s, im.height * s);
   };
 })(LV.itemIcon);
+
+/* ================= The sleeping log enemy is now the pack's bamboo creature ================= */
+(function () {
+  const make = LV.ENEMIES.log;
+  LV.ENEMIES.log = function (x, y) {
+    const e = make(x, y), old = e.draw;
+    e.draw = function (ctx, ox, oy) {
+      const im = LV.IMG.m_bamboo; if (!im) return old.call(this, ctx, ox, oy);
+      if (this.inv > 0 && Math.floor(this.inv * 30) % 2) return;
+      const X = Math.round(this.x - ox), Y = Math.round(this.y - oy), asleep = this.state === 'sleep';
+      const col = LV.HCOL[this.dir], row = asleep ? 0 : this.state === 'wake' ? 1 : Math.floor(this.t * 6) % 4;
+      ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(X - 6, Y - 2, 12, 3);
+      ctx.drawImage(im, (asleep ? 0 : col) * 16, row * 16, 16, 16, X - 8, Y - 16, 16, 16);
+      if (asleep && Math.floor(this.t * 2) % 2) LV.text(ctx, 'z', X + 5, Y - 22, '#ffffff');
+    };
+    return e;
+  };
+})();
+
+/* ================= Dungeon furniture from the pack: braziers, pressure plates, push blocks, locked doors, pegs ================= */
+(function () {
+  const D = function (ctx, tx, ty, X, Y) { const im = LV.IMG.nadungeon; if (im) ctx.drawImage(im, tx * 16, ty * 16, 16, 16, X, Y, 16, 16); };
+  const block = LV.drawBlock;
+  LV.drawBlock = function (ctx, X, Y) { if (LV.IMG.nadungeon) D(ctx, 2, 1, X, Y); else block(ctx, X, Y); };
+  const special = LV.drawSpecialTiles;
+  LV.drawSpecialTiles = function (ctx, g, ox, oy) {
+    special(ctx, g, ox, oy);
+    if (!LV.IMG.nadungeon) return;
+    const w = g.world, C = LV.C, x0 = Math.max(0, Math.floor(ox / 16)), y0 = Math.max(0, Math.floor(oy / 16)), x1 = Math.min(w.w - 1, x0 + 17), y1 = Math.min(w.h - 1, y0 + 15);
+    for (const p of (w.def.plates || [])) { if (w.c(p[0], p[1]) !== C.BLOCK) D(ctx, 0, 1, p[0] * 16 - ox, p[1] * 16 - oy); }
+    for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) {
+      const c = w.col[ty * w.w + tx], X = tx * 16 - ox, Y = ty * 16 - oy;
+      if (c === C.TORCH) D(ctx, 2, 3, X, Y);
+      else if (c === C.TORCH_LIT) { D(ctx, 2, 2, X, Y); const fl = LV.IMG.fx_flam; if (fl) { const f = 2 + Math.floor(g.t * 12 + tx) % 3; ctx.drawImage(fl, f * 25, 0, 25, 30, X - 4, Y - 20, 25, 30); } }
+      else if (c === C.LOCKED) D(ctx, 0, 0, X, Y);
+      else if (c === C.BIGLOCK) D(ctx, 1, 0, X, Y);
+      else if (c === C.PEG) D(ctx, 0, 3, X, Y);
+    }
+  };
+})();
