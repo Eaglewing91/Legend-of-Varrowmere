@@ -35,3 +35,13 @@ LV.ENEMIES.villager = LV.makeVillager;
     for (const p of mills) ctx.drawImage(im, f * 64, 0, 64, 64, Math.round(p[0] - ox - 32), Math.round(p[1] - oy - 46), 64, 64);
   };
 })();
+
+/* ---------- wildlife gets tougher the further you roam from Thistledown (and tougher still in the Shadow world) ---------- */
+(function () {
+  const enter = LV.Game.prototype.enter;
+  LV.Game.prototype.enter = function (mapId, x, y, dir, first) {
+    enter.call(this, mapId, x, y, dir, first);
+    const t = this.world.def.tier || 1; if (t <= 1) return;
+    for (const a of this.actors) if (!a.npc && !a.boss && !a.invuln && a.hp > 0 && a.hp < 50 && !a.tiered) { a.tiered = true; a.hp = Math.ceil(a.hp * t); if (a.contact) a.contact = Math.ceil(a.contact * (1 + (t - 1) * 0.5)); }
+  };
+})();

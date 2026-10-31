@@ -2255,6 +2255,17 @@ def make_dungeon(mid, name, back, theme, item, crystal, mini, boss, gate):
             m.spawn(boss, X + 8, Y + 7)
             if boss == 'shellback':
                 rocks(m, [(X + 3, Y + 5), (X + 12, Y + 5), (X + 3, Y + 11), (X + 12, Y + 11)])
+    # dressing: lit braziers in the top corners of the big rooms, a sign at the way in with a hint
+    hints = {'torches': 'Fire opens what force cannot. Light every brazier in the room.', 'plate': 'Heavy stones belong on the plates. Push them home.',
+             'clear': 'Some doors only open when the room falls quiet. Make it quiet.'}
+    for (rx, ry), role in L['rooms'].items():
+        X, Y = rx * 16, ry * 14
+        if role in 'EHTBX':
+            for x in (2, 13):
+                if m.col[(Y + 3) * m.w + X + x] == OPEN:
+                    m.solid(X + x, Y + 3, 1, 1, TORCH_LIT)
+        if role == 'E':
+            signboard(m, X + 4, Y + 12, name.upper() + '|' + ' '.join(hints[p] for p in dict.fromkeys(puzzles)) + ' The Big Key opens the way to the master of this place.')
     # soft-edged pits and pools, and a floor that suits the theme
     import blend as _B
     for y in range(m.h):
@@ -2293,6 +2304,37 @@ if __name__ == '__main__':
             if w['to'] in entries and (w['tx'], w['ty']) in ((23, 25), (24, 25)):
                 e = entries[w['to']]
                 w['tx'], w['ty'] = e[0] + (w['tx'] - 23), e[1]
+    # tidy-up: nobody stands in a wall, water or pit, and every door lands on open ground
+    byid = {m.id: m for m in built + GROTTOS}
+    walk = (OPEN, SHALLOW, PLATE, BUSH)
+    def near(m, x, y, r=8):
+        best = min(((abs(a - x) + abs(b - y), a, b) for b in range(max(1, y - r), min(m.h - 1, y + r + 1)) for a in range(max(1, x - r), min(m.w - 1, x + r + 1))
+                    if m.col[b * m.w + a] == OPEN and m.layers['deco'][b * m.w + a] < 0 and not any(w['x'] == a and w['y'] == b for w in m.warps)), default=None)
+        return best and (best[1], best[2])
+    swimmers = {'kraken', 'bogmaw', 'firebar', 'snapjaw', 'octopus', 'fairy'}
+    for m in built + GROTTOS:
+        keep_s = []
+        for sp in m.spawns:
+            if 'x' in sp and m.col[sp['y'] * m.w + sp['x']] not in walk and sp['kind'] not in swimmers and not (sp['kind'] == 'villager' and m.indoor and not sp.get('roam')):
+                p = near(m, sp['x'], sp['y'])
+                if not p:
+                    continue
+                sp['x'], sp['y'] = p
+            keep_s.append(sp)
+        m.spawns = keep_s
+        for w in m.warps:
+            t = byid.get(w['to'])
+            if t and t.ok(w['tx'], w['ty']) and t.col[w['ty'] * t.w + w['tx']] not in walk and not any(x['x'] == w['tx'] and x['y'] == w['ty'] for x in t.warps):
+                p = near(t, w['tx'], w['ty'], 4)
+                if p:
+                    w['tx'], w['ty'] = p
+        ex = m.extra.get('exit')
+        if ex and ex[0] in byid:
+            t = byid[ex[0]]
+            if t.col[ex[2] * t.w + ex[1]] not in walk:
+                p = near(t, ex[1], ex[2], 4)
+                if p:
+                    ex[1], ex[2] = p
     out = {m.id: m.json() for m in built}
     out.update({g.id: g.json() for g in GROTTOS})
     os.makedirs('src/data', exist_ok=True)

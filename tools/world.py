@@ -393,7 +393,7 @@ def rebuild(maps, M):
         anchors.append(spot(f[1], 4, 3))
     for d in DUNGEONS_NEW:
         anchors.append(spot(d[3], 4, 3))
-    LM_SIZE = {'stones': (12, 10), 'mill': (5, 5), 'wreck': (7, 3), 'tower': (2, 2), 'ruin': (4, 2)}
+    LM_SIZE = {'stones': (12, 10), 'mill': (5, 5), 'wreck': (14, 5), 'tower': (2, 2), 'ruin': (4, 2)}
     for (kind, reg, at) in LANDMARKS:
         if kind != 'maze':
             anchors.append(spot(at, *LM_SIZE[kind]))
@@ -433,6 +433,8 @@ def rebuild(maps, M):
         grounds = [''.join(GG[y][rx * SW:(rx + rw) * SW]) for y in range(ry * SH, (ry + rh) * SH)]
         nm = M.region(mid, name, rx, ry, rw, rh, rows, music=music, base=base, grounds=grounds)
         nm.extra['names'] = (list(names) * 9)[:rw * rh]
+        cx, cy = rx + rw / 2, ry + rh / 2
+        nm.extra['tier'] = round(1 + min(1.0, math.hypot(cx - 10.5, cy - 12.5) / 11), 2)   # tougher wildlife further from home
         nm.entry = [rw * 8, rh * 7]
         if mid in idx:
             carry(idx[mid], nm, T[mid], windows.get(mid, []), M)
@@ -444,6 +446,7 @@ def rebuild(maps, M):
     shadows = []
     for nm in new:
         sm = M.shadowize(nm, 'Shadow ' + nm.name)
+        sm.extra['tier'] = round(nm.extra.get('tier', 1) + 0.5, 2)
         sm.warps = []
         sm.spawns = []
         old = idx.get('s_' + nm.id)
@@ -504,7 +507,7 @@ def build_house(M, m, x, y, hid, name, kind, look, lines, extra=None):
     npc = dict(look=look, roam=0, dir=2, talk=[[None, lines]])
     if extra == 'bottles':
         npc['bottles'] = True
-    return M.interior(hid, name, (m.id, x + 2, y + 5), kind, npcs=[(7, 6, npc)], chests=[(5, 4, 'bottle')] if extra == 'bottle' else ())
+    return M.interior(hid, name, (m.id, x + 2, y + 5), kind, npcs=[(7, 5 if kind in ('shop', 'tavern', 'smith', 'game') else 6, npc)], chests=[(5, 4, 'bottle')] if extra == 'bottle' else ())
 
 
 def fountain_cave(M, m, x, y, fid):
@@ -566,12 +569,12 @@ def place_features(new, shadows, M, shadow):
             M.house(m, x, y)
             m.extra.setdefault('mills', []).append([(x + 3) * 16, (y + 2) * 16])
         elif kind == 'wreck':
-            m.stamp(M.LM, 0, 0, x, y + 1, 5, 2, col=M.SOLID)
-            m.stamp(M.LM, 5, 0, x + 5, y, 2, 3, col=M.SOLID)
+            m.stamp(M.LM, 0, 0, x, y + 1, 10, 4, col=M.SOLID)
+            m.stamp(M.LM, 10, 0, x + 8, y, 5, 4, col=M.SOLID)
         elif kind == 'tower':
-            m.stamp(M.LM, 7 if (x + y) % 2 else 9, 0, x, y, 2, 2, col=M.SOLID)
+            m.stamp(M.LM, 15 if (x + y) % 2 else 17, 0, x, y, 2, 2, col=M.SOLID)
         elif kind == 'ruin':
-            m.stamp(M.LM, 11, 0, x, y, 4, 2, col=M.SOLID)
+            m.stamp(M.LM, 19, 0, x, y, 4, 2, col=M.SOLID)
     if not shadow:
         for i, (reg, at, items, note) in enumerate(CAVES):
             m, x, y = local(new, reg, at)
