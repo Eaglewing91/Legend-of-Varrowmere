@@ -18,7 +18,7 @@ LV.open = function (opts) {
   opts = opts || {};
   if (LV.root) { LV.place(opts.parent); LV.root.style.display = 'flex'; if (LV.loop) LV.loop.start(); return LV.game; }
   const root = document.createElement('div'); LV.root = root;
-  const cv = document.createElement('canvas'); cv.width = LV.VIEW_W; cv.height = LV.VIEW_H; LV.canvas = cv;
+  const cv = document.createElement('canvas'); cv.width = LV.VIEW_W * LV.RES; cv.height = LV.VIEW_H * LV.RES; LV.canvas = cv;
   cv.style.cssText = 'image-rendering:pixelated;image-rendering:crisp-edges;box-shadow:0 0 0 2px #333';
   const bar = document.createElement('div'); bar.style.cssText = 'color:#ccc;font:12px sans-serif;margin-top:8px';
   bar.textContent = 'Arrows/WASD move · Z or click: sword (hold for Spin) · X item · C or Space: talk/lift/open · Enter items · M map · N music · Esc close';

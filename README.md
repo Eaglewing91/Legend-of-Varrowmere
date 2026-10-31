@@ -82,6 +82,7 @@ Win the Pendants and draw the Dawnblade. Break Vex's barrier, then follow him th
 
 - Game, world, story, code and original art: **Eaglewing [571041]**.
 - Characters, monsters, bosses, items, icons, effects, tiles, music and sound: **"Ninja Adventure"** by Pixel-boy and AAA, [CC0](https://pixel-boy.itch.io/ninja-adventure-asset-pack).
+- Townspeople: **"Mana Seed" Character Base** and add-ons by [Seliel the Shaper](https://seliel-the-shaper.itch.io/), used under licence with the artist's permission. This art is not CC0 and may not be taken out of the script.
 - Tiles and sprites: **"Zelda-like tilesets and sprites"** by ArMM1998, [CC0](https://opengameart.org/content/zelda-like-tilesets-and-sprites).
 
 ## 📝 Changelog

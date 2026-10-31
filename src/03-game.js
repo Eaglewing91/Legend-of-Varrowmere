@@ -2,7 +2,7 @@
    One Game owns the canvas, the current world, the hero and everything in it. */
 LV.Game = function (canvas, opts) {
   opts = opts || {};
-  this.canvas = canvas; this.ctx = canvas.getContext('2d'); this.ctx.imageSmoothingEnabled = false;
+  this.canvas = canvas; this.ctx = canvas.getContext('2d'); this.ctx.setTransform(LV.RES || 1, 0, 0, LV.RES || 1, 0, 0); this.ctx.imageSmoothingEnabled = false;
   this.input = new LV.Input(); this.store = opts.store || LV.memoryStore();
   this.save = this.store.get() || LV.newSave();
   this.actors = []; this.pickups = []; this.effects = []; this.shots = [];

@@ -6,6 +6,12 @@ Dates are in TCT (Torn City Time).
 
 ---
 
+## 1.0.6 — 2026-10-31
+### New
+- **New townsfolk.** Every villager, trader, guard, scholar and fisher is now drawn from the Mana Seed character art by Seliel the Shaper: 35 different people with full walking animation, and their own face beside what they say.
+- Spirits are pale, see-through figures that drift gently.
+- The picture is drawn on a finer pixel grid, so the new people keep their detail.
+
 ## 1.0.5 — 2026-10-31
 ### Fixed
 - Torn Arcade's speaker (mute) button now mutes Legend of Varrowmere's music and sound effects too.

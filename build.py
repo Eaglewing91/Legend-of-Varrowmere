@@ -5,10 +5,11 @@ Art sheets are embedded as base64 PNG; maps come from tools/maps.py.
 """
 import base64, glob, json, os, subprocess
 
-VERSION = '1.0.5'
+VERSION = '1.0.6'
 os.makedirs('build', exist_ok=True)
 subprocess.run(['python3', 'tools/maps.py'], check=True)
 subprocess.run(['python3', 'tools/patch_sheets.py'], check=True)
+subprocess.run(['python3', 'tools/manaseed.py'], check=True)   # townsfolk from Mana Seed (private art; skipped when absent)
 
 ART = {'overworld': 'generated/Overworld.png', 'inner': 'generated/Inner.png', 'cave': 'generated/cave.png', 'objects': 'generated/objects.png', 'hero': 'pack-armm1998/character.png', 'log': 'pack-armm1998/log.png', 'na': 'ninja-adventure/monsters.png', 'nafloor': 'ninja-adventure/TilesetFloor.png', 'nanature': 'ninja-adventure/TilesetNature.png', 'blend': 'generated/blend.png', 'nawater': 'ninja-adventure/TilesetWater.png', 'nahouse': 'ninja-adventure/TilesetHouse.png', 'narelief': 'ninja-adventure/TilesetRelief.png', 'naelem': 'ninja-adventure/TilesetElement.png', 'nadetail': 'ninja-adventure/TilesetFloorDetail.png', 'nainfloor': 'ninja-adventure/TilesetInteriorFloor.png', 'nadungeon': 'ninja-adventure/TilesetDungeon.png', 'lava': 'generated/lava.png', 'landmarks': 'generated/landmarks.png', 'dwall': 'generated/dwall.png', 'dfloor': 'generated/dfloor.png'}
 for f in sorted(glob.glob('art/ninja-adventure/skill/*.png')):
@@ -30,6 +31,10 @@ for f in sorted(glob.glob('art/ninja-adventure/chars/*.png')):
     ART[('cf_' + n[:-5]) if n.endswith('_face') else ('c_' + n)] = f[4:]
 for f in sorted(glob.glob('art/ninja-adventure/fx/*.png')):
     ART['fx_' + os.path.basename(f)[:-4]] = f[4:]
+# Mana Seed townsfolk (licensed to the author; the art lives outside the repo and only ships inside the built script)
+MS = None
+if os.path.exists('art/private/ms_people.png'):
+    ART['ms_people'] = 'private/ms_people.png'; MS = json.load(open('art/private/ms_people.json'))
 def lossless_png(path):
     """Re-save a PNG as small as possible without changing a single pixel (exact palette when there are 256
     colours or fewer, best zlib settings). Checked pixel-for-pixel; the original bytes are kept if anything differs."""
@@ -85,8 +90,8 @@ maps_gz = base64.b64encode(gzip.compress(maps.encode(), 9, mtime=0)).decode()
 # are decoded until you press Play.
 unrle = "const un = function (a) { const o = new Array(0); for (let i = 0; i < a.length; i += 2) { const v = a[i]; for (let k = a[i + 1]; k > 0; k--) o.push(v); } return o; }; Object.values(LV.MAPS).forEach(function (d) { if (!d.rle) return; Object.keys(d.layers).forEach(function (k) { d.layers[k] = un(d.layers[k]); }); d.col = un(d.col); delete d.rle; });"
 data = ('let DATA = null;\n// the data lives inside a function too, so a page that never opens the game never builds it\nfunction loadData() { return DATA || (DATA = { maps: ' + json.dumps(maps_gz) + ',\n art: ' + json.dumps(art) + ',\n sounds: ' + json.dumps(snd)
-        + ',\n plan: ' + json.dumps(plan) + ' }); }\n')
-engine = 'function engine(MAPS) {\n' + src + '\nLV.MAPS = MAPS;\n' + unrle + '\nLV.ART = DATA.art; LV.SOUNDS = DATA.sounds; LV.MUSIC = MUSIC(); LV.WORLDPLAN = DATA.plan;\nreturn LV;\n}\n'
+        + ',\n plan: ' + json.dumps(plan) + ',\n ms: ' + json.dumps(MS) + ' }); }\n')
+engine = 'function engine(MAPS) {\n' + src + '\nLV.MAPS = MAPS;\n' + unrle + '\nLV.ART = DATA.art; LV.SOUNDS = DATA.sounds; LV.MUSIC = MUSIC(); LV.WORLDPLAN = DATA.plan; LV.MS = DATA.ms;\nreturn LV;\n}\n'
 boot = """let booting = null;
 // The music lives in the two separate Legend of Varrowmere - Soundtrack scripts (so each script stays under 2 MB). They hand the
 // tracks over through one page event when the game starts. Without them the game plays its own synthesised tunes.
@@ -133,7 +138,8 @@ header = f"""// ==UserScript==
  * LEGEND OF VARROWMERE by Eaglewing [571041]
  * Licence: all rights reserved, for use on Torn only (full text: LICENCE in the GitHub repo). Third-party art and
  * sound are CC0: "Zelda-like tilesets and sprites" by ArMM1998 (OpenGameArt) and "Ninja Adventure" by Pixel-boy and
- * AAA. Torn's own names and material belong to Torn's owners. Unofficial fan project, not affiliated with Torn.
+ * AAA. Townspeople: "Mana Seed" by Seliel the Shaper, used under licence with permission (not CC0; don't
+ * extract or reuse it). Torn's own names and material belong to Torn's owners. Unofficial fan project, not affiliated with Torn.
  *
  * HOW IT WORKS
  * - The whole game is inside this script. Pages where you don't play only add a Tampermonkey menu entry and listen

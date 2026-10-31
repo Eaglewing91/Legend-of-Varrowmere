@@ -6,6 +6,7 @@ const LV = {};
 LV.TILE = 16;
 LV.VIEW_W = 256;
 LV.VIEW_H = 224;
+LV.RES = 2;                                   // the canvas has 2 x 2 real pixels per game pixel, so people drawn smaller keep their detail
 LV.STEP = 1 / 60;
 
 /* ---------- maths ---------- */
