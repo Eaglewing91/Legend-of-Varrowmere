@@ -46,6 +46,7 @@ LV.makeVillager = (function (orig) {
       const X = Math.round(this.x - ox), Y = Math.round(this.y - oy), c = LV.HCOL[this.dir];
       const row = this.goal ? Math.floor(this.anim) % 4 : 0, bob = this.goal ? 0 : (Math.floor(this.t * 1.5 + (this.home.x % 5)) % 2);
       ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(X - 5, Y - 2, 10, 3);
+      if (im.width <= 32) { ctx.drawImage(im, (Math.floor(this.t * 4) % 2) * 16, 0, 16, 16, X - 8, Y - 16, 16, 16); return; }   // animals: two frames
       ctx.drawImage(im, c * 16, row * 16, 16, 16 - bob, X - 8, Y - 16 + bob, 16, 16 - bob);
     };
     return e;

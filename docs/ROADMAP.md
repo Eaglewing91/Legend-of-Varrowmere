@@ -13,6 +13,12 @@ Status key: [x] done  [~] in progress  [ ] to do
 - [x] 11 new homes and shops, 22 fairy fountains (13 light, 9 shadow), 6 bottles, 24 heart pieces.
 - [x] Six new dungeons: Old Mine Depths, Standing Stones Barrow, Bramble Temple (light); Stormspire, Mirror Temple, Glass Spire (shadow).
 
+- [x] Every generated dungeon (12) has its own layout (cross, long, tower, ring or wide), key puzzles (torches, blocks on plates,
+  clear the room), hazard patterns, cracked-wall shortcuts, themed floors and soft-edged pits and pools.
+- [x] Landmarks: three stone circles, four windmills, two shipwrecks, four watchtowers, four ruins, the Bramble hedge maze.
+- [x] 8 more hidden caves, 15 more people out and about, and 3 side quests (the plushie trade from Brookhaven to the lighthouse,
+  Biscuit the lost dog, the fortune teller's star chart).
+
 Old 12 x 8 layout, for reference:
 
 | Screens (x, y) | Region | Status |

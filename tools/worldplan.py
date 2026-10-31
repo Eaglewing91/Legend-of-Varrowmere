@@ -212,3 +212,57 @@ DUNGEONS_NEW = [
     ('mirrortemple', 'Mirror Temple', 's_mirrorlake', (13.0, 18.0), 'swamp', 'guardring', 'Crystal of Reflections', 'brask2', 'bogmaw', 'DARKROCK'),
     ('glassspire', 'Glass Spire', 's_desert', (17.6, 18.6), 'thieves', 'powerring', 'Crystal of Glass', 'hald', 'pyrewyrm', 'PEG'),
 ]
+
+# landmarks: (kind, region, at). stones: a ring of standing stones; mill: a windmill; wreck: a shipwreck on the sand;
+# tower: a ruined watchtower; ruin: a broken old building; maze: the Bramble hedge maze (fills its rect in screens).
+LANDMARKS = [
+    ('stones', 'stoneheath', (10.4, 3.4)), ('stones', 'brackendowns', (4.4, 12.4)), ('stones', 's_heartfields', (3.4, 10.0)),
+    ('mill', 'westfold', (4.2, 7.2)), ('mill', 'westfold', (6.4, 7.6)), ('mill', 'eastvale', (16.6, 8.4)), ('mill', 'greenmarch', (11.4, 15.3)),
+    ('wreck', 'southshore', (4.4, 20.5)), ('wreck', 's_southshore', (12.0, 20.6)),
+    ('tower', 'stoneheath', (12.8, 3.3)), ('tower', 'cinderpass', (6.6, 3.4)), ('tower', 'eastgate', (12.6, 8.4)), ('tower', 'cliffside', (0.6, 15.6)),
+    ('ruin', 'heartfields', (3.0, 9.3)), ('ruin', 'oakshire', (5.6, 17.4)), ('ruin', 'riverlands', (12.4, 12.4)), ('ruin', 'deepwood', (0.6, 4.4)),
+    ('maze', 'bramble', (0.25, 11.25, 1.5, 1.4)),
+]
+# extra hidden caves (bomb the cracked boulder): (region, at, items, note)
+CAVES = [
+    ('westfold', (5.0, 8.4), ['cash50', 'bombs'], 'A farmer hid his savings here. From his wife. She knows.'),
+    ('heartfields', (6.6, 11.2), ['cash100'], 'Someone stashed a fortune here and wrote BANK on the wall.'),
+    ('greenmarch', (13.4, 16.2), ['arrows', 'cash20'], 'A poacher\'s hide. The poacher has been poached.'),
+    ('oakshire', (2.4, 19.2), ['cash50'], 'Acorns. Hundreds of acorns. And fifty cash, oddly.'),
+    ('deepwood', (2.0, 6.2), ['bombs', 'arrows'], 'An old bandit cache. Smells of damp and regret.'),
+    ('brackendowns', (7.4, 14.2), ['cash100'], 'A barrow-robber\'s hoard. The barrow would like it back.'),
+    ('riverlands', (14.2, 14.3), ['cash50', 'arrows'], 'An otter has been collecting coins. The otter is unimpressed by you.'),
+    ('stoneheath', (13.0, 4.4), ['cash20', 'bombs'], 'Graffiti says: THE STONES ARE WATCHING. They are not. Probably.'),
+]
+# people out and about: (region, at, look, lines)
+PEOPLE = [
+    ('kingsmeadow', (9.5, 11.5), 'trader', ['The road north goes to the castle. The road south goes away from it. I recommend south.']),
+    ('westfold', (4.5, 6.5), 'farmer', ['Three windmills and not one of them grinds anything. They just look nice. Like my cousin.']),
+    ('heartfields', (5.0, 10.5), 'baker', ['I came out here to pick poppies. Then I remembered I have hay fever. Then I sneezed for an hour.']),
+    ('stoneheath', (11.5, 4.0), 'scholar', ['Nine standing stones, and nobody knows who put them there. My theory: someone with a lot of energy and no hobbies.']),
+    ('eastgate', (12.0, 9.5), 'guard', ['Halt! Oh. Carry on. I only say halt for the practice.']),
+    ('riverlands', (13.0, 13.5), 'fisher', ['The otters stole my lunch again. They work in a crew. Very organised.']),
+    ('greenmarch', (9.5, 16.0), 'trader', ['Half the market was here before Vex taxed it. Now it is a very well-organised field.']),
+    ('oakshire', (4.5, 18.5), 'elder', ['The oak at Hollow Oak is older than the castle. It has seen kings come and go. It was not impressed by any of them.']),
+    ('brackendowns', (6.0, 12.6), 'guard', ['A barrow is a grave for important people. Important people are surprisingly easy to rob.']),
+    ('deepwood', (1.5, 4.0), 'farmer', ['Mind the owls. They are not wise. They are just very confident.']),
+    ('southshore', (10.5, 20.6), 'fisher', ['That wreck washed up years ago. The captain swam ashore and opened a bait shop. Nobody buys bait.']),
+    ('mirrorlake', (13.0, 19.4), 'scholar', ['Look into Mirror Lake and you see yourself. Look longer and you see your debts.']),
+    ('desert', (17.5, 13.5), 'trader', ['Sun, sand and scorpions. And a tavern that sells sand-flavoured drinks. On purpose.']),
+    ('icemere', (16.0, 7.5), 'fisher', ['Ice fishing! You sit by a hole for hours and freeze. Then you go home and tell everyone it was great.']),
+    ('northreach', (4.0, 1.5), 'farmer', ['The old mine down the track goes deep. Something big lives at the bottom. Probably a rock. A big, angry rock.']),
+]
+# side quests: (id, region, at, look, who, lines before, lines when done, needs flag/item, sets flag, reward)
+QUESTS = [
+    # the plushie trade: Brookhaven -> Dunmere -> Twin Oaks Inn -> the lighthouse
+    ('trade_bear', 'brookhaven', (11.6, 6.9), 'baker', 'Woman', ['Take this plushie bear. Please. We have hundreds. Someone in Dunmere collects them, I am told.'], ['Thank you for taking the bear. We only have four hundred and twelve left.'], None, 'bear', None),
+    ('trade_spice', 'desert', (16.9, 17.8), 'trader', 'Sultan', ['A plushie? I collect them! In exchange... here, a pouch of rare spices. The cook at the Twin Oaks will weep.'], ['Enjoy the spices. Do not inhale them. Learned that the hard way.'], 'bear', 'spices', None),
+    ('trade_pie', 'greenmarch', (8.9, 16.2), 'baker', 'OldWoman', ['Spices! Real spices! I will bake you a pie. Take it to the lighthouse keeper, he has not eaten a proper meal since the wreck.'], ['Was the pie good? Do not tell me. I can see on your face it was.'], 'spices', 'pie', None),
+    ('trade_light', 'southshore', (17.9, 20.9), 'fisher', 'Villager5', ['Is that... a pie? For me? Nobody has brought me a pie in eleven years. Take this, it is all I have.'], ['The light stays lit thanks to you. And the pie.'], 'pie', 'tradedone', 'cash200'),
+    # the lost dog: Westfold stables -> Deepwood
+    ('dog_owner', 'westfold', (6.0, 6.4), 'farmer', 'Hunter', ['My dog Biscuit ran off into Deepwood. He will only come home if someone he likes finds him. Everybody likes him. He likes nobody.'], ['Biscuit is home! He has already bitten me twice. Here, for your trouble.'], 'dogfound', 'dogdone', 'cash100'),
+    ('dog', 'deepwood', (1.8, 5.8), 'farmer', 'Dog', ['Woof. (Biscuit sniffs you, decides you are acceptable, and trots off home to Westfold.)'], ['Woof.'], None, 'dogfound', None),
+    # the star chart: the fortune teller wants the observatory's chart
+    ('stars_teller', 'heartfields', (6.2, 10.4), 'trader', 'Shaman', ['To see the future properly I need a star chart. The old observatory on Stone Heath has one. Fetch it?'], ['The stars say... you will find this cash useful. Take it.'], 'starchart', 'starsdone', 'cash100'),
+    ('stars_chart', 'stoneheath', (12.9, 4.0), 'scholar', 'Inspector', ['The fortune teller wants my star chart? Fine. Tell her the stars are not a bus timetable.'], ['Mind the chart. It is the only one, mostly because nobody else could be bothered.'], None, 'starchart', None),
+]

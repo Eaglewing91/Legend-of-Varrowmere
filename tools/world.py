@@ -7,7 +7,7 @@ New areas are generated from the plan. The Shadow world is the light world's mir
 """
 import math
 import random
-from worldplan import GW, GH, SW, SH, BIOME, SETPIECES, REGIONS, RIVERS, ROADS, TOWNS_BUILT, TOWN_HOUSES, HOMES, FOUNTAINS, DUNGEONS_NEW
+from worldplan import GW, GH, SW, SH, BIOME, SETPIECES, REGIONS, RIVERS, ROADS, TOWNS_BUILT, TOWN_HOUSES, HOMES, FOUNTAINS, DUNGEONS_NEW, LANDMARKS, CAVES, PEOPLE, QUESTS
 
 W, H = GW * SW, GH * SH
 WALK = set('.:sw-=*bhX')          # chars the hero can walk on (bushes can be cut)
@@ -179,6 +179,37 @@ def generate(reserved, anchors, openings, wet=()):
         q = min(far, key=lambda n: abs(n[0] - mid[0]) + abs(n[1] - mid[1]))
         if abs(q[0] - mid[0]) + abs(q[1] - mid[1]) < 50:
             road(g, mid, q, n1, n2, width=1)
+    # the hedge maze: a grid of hedges with winding two-wide paths
+    for (kind, reg, at) in LANDMARKS:
+        if kind != 'maze':
+            continue
+        mx, my, mw, mh = int(at[0] * SW), int(at[1] * SH), int(at[2] * SW), int(at[3] * SH)
+        cw, ch = (mw - 1) // 3, (mh - 1) // 3
+        for y in range(my, my + mh):
+            for x in range(mx, mx + mw):
+                if g[y][x] != '#':
+                    g[y][x] = 'F'
+        rr = random.Random(77); seen = {(0, 0)}; stack = [(0, 0)]
+        def open_cell(i, j):
+            for y in range(my + 1 + j * 3, my + 3 + j * 3):
+                for x in range(mx + 1 + i * 3, mx + 3 + i * 3):
+                    g[y][x] = '.'
+        open_cell(0, 0)
+        while stack:
+            i, j = stack[-1]
+            nb = [(i + a, j + b) for a, b in ((1, 0), (-1, 0), (0, 1), (0, -1)) if 0 <= i + a < cw and 0 <= j + b < ch and (i + a, j + b) not in seen]
+            if not nb:
+                stack.pop(); continue
+            ni, nj = rr.choice(nb); seen.add((ni, nj)); stack.append((ni, nj)); open_cell(ni, nj)
+            for y in range(my + 1 + min(j, nj) * 3, my + 3 + max(j, nj) * 3):
+                for x in range(mx + 1 + min(i, ni) * 3, mx + 3 + max(i, ni) * 3):
+                    g[y][x] = '.'
+        for x in range(mx + 1, mx + 3):            # ways in: bottom-left and top-right
+            for y in range(my + mh - 1, my + mh + 3):
+                if y < H and g[y][x] != '#': g[y][x] = '.'
+        for x in range(mx + mw - 3 - ((mw - 1) % 3), mx + mw - 1 - ((mw - 1) % 3)):
+            for y in range(my - 3, my + 1):
+                if y >= 0 and g[y][x] != '#': g[y][x] = '.'
     # everything must be reachable: carve from any cut-off carried place to the land that is reached
     reach_all(g, anchors, openings, n1, n2)
     # nothing walks off the edge of the world
@@ -362,6 +393,10 @@ def rebuild(maps, M):
         anchors.append(spot(f[1], 4, 3))
     for d in DUNGEONS_NEW:
         anchors.append(spot(d[3], 4, 3))
+    LM_SIZE = {'stones': (12, 10), 'mill': (5, 5), 'wreck': (7, 3), 'tower': (2, 2), 'ruin': (4, 2)}
+    for (kind, reg, at) in LANDMARKS:
+        if kind != 'maze':
+            anchors.append(spot(at, *LM_SIZE[kind]))
     wet = []
     for k, (sx, sy) in SETPIECES.items():
         m = idx[k]
@@ -404,6 +439,7 @@ def rebuild(maps, M):
         else:
             wildlife(nm, theme, M, hash(mid) & 0xffff)
         new.append(nm)
+    extra = place_features(new, [], M, shadow=False)
     # the Shadow world: each new region darkened, with the old shadow area's own extras carried across
     shadows = []
     for nm in new:
@@ -419,7 +455,7 @@ def rebuild(maps, M):
         else:
             wildlife(sm, 'shadow', M, hash(sm.id) & 0xffff)
         shadows.append(sm)
-    extra = place_features(new, shadows, M)
+    extra += place_features(new, shadows, M, shadow=True)
     # move the hand-built areas (and their shadows)
     for k, (sx, sy) in SETPIECES.items():
         for mid in (k, 's_' + k):
@@ -449,6 +485,12 @@ def rebuild(maps, M):
             if w['to'] in T:
                 w['tx'], w['ty'] = fix(w['to'], w['tx'], w['ty'])
     return keep + new + shadows + extra
+
+
+def nearest_open(m, x, y, M):
+    best = min(((abs(a - x) + abs(b - y), a, b) for b in range(2, m.h - 2) for a in range(2, m.w - 2)
+                if m.col[b * m.w + a] == M.OPEN and m.layers['deco'][b * m.w + a] < 0), default=(0, x, y))
+    return best[1], best[2]
 
 
 def local(maps, mid, at):
@@ -499,11 +541,51 @@ def fountain_cave(M, m, x, y, fid):
     return f
 
 
-def place_features(new, shadows, M):
-    """Towns, homes and fairy fountains go in after the land is sliced (their ground was cleared by the generator)."""
+def place_features(new, shadows, M, shadow):
+    """Towns, homes, landmarks, caves, people, quests, fairy fountains and new dungeons go in after the land is sliced
+    (their ground was cleared by the generator). Light-world things go in first, so the Shadow world inherits their shapes."""
     out = []
     every = new + shadows
-    for tname, t in TOWNS_BUILT.items():
+    mine = lambda reg: reg.startswith('s_') == shadow
+    for (kind, reg, at) in LANDMARKS:
+        if not mine(reg) or kind == 'maze':
+            if kind == 'maze' and not shadow:
+                m, x, y = local(new, reg, at)
+                spots = [(a, b) for b in range(y + 6, y + int(at[3] * SH) - 6) for a in range(x + 6, x + int(at[2] * SW) - 6) if m.ok(a, b) and m.col[b * m.w + a] == M.OPEN and m.col[(b + 1) * m.w + a] == M.OPEN]
+                if spots:
+                    cx, cy = spots[len(spots) // 2]
+                    m.chest(cx, cy, 'cash100')
+            continue
+        m, x, y = local(every, reg, at)
+        if kind == 'stones':
+            for k in range(8):
+                a = k * math.pi / 4
+                sx, sy = x + 5 + int(round(math.cos(a) * 4.5)), y + 4 + int(round(math.sin(a) * 3.6))
+                m.stamp(M.NN, 16, 8, sx, sy, 2, 2, col=M.SOLID)
+        elif kind == 'mill':
+            M.house(m, x, y)
+            m.extra.setdefault('mills', []).append([(x + 3) * 16, (y + 2) * 16])
+        elif kind == 'wreck':
+            m.stamp(M.LM, 0, 0, x, y + 1, 5, 2, col=M.SOLID)
+            m.stamp(M.LM, 5, 0, x + 5, y, 2, 3, col=M.SOLID)
+        elif kind == 'tower':
+            m.stamp(M.LM, 7 if (x + y) % 2 else 9, 0, x, y, 2, 2, col=M.SOLID)
+        elif kind == 'ruin':
+            m.stamp(M.LM, 11, 0, x, y, 4, 2, col=M.SOLID)
+    if not shadow:
+        for i, (reg, at, items, note) in enumerate(CAVES):
+            m, x, y = local(new, reg, at)
+            M.secret_cave(m, x, y, 'grotto%d' % (20 + i), items, note)
+        for (reg, at, look, lines) in PEOPLE:
+            m, x, y = local(new, reg, at)
+            x, y = nearest_open(m, x, y, M)
+            m.spawn('villager', x, y, look=look, roam=10, talk=[[None, lines]])
+        for (qid, reg, at, look, who, before, after, need, sets, reward) in QUESTS:
+            m, x, y = local(new, reg, at)
+            x, y = nearest_open(m, x, y, M)
+            m.spawn('villager', x, y, look=look, who=who, roam=0 if who != 'Dog' else 6, dir=2,
+                    quest={'id': qid, 'need': need, 'set': sets, 'reward': reward, 'before': before, 'after': after}, talk=[[None, before]])
+    for tname, t in (TOWNS_BUILT.items() if not shadow else []):
         m, tx, ty = local(new, t['region'], t['at'])
         for yy in range(24):
             for xx in range(40):
@@ -525,10 +607,12 @@ def place_features(new, shadows, M):
         for k, (vx, vy) in enumerate(((13, 11), (28, 10), (5, 12), (34, 13), (17, 18))):
             m.spawn('villager', tx + vx, ty + vy, look=looks[k % len(looks)], roam=12, talk=[[None, [
                 ['Welcome to ' + tname + '. We have a fountain. It is very wet.', 'Have you seen the castle? Ask before you visit. Vex does not like visitors.', 'My cousin went abroad with a suitcase of flowers. Came back rich and smelling of daisies.', 'They say there are fairies in caves all over the land. Fairies in caves! Whatever next.', 'I would tell you a secret, but my energy is too low. Come back in five minutes.'][k]]]])
-    for (hid, name, reg, at, kind, look, lines) in HOMES:
+    for (hid, name, reg, at, kind, look, lines) in (HOMES if not shadow else []):
         m, x, y = local(new, reg, at)
         out.append(build_house(M, m, x, y, hid, name, kind, look, lines, 'bottles' if hid == 'wf_witch' else None))
     for (did, name, reg, at, theme, item, reward, mini, boss, gate) in DUNGEONS_NEW:
+        if not mine(reg):
+            continue
         m, x, y = local(every, reg, at)
         m.stamp(M.OW, 4, 31, x, y, 4, 3, col=M.SOLID)
         m.warp(x + 1, y + 2, did, 23, 25, 0)
@@ -537,7 +621,9 @@ def place_features(new, shadows, M):
         if not reg.startswith('s_'):
             d.extra['shadow'] = False
         out.append(d)
-    for i, (reg, at, shadow) in enumerate(FOUNTAINS):
+    for i, (reg, at, sh_) in enumerate(FOUNTAINS):
+        if not mine(reg):
+            continue
         m, x, y = local(every, reg, at)
         out.append(fountain_cave(M, m, x, y, 'fairy%d' % (i + 1)))
     return out
@@ -563,6 +649,24 @@ def carry(old, nm, t, wins, M):
         nx, ny = t(w['x'], w['y'])
         nm.warps.append(dict(w, x=nx, y=ny))
     nm.chests = {'%d,%d' % t(*map(int, k.split(','))): v for k, v in old.chests.items()}
+    free = lambda x, y: nm.ok(x, y) and nm.col[y * nm.w + x] == M.OPEN
+    moved = {}
+    for k in list(nm.chests):           # a chest boxed in by things carried from elsewhere moves to the nearest clear spot
+        x, y = map(int, k.split(','))
+        if not (free(x - 1, y + 1) or free(x + 1, y + 1) or free(x, y + 2)):
+            best = min(((abs(a - x) + abs(b - y), a, b) for b in range(3, nm.h - 3) for a in range(3, nm.w - 3)
+                        if free(a, b) and free(a, b + 1) and free(a - 1, b + 1) and free(a + 1, b + 1) and free(a, b + 2)), default=None)
+            if best:
+                v = nm.chests.pop(k); nk = '%d,%d' % (best[1], best[2]); nm.chests[nk] = v
+                i0, i1 = y * nm.w + x, best[2] * nm.w + best[1]
+                nm.layers['deco'][i1], nm.col[i1] = nm.layers['deco'][i0], nm.col[i0]
+                nm.layers['deco'][i0], nm.col[i0] = -1, M.OPEN
+    for k in nm.chests:                 # a chest is opened from below: keep that tile clear
+        x, y = map(int, k.split(','))
+        if nm.ok(x, y + 1) and nm.col[(y + 1) * nm.w + x] in (M.SOLID, M.ROCK, M.BUSH, M.DEEP, M.PIT):
+            nm.col[(y + 1) * nm.w + x] = M.OPEN
+            nm.layers['deco'][(y + 1) * nm.w + x] = -1
+            nm.layers['over'][(y + 1) * nm.w + x] = -1
     nm.signs = {'%d,%d' % t(*map(int, k.split(','))): v for k, v in old.signs.items()}
     for s in old.spawns:
         nx, ny = t(s['x'], s['y'])

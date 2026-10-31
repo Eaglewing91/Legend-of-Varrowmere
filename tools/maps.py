@@ -18,6 +18,7 @@ OW, IN, CV, OB = 0, 1, 2, 3
 NF, NN = 4, 5          # Ninja Adventure floor and nature sheets
 BL = 6                 # generated soft-edge ground transitions (tools/blend.py)
 NW, NH, NR, NE, ND, NI = 7, 8, 9, 10, 11, 12   # pack water, houses, cliffs, elements, floor details, interior floors
+LM = 13                # landmarks (generated in tools/patch_sheets.py)
 OPEN, SOLID, DEEP, PIT, LEDGE, LOW, BUSH, ROCK, SHALLOW, CRACK, TORCH, TORCH_LIT, LOCKED, BIGLOCK, BLOCK, PLATE, SHUTTER, BIGCHEST, LEVER, SWITCH, POST, _21, PEDESTAL, BARRIER, PEG, DARKROCK = range(26)
 
 
