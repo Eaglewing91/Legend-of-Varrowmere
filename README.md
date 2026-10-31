@@ -1,96 +1,95 @@
-# Legend of Varrowmere
+# ⚔️ Legend of Varrowmere
 
-A top-down action-adventure for Torn, in the style of the 16-bit classics. It runs as a single userscript and opens in its own window over the Torn page.
+**A top-down action-adventure for [Torn](https://www.torn.com), by Eaglewing [571041].**
 
-> **Status:** in development on the `dev` branch. It will join the Torn Arcade when it is finished.
+> ⚠️ **For use on Torn only.** Legend of Varrowmere is licensed solely for use on [torn.com](https://www.torn.com) through a userscript manager. Copying, modifying, redistributing or reusing it is not allowed without written permission from the author. See [Licence](#-licence).
 
-## The story
+Legend of Varrowmere is a full adventure in the style of the 16-bit classics, made for Torn. It opens in its own window over the Torn page, from the **Legends** folder on the [Torn Arcade](https://github.com/Eaglewing91/Torn-Arcade.user.js) phone or from the Tampermonkey menu. It makes no requests of any kind and needs no API key.
 
-Long ago, three Pendants kept the land of Varrowmere at peace. Now Chancellor Vex rules from Ashford Castle, and his Gilded Hand patrol every road. You are Wren of Thistledown. Last night you dreamt of a voice calling from the Meadow Ruins...
+> ⭐ **A Premium Game, free for now.** Legend of Varrowmere will be listed as a Premium Game in Torn Arcade. It is completely free until Torn Staff approve a subscription service. Only Legends games will be premium; every other Torn Arcade game will remain free.
 
-Win the three Pendants and draw the Dawnblade. Break Vex's barrier, then follow him through the Twin Mirror into Shadow Varrowmere. Gather two Crystals there and end it in the Shadow Keep.
+![Title screen](screenshots/title.png)
 
-## What's in it
+---
 
-- **Two worlds.** Varrowmere and its shadow, with the Twin Mirror to cross between them at the same spot.
-- **Eight dungeons.** Each has keys, a map, a compass, a Big Key, a mini-boss and a boss:
+## ⬇️ Install
 
-  | Dungeon | Item | Mini-boss | Boss |
-  |---|---|---|---|
-  | Meadow Ruins | Bow | Captain Brask | the Stone Sentinels |
-  | Sunken Shrine | Grapple | Lieutenant Garrow | the Mire Kraken |
-  | Ember Forge | Ember Rod | Forgemaster Hald | the Pyrewyrm |
-  | Ashford Castle | — | — | Chancellor Vex |
-  | Drowned Vault | Power Glove | the Drowned Knight | the Twin Maws |
-  | Hollow Quarry | Mirror Shield | the Quarry Boss | the Stone Colossus |
-  | Shadow Keep | Sunfire Arrows | Captain Brask (again) | Vex's Shadow |
+1. Install the [Tampermonkey](https://www.tampermonkey.net/) browser extension.
+2. Install the game: **[Legend of Varrowmere](https://github.com/Eaglewing91/Legend-of-Varrowmere/raw/main/build/Legend-of-Varrowmere.user.js)** (about 1.5 MB).
+3. Optional, but recommended: **[Legend of Varrowmere - Soundtrack](https://github.com/Eaglewing91/Legend-of-Varrowmere/raw/main/build/Legend-of-Varrowmere-Soundtrack.user.js)** (about 1.3 MB). Without it the game plays simple built-in tunes.
+4. Reload Torn. Open the **Legends** folder on the Torn Arcade phone and tap **Varrowmere**, or choose **Play Legend of Varrowmere** in the Tampermonkey menu.
 
-- **Puzzles.** Push blocks, floor switches, torches, water levels, lava, fire bars, cracked walls, boulders and a gateless pen.
-- **Equipment.** Lantern, Bombs, Ricochet Dice, Flippers, the Dawnblade (fires a beam at full health) and Shadow Mail.
-- **Secrets.** Twelve heart pieces, hidden grottos behind cracked boulders, and cash stashes.
-- **Towns.** Thistledown and Cinderfold, with villagers, shops and nurses.
-- **Extras.** Three save files, a map screen and original chiptune music.
+The game and its music are two scripts so each stays under 2 MB. Both update themselves through Tampermonkey. Your saves are kept in Tampermonkey's storage on your device, and updating keeps them.
 
-## Controls
+It plays with a keyboard, so it's best on a PC or laptop.
+
+## 🎮 Controls
 
 | Key | Action |
 |---|---|
-| Arrows / WASD | Move |
-| Z (or J) | Sword. Hold to charge a Spin Attack |
+| Arrows or WASD | Move |
+| Z (or J) | Sword (hold, then let go, for a Spin Attack) |
 | X (or K) | Use the selected item |
-| C (or L) | Talk, read, open, lift, throw |
-| Shift (or V) | Dash (with the Running Shoes) |
-| Enter | Item menu (pause) |
+| C (or L) | Talk, read, lift, open |
+| Shift (or V) | Dash (once you have the Running Shoes) |
+| Enter | Items and status screen |
 | M | Map |
-| N | Music on / off |
-| Esc | Close the game window |
+| N | Music on or off |
+| Esc | Close the game (it saves) |
 
-Keys only drive the game while its window is open and you are not typing in a text box.
+## 📖 The story
 
-## Install
+Long ago, three Pendants kept the land of Varrowmere at peace. Now Chancellor Vex rules from Ashford Castle, and his Gilded Hand patrol every road. You wake in Thistledown after a dream of a voice calling from the Meadow Ruins...
 
-Install [Tampermonkey](https://www.tampermonkey.net/), then install `Legend-of-Varrowmere.user.js`. The link will be added here at release. On any Torn page, open the Tampermonkey menu and choose **Play Legend of Varrowmere**.
+Win the Pendants and draw the Dawnblade. Break Vex's barrier, then follow him through the Twin Mirror into Shadow Varrowmere, gather the Crystals and end it in the Shadow Keep.
 
-PC only: it is built for a keyboard.
+## 🗺️ What's in it
 
-## Torn scripting rules
-
-The game is entirely self-contained.
-
-- It makes **no network requests** of any kind: no Torn pages, no API calls, no external sites, no websockets.
-- It never reads, clicks or changes anything on the Torn page underneath. It only adds its own window on top.
-- All art, maps and music are inside the script.
-
-### Terms of Service
+- **Two worlds.** Varrowmere and its Shadow twin, each about 50% bigger than the 1991 classic's: towns, farmland, forests, snowy peaks, a frozen lake, swamps, a desert, a long coast. The Twin Mirror crosses between them at the same spot.
+- **19 dungeons.** Every one hand-designed over several floors, with keys, a map, a compass, a Big Key, puzzles (crystal switches, dark rooms, pressure plates, water levels, push blocks), a mini-boss and a boss of its own.
+- **Unique bosses and foes.** Dozens of monsters with their own habits, and a different master at the end of every dungeon.
+- **Gear and tools.** The Bow, Grapple, Power Glove, Twin Mirror, Ember and Frost Rods, Brick Wand, Bug Net, bottles, armour and shields, a few with Torn names (the Molotov Cocktail, Flash Grenade, Pepper Spray and Ninja Stars).
+- **15 side quests.** Walk a lost old man home through the snow, show a sick child a fairy, wish at the Wishing Pond for bigger bags, dig up a merchant's ring, play hide and seek, help a ghost, carry a hopping chest across the Shadow, make the Shadow Jester laugh, and more.
+- **Towns, shops and secrets.** Furnished houses, shops with their own stock, cellars, secret caves, fairy fountains and three Great Fairies.
+- **Three heroes.** Three save files, each with its own named hero and tunic colour. Files can be copied or erased.
+- **Torn Arcade leaderboards.** Total playtime, Completion and Monsters defeated appear in the Arcade's Leaderboards (the global boards need the Arcade's optional Online play).
 
 | | |
 |---|---|
-| **Data Storage** | Only locally: your three save files, in Tampermonkey's own storage on your device |
-| **Data Sharing** | Nobody |
-| **Purpose of Use** | Public amusement |
-| **Key Storage & Sharing** | Not stored / Not shared: no API key is used or asked for |
-| **Key Access Level** | None: no API key required |
+| ![Create your hero](screenshots/create-hero.png) | ![File select](screenshots/files.png) |
+| ![Town](screenshots/town.png) | ![Dungeon](screenshots/dungeon.png) |
+| ![Items and status](screenshots/pause.png) | ![Map](screenshots/map.png) |
 
-## Credits
+## 🔒 Safety and Torn's rules
 
-- **Created by** Eaglewing [571041]
-- **Built with** Claude
-- **Art:**
-  - "Zelda-like tilesets and sprites" by ArMM1998 ([OpenGameArt](https://opengameart.org/content/zelda-like-tilesets-and-sprites), CC0)
-  - The hero, people, bosses, monsters, terrain, water, houses, effects, item icons, font, dialog boxes, sound effects and music from "Ninja Adventure" by Pixel-boy and AAA ([itch.io](https://pixel-boy.itch.io/ninja-adventure-asset-pack), CC0)
-- Everything else © Eaglewing [571041]. All rights reserved.
+- **No requests.** The game never talks to any website: no API, no servers, no websockets. Everything it shows is built into the script.
+- **Never touches Torn's page.** It doesn't read, click or change anything in Torn. It only opens its own window over the page.
+- **No automation.** It's a game in a window, nothing more.
+- **Light on Torn.** On pages where you don't play, it only adds its menu entry. The game is only unpacked and run when you press Play.
+- **Torn Arcade link.** The game and the Arcade talk only through browser events on the page you're viewing (`varrowmere:ping`, `here`, `open`, `closed`, `scores`). No data leaves your browser unless you turned on the Arcade's own optional Online play, which sends your three leaderboard numbers to the Arcade's leaderboards.
 
-## Developing
+## 📜 Terms of service
 
-```
-python3 build.py            # builds build/Legend-of-Varrowmere.user.js and build/dev.html
-node tests/mech.js          # mechanics tests (combat, items, puzzles, bosses, saves)
-node tests/progress.js      # walks the story in order: every chest reachable with the items you'd have
-node tests/reach.js         # flood-fills every map from its entry
-```
+| | Legend of Varrowmere | Soundtrack |
+|---|---|---|
+| **Data Storage** | Only locally (your save files and leaderboard numbers, in Tampermonkey storage) | No |
+| **Data Sharing** | Nobody (the game sends nothing; Torn Arcade's optional Online play can submit your leaderboard numbers under the Arcade's terms) | Nobody |
+| **Purpose of Use** | Public amusement | Public amusement |
+| **Key Storage & Sharing** | Not stored / Not shared (no API key is used) | Not stored / Not shared |
+| **Key Access Level** | None (no API key needed) | None |
 
-The tests need Node and Playwright.
+## 🎨 Credits
 
-- Maps are written in Python in `tools/maps.py`.
-- The game is plain JavaScript in `src/`.
-- The build combines everything into the one userscript.
+- Game, world, story, code and original art: **Eaglewing [571041]**.
+- Characters, monsters, bosses, items, icons, effects, tiles, music and sound: **"Ninja Adventure"** by Pixel-boy and AAA, [CC0](https://pixel-boy.itch.io/ninja-adventure-asset-pack).
+- Tiles and sprites: **"Zelda-like tilesets and sprites"** by ArMM1998, [CC0](https://opengameart.org/content/zelda-like-tilesets-and-sprites).
+
+## 📝 Changelog
+
+See [CHANGELOG.md](CHANGELOG.md).
+
+## ⚖️ Licence
+
+All rights reserved, for use on Torn only. See [LICENCE](LICENCE). The CC0 art and sound packs above stay CC0 and are not claimed. Legend of Varrowmere is an unofficial fan project, not affiliated with Torn.
+
+Bugs or ideas? Message **Eaglewing [571041]** on Torn.

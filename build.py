@@ -5,7 +5,7 @@ Art sheets are embedded as base64 PNG; maps come from tools/maps.py.
 """
 import base64, glob, json, os, subprocess
 
-VERSION = '0.41.0'
+VERSION = '1.0.0'
 os.makedirs('build', exist_ok=True)
 subprocess.run(['python3', 'tools/maps.py'], check=True)
 subprocess.run(['python3', 'tools/patch_sheets.py'], check=True)
@@ -115,15 +115,45 @@ header = f"""// ==UserScript==
 // @name         Legend of Varrowmere
 // @namespace    eaglewing.legend-of-varrowmere
 // @version      {VERSION}
-// @description  A top-down action-adventure in the style of the 16-bit classics. Opens in its own window over the Torn page; makes no requests.
+// @description  A top-down action-adventure in the style of the 16-bit classics, for Torn. Opens in its own window over the Torn page (from the Torn Arcade phone or the Tampermonkey menu). Makes no requests.
 // @author       Eaglewing [571041]
+// @copyright    2026, Eaglewing [571041]. All rights reserved.
+// @license      All Rights Reserved - for use on Torn (torn.com) only; no copying, modifying, redistribution or use elsewhere (see LICENCE)
+// @homepageURL  https://github.com/Eaglewing91/Legend-of-Varrowmere
+// @updateURL    https://github.com/Eaglewing91/Legend-of-Varrowmere/raw/main/build/Legend-of-Varrowmere.user.js
+// @downloadURL  https://github.com/Eaglewing91/Legend-of-Varrowmere/raw/main/build/Legend-of-Varrowmere.user.js
 // @match        https://www.torn.com/*
 // @grant        GM_getValue
 // @grant        GM_setValue
 // @grant        GM_registerMenuCommand
 // @run-at       document-idle
+// @noframes
 // ==/UserScript==
-/* Art: "Zelda-like tilesets and sprites" by ArMM1998 (OpenGameArt, CC0); monsters, bosses, terrain and sound effects from "Ninja Adventure" by Pixel-boy and AAA (CC0). Everything else (c) Eaglewing [571041], all rights reserved. */
+/*
+ * LEGEND OF VARROWMERE by Eaglewing [571041]
+ * Licence: all rights reserved, for use on Torn only (full text: LICENCE in the GitHub repo). Third-party art and
+ * sound are CC0: "Zelda-like tilesets and sprites" by ArMM1998 (OpenGameArt) and "Ninja Adventure" by Pixel-boy and
+ * AAA. Torn's own names and material belong to Torn's owners. Unofficial fan project, not affiliated with Torn.
+ *
+ * HOW IT WORKS
+ * - The whole game is inside this script. Pages where you don't play only add a Tampermonkey menu entry and listen
+ *   for Torn Arcade: nothing is unpacked, drawn or run until you press Play.
+ * - It never reads, clicks or changes Torn's page, makes no network requests of any kind, uses no API key and
+ *   no websockets. Every picture and sound is built into the script (the music is in the optional Soundtrack script).
+ * - Your three save files are kept in Tampermonkey storage on your device.
+ * - Torn Arcade link (page events only): 'varrowmere:ping' / 'varrowmere:here' (is it installed? version, Soundtrack
+ *   version, leaderboard numbers), 'varrowmere:open' (you tapped Play), 'varrowmere:closed' and 'varrowmere:scores'
+ *   (total playtime, completion and monsters defeated, for the Arcade's leaderboards; only sent on by the Arcade if
+ *   you turned on its optional Online play).
+ *
+ * TERMS OF SERVICE
+ * | Data Storage          | Only locally (your save files and leaderboard numbers, in Tampermonkey storage) |
+ * | Data Sharing          | Nobody (the game sends nothing; Torn Arcade's optional Online play can submit    |
+ * |                       | your leaderboard numbers to its leaderboards, under the Arcade's own terms)      |
+ * | Purpose of Use        | Public amusement                                                                 |
+ * | Key Storage & Sharing | Not stored / Not shared (no API key is used)                                     |
+ * | Key Access Level      | None (no API key needed)                                                         |
+ */
 """
 launcher = """
 const play = function () { return boot().then(function (LV) { if (LV.root) return LV.open({ title: true }); return LV.loadArt().then(function () { LV.open({ title: true }); }); }); };
@@ -152,15 +182,23 @@ snd_header = f"""// ==UserScript==
 // @description  Optional music for Legend of Varrowmere: the full soundtrack for the towns, fields, dungeons and bosses. Hands them to the game when it starts; makes no requests and stores nothing.
 // @author       Eaglewing [571041]
 // @match        https://www.torn.com/*
-// @updateURL    https://github.com/Eaglewing91/Legend-of-Varrowmere/raw/dev/build/Legend-of-Varrowmere-Soundtrack.user.js
-// @downloadURL  https://github.com/Eaglewing91/Legend-of-Varrowmere/raw/dev/build/Legend-of-Varrowmere-Soundtrack.user.js
+// @updateURL    https://github.com/Eaglewing91/Legend-of-Varrowmere/raw/main/build/Legend-of-Varrowmere-Soundtrack.user.js
+// @downloadURL  https://github.com/Eaglewing91/Legend-of-Varrowmere/raw/main/build/Legend-of-Varrowmere-Soundtrack.user.js
 // @grant        none
 // @run-at       document-idle
 // @noframes
 // ==/UserScript==
-/* Music from "Ninja Adventure" by Pixel-boy and AAA (CC0). Packaging (c) Eaglewing [571041], all rights reserved.
-   Terms of service: this script makes no requests, stores nothing and needs no API key. It only answers the game's
-   'varrowmere-music:request' page event with one 'varrowmere-music' event carrying the tracks. */
+/* Music from "Ninja Adventure" by Pixel-boy and AAA (CC0). Packaging (c) Eaglewing [571041], all rights reserved;
+   for use on Torn only (see LICENCE in the GitHub repo).
+   This script makes no requests and needs no API key. It only answers the game's 'varrowmere-music:request' page
+   event with one 'varrowmere-music' event carrying the tracks.
+   TERMS OF SERVICE
+   | Data Storage          | No                          |
+   | Data Sharing          | Nobody                      |
+   | Purpose of Use        | Public amusement            |
+   | Key Storage & Sharing | Not stored / Not shared     |
+   | Key Access Level      | None (no API key needed)    |
+*/
 """
 snd_body = """(function () {
   // the tracks sit inside a function, so a page that never starts the game never builds them
