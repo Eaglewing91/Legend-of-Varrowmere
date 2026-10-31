@@ -6,6 +6,10 @@ Dates are in TCT (Torn City Time).
 
 ---
 
+## 1.0.3 — 2026-10-31
+### Fixed
+- The music was distorted and crackly: it had been squeezed to about 14 kbps to fit one script. It's now re-encoded from the original tracks at about 2.5 times the quality, in **two Soundtrack scripts** (Part 1: title, towns, fields and bosses; Part 2: Shadow world, dungeons, caves and the ending), each under 2 MB. If you already have the Soundtrack, it updates itself to Part 1; install Part 2 for the rest.
+
 ## 1.0.2 — 2026-10-31
 ### Changed
 - From Torn Arcade, the game now opens **inside the phone**, turned sideways like Tornies, instead of in its own window over the page. The Home button (or Esc) takes you back to the phone and saves. From the Tampermonkey menu it still opens in its own window.

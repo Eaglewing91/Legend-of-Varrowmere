@@ -5,7 +5,7 @@ Art sheets are embedded as base64 PNG; maps come from tools/maps.py.
 """
 import base64, glob, json, os, subprocess
 
-VERSION = '1.0.2'
+VERSION = '1.0.3'
 os.makedirs('build', exist_ok=True)
 subprocess.run(['python3', 'tools/maps.py'], check=True)
 subprocess.run(['python3', 'tools/patch_sheets.py'], check=True)
@@ -88,10 +88,10 @@ data = ('let DATA = null;\n// the data lives inside a function too, so a page th
         + ',\n plan: ' + json.dumps(plan) + ' }); }\n')
 engine = 'function engine(MAPS) {\n' + src + '\nLV.MAPS = MAPS;\n' + unrle + '\nLV.ART = DATA.art; LV.SOUNDS = DATA.sounds; LV.MUSIC = MUSIC(); LV.WORLDPLAN = DATA.plan;\nreturn LV;\n}\n'
 boot = """let booting = null;
-// The music lives in the separate Legend of Varrowmere - Soundtrack script (so each script stays under 2 MB). It hands the
-// tracks over through one page event when the game starts. Without it the game plays its own synthesised tunes.
+// The music lives in the two separate Legend of Varrowmere - Soundtrack scripts (so each script stays under 2 MB). They hand the
+// tracks over through one page event when the game starts. Without them the game plays its own synthesised tunes.
 let music = null, LV_ = null;
-document.addEventListener('varrowmere-music', function (e) { try { music = JSON.parse(e.detail); } catch (x) { music = null; } if (music && LV_) LV_.MUSIC = music; });
+document.addEventListener('varrowmere-music', function (e) { try { const m = JSON.parse(e.detail); if (m && typeof m === 'object') music = Object.assign(music || {}, m); } catch (x) {} if (music && LV_) LV_.MUSIC = music; });
 function MUSIC() { if (!music) document.dispatchEvent(new CustomEvent('varrowmere-music:request')); return music || {}; }
 
 // unpack the maps (gzip, with the browser's own decompressor) and start the engine, once
@@ -139,10 +139,10 @@ header = f"""// ==UserScript==
  * - The whole game is inside this script. Pages where you don't play only add a Tampermonkey menu entry and listen
  *   for Torn Arcade: nothing is unpacked, drawn or run until you press Play.
  * - It never reads, clicks or changes Torn's page, makes no network requests of any kind, uses no API key and
- *   no websockets. Every picture and sound is built into the script (the music is in the optional Soundtrack script).
+ *   no websockets. Every picture and sound is built into the script (the music is in the two optional Soundtrack scripts).
  * - Your three save files are kept in Tampermonkey storage on your device.
  * - Torn Arcade link (page events only): 'varrowmere:ping' / 'varrowmere:here' (is it installed? version, Soundtrack
- *   version, leaderboard numbers), 'varrowmere:open' (you tapped Play: the game opens inside the phone), 'varrowmere:close' (you left it), 'varrowmere:closed' and 'varrowmere:scores'
+ *   versions, leaderboard numbers), 'varrowmere:open' (you tapped Play: the game opens inside the phone), 'varrowmere:close' (you left it), 'varrowmere:closed' and 'varrowmere:scores'
  *   (total playtime, completion and monsters defeated, for the Arcade's leaderboards; only sent on by the Arcade if
  *   you turned on its optional Online play).
  *
@@ -163,11 +163,11 @@ const play = function (parent) { return ready().then(function (LV) { LV.open({ t
 if (typeof GM_registerMenuCommand === 'function') GM_registerMenuCommand('Play Legend of Varrowmere', function () { play(); });
 // Torn Arcade link: the two scripts talk through page events (no requests, nothing shared but these three messages).
 //   Arcade sends 'varrowmere:ping'  -> this script answers 'varrowmere:here' { version, music }   (so the phone can show the app;
-//                                      music is the Soundtrack script's version, or '' when it isn't installed; scores
+//                                      music / music2 are the Soundtrack parts' versions, or '' when not installed; scores
 //                                      are the leaderboard numbers saved when the game last closed: { time, completion, kills })
 //   When the game window closes it also sends 'varrowmere:scores' with those numbers.
 //   Arcade sends 'varrowmere:open'  -> the game opens; when it closes, 'varrowmere:closed' goes back
-document.addEventListener('varrowmere:ping', function () { document.dispatchEvent(new CustomEvent('varrowmere:here', { detail: JSON.stringify({ version: '""" + VERSION + """', music: document.documentElement.dataset.varrowmereMusic || '', scores: (function () { try { return JSON.parse(GM_getValue('lv_scores', 'null')); } catch (e) { return null; } })() }) })); });
+document.addEventListener('varrowmere:ping', function () { document.dispatchEvent(new CustomEvent('varrowmere:here', { detail: JSON.stringify({ version: '""" + VERSION + """', music: document.documentElement.dataset.varrowmereMusic || '', music2: document.documentElement.dataset.varrowmereMusic2 || '', scores: (function () { try { return JSON.parse(GM_getValue('lv_scores', 'null')); } catch (e) { return null; } })() }) })); });
 //   Arcade sends 'varrowmere:preload' (only if you turned on Preload Legend) -> the game unpacks itself when the page is idle
 document.addEventListener('varrowmere:preload', function () { const go = function () { ready().catch(function () {}); }; if (typeof requestIdleCallback === 'function') requestIdleCallback(go, { timeout: 3000 }); else setTimeout(go, 500); });
 //   (with detail { host: id } the game opens inside that element on the page, i.e. inside the phone, instead of over the page)
@@ -186,23 +186,28 @@ dev = """<!doctype html><html><head><meta charset="utf-8"><title>Legend of Varro
 boot().then(function (LV) { window.LV = LV; return LV.loadArt().then(function () { LV.open({ noClose: true, muted: /mute/.test(location.hash), store: LV.memoryStore(), title: /title/.test(location.hash), stores: [0, 1, 2].map(function () { return LV.memoryStore(); }) }); window.ready = true; }); });
 </script></body></html>"""
 open('build/dev.html', 'w').write(dev)
-snd_header = f"""// ==UserScript==
-// @name         Legend of Varrowmere - Soundtrack
+# The soundtrack comes in two parts so each script stays under 2 MB at good quality (Opus, 36 kbps).
+PARTS = [(1, ['title', 'village', 'home', 'boss'], 'Legend-of-Varrowmere-Soundtrack.user.js', 'the title, towns, fields and boss fights'),
+         (2, ['shadow', 'dungeon', 'cave', 'ending'], 'Legend-of-Varrowmere-Soundtrack-2.user.js', 'the Shadow world, dungeons, caves and the ending')]
+for part, keys, fname, what in PARTS:
+    url = 'https://github.com/Eaglewing91/Legend-of-Varrowmere/raw/main/build/' + fname
+    snd_header = f"""// ==UserScript==
+// @name         Legend of Varrowmere - Soundtrack{' Part 2' if part == 2 else ''}
 // @namespace    eaglewing.legend-of-varrowmere
 // @version      {VERSION}
-// @description  Optional music for Legend of Varrowmere: the full soundtrack for the towns, fields, dungeons and bosses. Hands them to the game when it starts; makes no requests and stores nothing.
+// @description  Optional music for Legend of Varrowmere, part {part} of 2: {what}. Hands the tracks to the game when it starts; makes no requests and stores nothing.
 // @author       Eaglewing [571041]
 // @match        https://www.torn.com/*
-// @updateURL    https://github.com/Eaglewing91/Legend-of-Varrowmere/raw/main/build/Legend-of-Varrowmere-Soundtrack.user.js
-// @downloadURL  https://github.com/Eaglewing91/Legend-of-Varrowmere/raw/main/build/Legend-of-Varrowmere-Soundtrack.user.js
+// @updateURL    {url}
+// @downloadURL  {url}
 // @grant        none
 // @run-at       document-idle
 // @noframes
 // ==/UserScript==
 /* Music from "Ninja Adventure" by Pixel-boy and AAA (CC0). Packaging (c) Eaglewing [571041], all rights reserved;
-   for use on Torn only (see LICENCE in the GitHub repo).
+   for use on Torn only (see LICENCE in the GitHub repo). Part {part} of 2 of the soundtrack.
    This script makes no requests and needs no API key. It only answers the game's 'varrowmere-music:request' page
-   event with one 'varrowmere-music' event carrying the tracks.
+   event with one 'varrowmere-music' event carrying its tracks.
    TERMS OF SERVICE
    | Data Storage          | No                          |
    | Data Sharing          | Nobody                      |
@@ -211,14 +216,15 @@ snd_header = f"""// ==UserScript==
    | Key Access Level      | None (no API key needed)    |
 */
 """
-snd_body = """(function () {
+    sub = {k: mus[k] for k in keys}
+    snd_body = """(function () {
   // the tracks sit inside a function, so a page that never starts the game never builds them
   let payload = null;
-  function tracks() { return """ + json.dumps(mus) + """; }
+  function tracks() { return """ + json.dumps(sub) + """; }
   document.addEventListener('varrowmere-music:request', function () { if (!payload) payload = JSON.stringify(tracks()); document.dispatchEvent(new CustomEvent('varrowmere-music', { detail: payload })); });
-  document.documentElement.dataset.varrowmereMusic = '""" + VERSION + """';
+  document.documentElement.dataset.varrowmereMusic""" + ('' if part == 1 else '2') + """ = '""" + VERSION + """';
 })();
 """
-open('build/Legend-of-Varrowmere-Soundtrack.user.js', 'w').write(snd_header + snd_body)
-print('soundtrack', os.path.getsize('build/Legend-of-Varrowmere-Soundtrack.user.js'), 'bytes')
+    open('build/' + fname, 'w').write(snd_header + snd_body)
+    print('soundtrack part', part, os.path.getsize('build/' + fname), 'bytes')
 print('built', os.path.getsize('build/Legend-of-Varrowmere.user.js'), 'bytes')

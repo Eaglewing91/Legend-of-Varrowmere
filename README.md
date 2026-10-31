@@ -16,10 +16,10 @@ Legend of Varrowmere is a full adventure in the style of the 16-bit classics, ma
 
 1. Install the [Tampermonkey](https://www.tampermonkey.net/) browser extension.
 2. Install the game: **[Legend of Varrowmere](https://github.com/Eaglewing91/Legend-of-Varrowmere/raw/main/build/Legend-of-Varrowmere.user.js)** (about 1.5 MB).
-3. Optional, but recommended: **[Legend of Varrowmere - Soundtrack](https://github.com/Eaglewing91/Legend-of-Varrowmere/raw/main/build/Legend-of-Varrowmere-Soundtrack.user.js)** (about 1.3 MB). Without it the game plays simple built-in tunes.
-4. Reload Torn. Open the **Legends** folder on the Torn Arcade phone and tap **Varrowmere**, or choose **Play Legend of Varrowmere** in the Tampermonkey menu.
+3. Optional, but recommended: the soundtrack, in two parts: **[Soundtrack Part 1](https://github.com/Eaglewing91/Legend-of-Varrowmere/raw/main/build/Legend-of-Varrowmere-Soundtrack.user.js)** (title, towns, fields, bosses) and **[Soundtrack Part 2](https://github.com/Eaglewing91/Legend-of-Varrowmere/raw/main/build/Legend-of-Varrowmere-Soundtrack-2.user.js)** (Shadow world, dungeons, caves, ending), about 1.8 MB each. Without them the game plays simple built-in tunes.
+4. Reload Torn. Open the **Legends** folder on the Torn Arcade phone and tap **Varrowmere** (it plays inside the phone), or choose **Play Legend of Varrowmere** in the Tampermonkey menu.
 
-The game and its music are two scripts so each stays under 2 MB. Both update themselves through Tampermonkey. Your saves are kept in Tampermonkey's storage on your device, and updating keeps them.
+The game and its music are separate scripts so each stays under 2 MB. Both update themselves through Tampermonkey. Your saves are kept in Tampermonkey's storage on your device, and updating keeps them.
 
 It plays with a keyboard, so it's best on a PC or laptop.
 
@@ -70,7 +70,7 @@ Win the Pendants and draw the Dawnblade. Break Vex's barrier, then follow him th
 
 ## 📜 Terms of service
 
-| | Legend of Varrowmere | Soundtrack |
+| | Legend of Varrowmere | Soundtrack (both parts) |
 |---|---|---|
 | **Data Storage** | Only locally (your save files and leaderboard numbers, in Tampermonkey storage) | No |
 | **Data Sharing** | Nobody (the game sends nothing; Torn Arcade's optional Online play can submit your leaderboard numbers under the Arcade's terms) | Nobody |

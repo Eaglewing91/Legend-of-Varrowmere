@@ -67,7 +67,7 @@ LV.MUSIC_STYLES = {
     const ac = g.audio, self = this;
     const start = function (buf) {
       if (self.track !== name || !self.on) return;
-      const src = ac.createBufferSource(), gn = ac.createGain(); src.buffer = buf; src.loop = true; gn.gain.value = 0.32 * (style && style[3] || 1);
+      const src = ac.createBufferSource(), gn = ac.createGain(); src.buffer = buf; src.loop = true; gn.gain.value = 0.28 * (style && style[3] || 1);
       // each kind of dungeon plays its track its own way: slower and darker, brighter and quicker
       if (style) src.playbackRate.value = style[1];
       let out = src;
