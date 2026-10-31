@@ -14,6 +14,7 @@ OW, IN, CV, OB = 0, 1, 2, 3
 OPEN, SOLID, DEEP, PIT, LEDGE, LOW, BUSH, ROCK, SHALLOW, CRACK, TORCH, TORCH_LIT, LOCKED, BIGLOCK, BLOCK, PLATE, SHUTTER, BIGCHEST, LEVER, SWITCH, POST = range(21)
 
 
+
 def ref(sheet, tx, ty):
     return sheet << 16 | ty << 8 | tx
 
@@ -265,9 +266,20 @@ def thistledown():
         [None, ['Three days I have been fishing here.', 'So far: one boot, one cart wheel and somebody\'s crumpled receipt for a plushie.']]])
     m.spawn('villager', 3, 11, look='farmer', roam=24, talk=[
         [None, ['Those logs in the east meadow are not logs.', 'I sat on one. Spent a week in hospital. The nurse said it happens more than you would think.']]])
-    m.spawn('villager', 8, 1, look='guard', roam=0, dir=2, talk=[
-        ['pendant_ruins1', ['Still no orders to open the north road.', 'I have asked for a raise twice. They gave me two more nerve and a pat on the head.']],
+    # the north road: barred until Wren holds two Pendants, then the guard steps aside
+    fence(m, 6, 9, 2)
+    m.spawn('villager', 8, 3, look='guard', roam=0, dir=2, when='!pendant_shrine', talk=[
+        ['pendant_ruins1', ['Still no orders to open the north road.', 'I have asked for a raise twice. They gave me two more nerve and a pat on the head.', 'Come back with a second one of those shiny Pendants and maybe I will forget I saw you.']],
         [None, ['The north road is closed by order of the Chancellor.', 'Do not ask me why. I just stand here. The pay is terrible.']]])
+    m.spawn('villager', 10, 3, look='guard', roam=0, dir=3, when='pendant_shrine', talk=[
+        [None, ['Two Pendants! Right, I never saw you. The road north goes up to Cinderfold.', 'If anyone asks, you overpowered me. Make it sound heroic.']]])
+    before = m.snapshot()
+    for x in range(6, 10):
+        m.layers['deco'][2 * m.w + x] = -1
+        m.col[2 * m.w + x] = OPEN
+    m.warp(7, 0, 'highlands', 7, 26, 0)
+    m.warp(8, 0, 'highlands', 8, 26, 0)
+    m.variant('pendant_shrine', before)
     m.entry = [8, 8]
     return m
 
@@ -567,8 +579,181 @@ def sunken_shrine():
     return m
 
 
+def boulder(m, x, y):                 # a big 2x2 mountain boulder
+    m.stamp(OW, 9, 11, x, y, 2, 2, col=SOLID)
+
+
+def rockpile(m, x, y):
+    m.stamp(OW, 11, 11, x, y, 2, 2, col=SOLID)
+
+
+def highlands():
+    """North of Thistledown: the hamlet of Cinderfold and the mountain path up to the Ember Forge.
+       (0,1) Cinderfold   (0,0) mountain path   (1,0) the Forge gate   (1,1) the overlook"""
+    m = Map('highlands', 32, 28, 'Cinder Highlands')
+    m.area(0, 0)
+    m.area(16, 0)
+    m.area(0, 14)
+    m.area(16, 14)
+    m.extra['names'] = ['Mountain Path', 'Forge Gate', 'Cinderfold', 'Overlook']
+    grass(m, 0, 0, 31, 27)
+    # outer edge: forest on the west, boulders along the north and east
+    for y0 in (-3, 3, 9, 15, 21):
+        forest(m, -3, y0)
+    for x in range(1, 31, 2):
+        boulder(m, x, 0)
+    for y in range(2, 27, 2):
+        boulder(m, 30, y)
+    # Cinderfold (0,1): a road from the south gate up through the hamlet
+    road_ns(m, 7, 14, 27)
+    m.warp(7, 27, 'meadow', 7, 1, 2)
+    m.warp(8, 27, 'meadow', 8, 1, 2)
+    house(m, 2, 15)
+    house(m, 10, 15)
+    stall(m, 10, 21)
+    fountain(m, 3, 22)
+    flowers(m, [(2, 21), (3, 21), (4, 21), (5, 21)])
+    signboard(m, 6, 20, 'CINDERFOLD|Miners welcome. Soldiers tolerated. Tax collectors pushed down the well.')
+    m.spawn('villager', 4, 25, look='elder', roam=12, talk=[
+        ['pendant_forge', ['Three Pendants! The Dawnblade sleeps in the old grove east of Ashford.', 'Take it, child, and end Vex\'s rule.']],
+        [None, ['The forge up the mountain has burned for a hundred years. Vex\'s men keep it lit day and night.', 'They say the third Pendant, the Pendant of Embers, sits in its heart.']]])
+    m.spawn('villager', 12, 24, look='trader', roam=0, dir=2, shop=True, talk=[
+        [None, ['Mountain prices, friend. Everything costs more up here. The air is thinner and so is my patience.']]])
+    m.spawn('villager', 13, 26, look='farmer', roam=16, talk=[
+        [None, ['I used to mine up there. Then the Gilded Hand moved in and the pay went to ten cash a day and a free hospital visit.', 'Mostly the hospital visit.']]])
+    m.spawn('villager', 1, 19, look='scholar', roam=0, dir=1, talk=[
+        [None, ['The Wisps in the forge? Your blade passes right through them while they blaze.', 'Wait until they dim, or shoot them. Fire will not hurt fire, of course.']]])
+    # mountain path (0,0): switchbacks between boulders, a cracked boulder hides a heart piece
+    road_ns(m, 7, 2, 13)
+    for (x, y) in [(2, 3), (2, 6), (11, 3), (12, 8), (4, 10)]:
+        boulder(m, x, y)
+    boulder(m, 9, 6)
+    m.solid(1, 9, 1, 1, CRACK)
+    m.chest(1, 8, 'heart_shard')
+    m.solid(2, 8, 1, 2, SOLID)
+    m.put('deco', OW, 9, 11, 2, 8)
+    m.put('deco', OW, 9, 12, 2, 9)
+    m.spawn('soldier', 6, 7)
+    m.spawn('archer', 12, 5)
+    m.spawn('log', 4, 12)
+    # forge gate (1,0)
+    stone_pad(m, 9, 9, 22)
+    m.stamp(OW, 4, 31, 22, 3, 4, 3, col=SOLID)
+    m.warp(23, 5, 'forge', 23, 25, 0)
+    m.warp(24, 5, 'forge', 24, 25, 0)
+    m.sign(26, 6, 'EMBER FORGE|Property of the Chancellor. Hot. Do not lick.')
+    for (x, y) in [(18, 4), (27, 9), (19, 11)]:
+        boulder(m, x, y)
+    m.spawn('soldierBlue', 21, 8)
+    m.spawn('archer', 27, 4)
+    # overlook (1,1): a quiet ledge with a view east to Ashford
+    for (x, y) in [(18, 17), (24, 22), (27, 16)]:
+        boulder(m, x, y)
+    boulder(m, 21, 25)
+    for (x, y) in [(20, 19), (21, 19), (22, 20)]:
+        bush(m, x, y)
+    m.chest(21, 20, 'arrows')
+    signboard(m, 26, 20, 'OVERLOOK|East, past the mountains, the towers of Ashford Castle. West, a cow. Mostly the castle.')
+    m.spawn('log', 24, 18)
+    m.spawn('soldier', 19, 24)
+    m.entry = [7, 26]
+    return m
+
+
+def ember_forge():
+    """Dungeon 3: the Ember Forge.
+       (0,0) Big Key (block on switch)   (1,0) Big Chest (Ember Rod), fire bars, far torches   (2,0) BOSS: the Pyrewyrm
+       (0,1) Small Key across lava        (1,1) entrance, torches open north     (2,1) Forgemaster Hald"""
+    m = Map('forge', 48, 28, 'Ember Forge', indoor=True, music='dungeon')
+    for ry in range(2):
+        for rx in range(3):
+            room(m, rx, ry)
+    m.extra.update({'dungeon': 'forge', 'exit': ['highlands', 23, 6], 'boss': True, 'pendant': 'Pendant of Embers', 'lava': []})
+    def lava(x0, y0, x1, y1):
+        for y in range(y0, y1 + 1):
+            for x in range(x0, x1 + 1):
+                m.col[y * m.w + x] = PIT
+                m.extra['lava'].append(y * m.w + x)
+    # entrance (1,1): lava cuts the room; a narrow bridge with a fire bar; four torches open the way north
+    door(m, 1, 1, 's')
+    m.warp(23, 27, 'highlands', 23, 6, 2)
+    m.warp(24, 27, 'highlands', 24, 6, 2)
+    lava(17, 20, 30, 21)
+    for x in (27, 28):
+        m.col[20 * m.w + x] = OPEN
+        m.col[21 * m.w + x] = OPEN
+        m.extra['lava'].remove(20 * m.w + x)
+        m.extra['lava'].remove(21 * m.w + x)
+    m.spawn('firebar', 25, 20, len=4, sp=1.8)
+    for (x, y) in [(18, 17), (29, 17)]:
+        m.solid(x, y, 1, 1, TORCH)
+    door(m, 1, 1, 'n', SHUTTER, 'entry')
+    door(m, 1, 0, 's')
+    m.extra.setdefault('triggers', []).append({'type': 'torches', 'at': [[18, 17], [29, 17]], 'open': 'entry'})
+    m.chest(18, 24, 'map')
+    door(m, 1, 1, 'w')
+    door(m, 0, 1, 'e')
+    door(m, 1, 1, 'e', LOCKED)
+    door(m, 2, 1, 'w', LOCKED)
+    m.spawn('wisp', 22, 24)
+    m.sign(25, 25, 'The heat is unbearable. Somewhere far above, hammers ring.')
+    # west room (0,1): the Small Key on a ledge beyond the lava; grapple the chest, then the post to get back
+    lava(1, 19, 14, 20)
+    m.chest(7, 17, 'key')
+    m.solid(7, 22, 1, 1, POST)
+    m.chest(12, 25, 'compass')
+    m.spawn('wisp', 4, 23)
+    m.spawn('wisp', 11, 22)
+    # east room (2,1): Forgemaster Hald; beating him reveals a chest of bombs
+    m.spawn('hald', 40, 21)
+    m.chests['43,17'] = {'item': 'bombs', 'big': False}
+    m.extra.setdefault('reveal', {})['hald'] = [[43, 17]]
+    m.extra['triggers'].append({'type': 'clear', 'area': 5, 'open': 'hald'})
+    lava(33, 25, 35, 26)
+    lava(44, 25, 46, 26)
+    # north room (1,0): the Big Chest between fire bars; torches stranded in lava open the east way
+    bigchest(m, 23, 5, 'rod')
+    m.spawn('firebar', 20, 8, len=3, sp=-2.0)
+    m.spawn('firebar', 27, 8, len=3, sp=2.0, ang=3.1)
+    lava(28, 3, 30, 5)
+    lava(28, 10, 30, 12)
+    m.solid(29, 4, 1, 1, TORCH)
+    m.solid(29, 11, 1, 1, TORCH)
+    m.extra['lava'] = [i for i in m.extra['lava'] if i not in (4 * m.w + 29, 11 * m.w + 29)]
+    m.extra['triggers'].append({'type': 'torches', 'at': [[29, 4], [29, 11]], 'open': 'far'})
+    door(m, 1, 0, 'e', SHUTTER, 'far')
+    door(m, 2, 0, 'w', BIGLOCK)
+    door(m, 1, 0, 'w')
+    door(m, 0, 0, 'e')
+    m.spawn('wisp', 18, 11)
+    # north-west room (0,0): push the block onto the switch; the alcove with the Big Key opens
+    m.chest(11, 4, 'bigkey')
+    m.solid(10, 3, 1, 3, SOLID)
+    m.solid(12, 3, 1, 3, SOLID)
+    for y in (4, 5):
+        m.put('deco', IN, 6, 7, 10, y)
+        m.put('deco', IN, 6, 7, 12, y)
+    m.solid(11, 6, 1, 1, SHUTTER)
+    m.extra.setdefault('shutters', {})['bk'] = [[11, 6]]
+    m.solid(6, 7, 1, 1, BLOCK)
+    m.extra['plates'] = [[6, 10]]
+    m.solid(6, 10, 1, 1, PLATE)
+    m.extra['triggers'].append({'type': 'plate', 'at': [[6, 10]], 'open': 'bk'})
+    lava(2, 6, 3, 12)
+    lava(8, 9, 9, 12)
+    m.spawn('soldierBlue', 12, 10)
+    # boss room (2,0): the Pyrewyrm; lava in the corners
+    lava(33, 3, 34, 4)
+    lava(45, 3, 46, 4)
+    lava(33, 11, 34, 12)
+    lava(45, 11, 46, 12)
+    m.spawn('pyrewyrm', 40, 8)
+    m.entry = [23, 25]
+    return m
+
+
 if __name__ == '__main__':
-    out = {m.id: m.json() for m in (thistledown(), home(), cave1(), meadow_ruins(), riverhead(), sunken_shrine())}
+    out = {m.id: m.json() for m in (thistledown(), home(), cave1(), meadow_ruins(), riverhead(), sunken_shrine(), highlands(), ember_forge())}
     os.makedirs('src/data', exist_ok=True)
     json.dump(out, open('src/data/maps.json', 'w'), separators=(',', ':'))
     print('maps', {k: (v['w'], v['h']) for k, v in out.items()})

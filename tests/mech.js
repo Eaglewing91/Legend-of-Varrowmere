@@ -171,6 +171,34 @@ const { chromium } = require('playwright');
     const cont = g.pickups.find(p => p.kind === 'container'); if (cont) g.collect(cont); const line = g.dialog && g.dialog.lines[1]; g.dialog = null;
     return { nb, shielded, plucked, popped, phase, pendant: !!g.save.items.pendant_shrine, line }; });
   check('kraken: bubbles, grapple, pop, defeat, Pendant of Tides', r.nb === 6 && r.shielded && r.plucked && r.popped && r.phase === 'bound' && r.pendant && /Tides/.test(r.line), r);
+  // 39. North road: barred until two Pendants, then it leads up to the highlands
+  r = await p.evaluate(() => { const g = LV.game; delete g.save.items.pendant_shrine; place('meadow', 7, 4, 0); step(90, ['up']); const barred = g.world.id;
+    g.save.items.pendant_shrine = 1; place('meadow', 7, 4, 0); step(90, ['up']); step(30, []); return { barred, open: g.world.id }; });
+  check('north road opens with two Pendants', r.barred === 'meadow' && r.open === 'highlands', r);
+  // 40. Ember Rod: a fireball lights a torch stranded in lava and the east shutter opens
+  r = await p.evaluate(() => { const g = LV.game; g.save.items.rod = 1; g.save.equip = 'rod'; Object.keys(g.save.flags).filter(k => k.startsWith('forge:')).forEach(k => delete g.save.flags[k]);
+    place('forge', 27, 4, 1); g.actors = []; g.world.setC(29, 11, LV.C.TORCH_LIT); step(1, [], ['item']); step(30, []); return { lit: g.world.c(29, 4), open: g.world.c(31, 7) }; });
+  check('ember rod lights a far torch, shutter opens', r.lit === 11 && r.open === 0, r);
+  // 41. Lava: falling in burns a whole heart and puts you back
+  r = await p.evaluate(() => { const g = LV.game; place('forge', 18, 22, 0); g.actors = []; H().hp = 12; step(5, []); step(40, ['up']); step(60, []); return { hp: H().hp, state: H().state, y: Math.floor(H().y / 16) }; });
+  check('lava burns a heart and respawns', r.hp === 8 && r.state === 'walk' && r.y >= 22, r);
+  // 42. Cinder Wisp: the blade can't touch it while it blazes, can when it dims; fire does nothing
+  r = await p.evaluate(() => { const g = LV.game; place('forge', 20, 24, 1); g.actors = []; const w = LV.ENEMIES.wisp(22 * 16, 24 * 16 + 12); g.actors.push(w);
+    const hit = k => { w.inv = 0; return LV.applyHit(g, new LV.Hit({ team: 'hero', kind: k, power: 1, from: { x: H().x, y: H().y }, box: { x: 0, y: 0, w: 1, h: 1 } }), w); };
+    w.t = 0; w.ph = 0; const blaze = hit('blade'); const fire = hit('fire'); w.t = 3.4; const dim = w.dim(); const cut = hit('blade'); return { blaze, fire, dim, cut, hp: w.hp }; });
+  check('wisp: blade only when dim, fire immune', r.blaze === 'immune' && r.fire === 'immune' && r.dim && r.cut === 'hit', r);
+  // 43. Fire bar burns the hero; hazards don't block "clear the room"
+  r = await p.evaluate(() => { const g = LV.game; place('forge', 25, 23, 0); g.actors = g.actors.filter(a => a.kind === 'firebar'); H().hp = 12; H().inv = 0; const fb = g.actors[0]; fb.ang = Math.PI / 2; step(1, []); return { hp: H().hp }; });
+  check('fire bar burns', r.hp < 12, r);
+  // 44. Pyrewyrm: only the tail can be hurt; killing it gives the Pendant of Embers
+  r = await p.evaluate(() => { const g = LV.game; delete g.save.flags['forge:boss']; delete g.save.items.pendant_forge; place('forge', 40, 11, 0); g.actors = g.actors.filter(a => a.kind === 'pyrewyrm'); const w = g.actors[0];
+    const tail = w.tailBox(), head = { x: w.x - 6, y: w.y - 14, w: 12, h: 12 };
+    for (let i = 0; i < 60; i++) w.trail[i] = { x: 40 * 16 + 8 + i * 2, y: 8 * 16 }; w.x = 40 * 16 + 8; w.y = 8 * 16;
+    const headHit = LV.overlap(w.hurtBox(), { x: w.x - 4, y: w.y - 12, w: 8, h: 8 }); w.hp = 1; w.inv = 0;
+    LV.applyHit(g, new LV.Hit({ team: 'hero', kind: 'blade', power: 2, from: { x: H().x, y: H().y }, box: w.tailBox() }), w); step(2, []);
+    const cont = g.pickups.find(p => p.kind === 'container'); if (cont) g.collect(cont); const line = g.dialog && g.dialog.lines[1]; g.dialog = null;
+    return { headHit, dead: w.dead, pendant: !!g.save.items.pendant_forge, line }; });
+  check('pyrewyrm: tail only, Pendant of Embers', !r.headHit && r.dead && r.pendant && /Embers/.test(r.line), r);
   console.log(results.join('\n')); console.log('errors', errs);
   await b.close();
   process.exit(results.some(x => x.startsWith('FAIL')) || errs.length ? 1 : 0);
