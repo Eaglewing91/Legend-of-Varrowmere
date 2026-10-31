@@ -166,11 +166,13 @@ def signboard(m, x, y, text):
 
 # ---------- the first area: Thistledown and the east meadow ----------
 def thistledown():
-    m = Map('meadow', 32, 14, 'Thistledown')
+    m = Map('meadow', 48, 14, 'Thistledown')
     m.area(0, 0)
     m.area(16, 0)
-    grass(m, 0, 0, 31, 13)
-    lake(m, -1, 11, 32, 14)
+    m.area(32, 0)
+    m.extra['names'] = ['Thistledown', 'East Meadow', 'Reedwater']
+    grass(m, 0, 0, 47, 13)
+    lake(m, -1, 11, 48, 14)
     # screen 1: the village
     for x0 in (-2, 2, 10):
         forest(m, x0, -3)
@@ -210,8 +212,24 @@ def thistledown():
     m.spawn('villager', 14, 10, look='elder', roam=10, talk=[
         ['pendant_ruins1', ['You found the Pendant of Courage! I knew you had it in you.', 'Four more Pendants are hidden across Varrowmere. The lake, the hills, the marsh, the peaks...', 'Find them before Vex does.']],
         [None, ['Wren! You look like you slept in a hedge.', 'East of here, past the cave, the old Meadow Ruins sit behind the gate.', 'Vex has soldiers guarding it. Cut the bushes for hearts, and mind the logs.']]])
-    m.spawn('villager', 12, 6, look='trader', roam=0, dir=2, talk=[
+    m.spawn('villager', 12, 6, look='trader', roam=0, dir=2, shop=True, talk=[
         [None, ['Fresh goods! Prices go up every time you look at them. That is just how markets work.', 'Energy drinks? Sold out. Some fellow bought forty and ran off to train in the woods.']]])
+    # screen 3: Reedwater, a pool hiding the Sunken Shrine (dungeon 2)
+    for x0 in (34, 38, 42, 46):
+        forest(m, x0, -3)
+    stone_pad(m, 32, 8, 36)
+    lake(m, 37, 3, 48, 10)
+    m.stamp(OW, 6, 6, 40, 3, 2, 3)              # jetty out onto the pool
+    m.solid(40, 3, 2, 3, OPEN)
+    m.spawn('villager', 40, 5, look='fisher', roam=0, dir=2, talk=[
+        [None, ['They say a shrine sits at the bottom of this pool.', 'My grandmother swore the water drops when the old sluice upstream is shut.', 'Me? I just rent out the boat. Well, I would, if anyone had stolen it back for me.']]])
+    signboard(m, 36, 6, 'REEDWATER POOL|No swimming. No fishing. No asking why.')
+    for (x, y) in [(32, 10), (34, 10), (33, 9), (35, 9)]:
+        bush(m, x, y)
+    m.chest(33, 10, 'heart_shard')
+    m.spawn('soldierBlue', 34, 6)
+    m.spawn('archer', 35, 4)
+    m.spawn('log', 33, 9)
     m.spawn('villager', 7, 12, look='fisher', roam=0, dir=2, talk=[
         [None, ['Three days I have been fishing here.', 'So far: one boot, one cart wheel and somebody\'s crumpled receipt for a plushie.']]])
     m.spawn('villager', 3, 11, look='farmer', roam=24, talk=[

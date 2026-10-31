@@ -118,6 +118,18 @@ const { chromium } = require('playwright');
     g.showTitle(st); step(30, []); step(1, [], ['menu']); step(1, [], ['up']); step(1, [], ['menu']); const er = g.title.erase; step(1, [], ['down']); step(1, [], ['down']); step(1, [], ['menu']); const still = !!st[1].get(); step(1, [], ['menu']); const gone = !st[1].get();
     g.mode = 'play'; g.title = null; return { files, mode, intro, saved, er, still, gone }; });
   check('title, file select, new game and erase', r.files === 'files' && r.mode === 'play' && r.intro && r.saved && r.er && r.still && r.gone, r);
+  // 31. Shop: talk to the trader across the counter, buy with cash; refused when broke or not needed
+  r = await p.evaluate(() => { const g = LV.game; place('meadow', 12, 8, 0); g.actors = g.actors.filter(a => a.npc); const t = g.actors.find(a => a.look === 'trader'); t.x = 12 * 16 + 8; t.y = 6 * 16 + 14;
+    g.save.cash = 60; H().hp = 4; g.save.items.bow = 1; g.save.arrows = 0;
+    step(1, [], ['action']); let n = 0; while (g.dialog && !g.dialog.choices && n++ < 5) step(1, [], ['action']); const asked = !!(g.dialog && g.dialog.choices);
+    step(1, [], ['action']); step(1, [], ['action']); const hp = H().hp, cash1 = g.save.cash;
+    g.openShop(); step(1, [], ['down']); step(1, [], ['action']); step(1, [], ['action']); const arrows = g.save.arrows, cash2 = g.save.cash;
+    g.openShop(); step(1, [], ['down']); step(1, [], ['down']); step(1, [], ['action']); const broke = g.dialog && g.dialog.lines[0]; g.dialog = null;
+    return { asked, hp, cash1, arrows, cash2, broke }; });
+  check('shop sells first aid and arrows, refuses when short', r.asked && r.hp === 12 && r.cash1 === 40 && r.arrows === 10 && r.cash2 === 10 && /short/.test(r.broke), r);
+  // 32. Map screen opens with M, rooms are recorded as visited
+  r = await p.evaluate(() => { const g = LV.game; place('ruins1', 23, 24, 0); g.save.seen = {}; step(2, []); step(1, [], ['map']); const open = g.mapOpen; g.render(); step(1, [], ['map']); return { open, closed: !g.mapOpen, seen: (g.save.seen.ruins1 || []).length }; });
+  check('map screen and visited rooms', r.open && r.closed && r.seen === 1, r);
   console.log(results.join('\n')); console.log('errors', errs);
   await b.close();
   process.exit(results.some(x => x.startsWith('FAIL')) || errs.length ? 1 : 0);
