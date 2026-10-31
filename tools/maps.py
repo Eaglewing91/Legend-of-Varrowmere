@@ -174,7 +174,7 @@ def thistledown():
     road_ns(m, 7, 0, 10)
     m.stamp(OW, 6, 6, 7, 11, 2, 3)          # jetty
     m.solid(7, 11, 2, 3, OPEN)
-    house(m, 1, 2, ('home', 7, 11, 0))
+    house(m, 1, 2, ('home', 7, 12, 0))
     stone_pad(m, 3, 7, 6)
     stall(m, 10, 2)
     fence(m, 1, 5, 9)
@@ -201,16 +201,31 @@ def thistledown():
 
 def home():
     m = Map('home', 16, 14, "Wren's house", indoor=True, music='home')
-    m.fill(IN, 2, 4, 0, 0, 15, 13)
+    m.fill(IN, 1, 1, 0, 0, 15, 13)                 # dark outside the room
+    m.fill(IN, 0, 4, 2, 3, 13, 12)                 # wooden floor
+    for x in range(2, 14):                          # back wall, brick
+        for y in range(0, 3):
+            m.put('ground', IN, 0, 1, x, y)
     m.solid(0, 0, 16, 3)
-    m.solid(0, 0, 1, 14)
-    m.solid(15, 0, 1, 14)
+    m.solid(0, 0, 2, 14)
+    m.solid(14, 0, 2, 14)
     m.solid(0, 13, 16, 1)
-    m.warp(7, 12, 'meadow', 3, 7, 2)
-    m.warp(8, 12, 'meadow', 3, 7, 2)
-    m.chest(3, 4, 'lantern')
-    m.sign(12, 3, "A note from Captain Brannoc:|'Back late. Don't touch my blade.'")
-    m.entry = [7, 11]
+    m.stamp(IN, 9, 4, 5, 0, 2, 2)                   # window
+    m.stamp(IN, 12, 10, 11, 0, 2, 3)               # fireplace
+    m.stamp(IN, 10, 12, 11, 2, 2, 1)               # the fire
+    m.stamp(IN, 3, 12, 7, 1, 3, 2)                  # bookshelf
+    m.stamp(IN, 16, 1, 2, 3, 2, 3, col=SOLID)       # bed
+    m.stamp(IN, 10, 1, 7, 6, 3, 3, col=SOLID)       # table
+    m.stamp(IN, 13, 4, 6, 7, 1, 2); m.solid(6, 8)   # chairs
+    m.stamp(IN, 14, 4, 10, 7, 1, 2); m.solid(10, 8)
+    m.nine(IN, 0, 7, 6, 10, 9, 12, layer='deco')    # rug by the door
+    m.stamp(IN, 8, 12, 13, 3, 1, 2, col=SOLID)      # plant
+    m.stamp(IN, 6, 9, 2, 10, 3, 3, col=SOLID)       # cupboard
+    m.warp(7, 13, 'meadow', 3, 7, 2)
+    m.warp(8, 13, 'meadow', 3, 7, 2)
+    m.chest(12, 4, 'lantern')
+    m.sign(8, 2, "A note pinned to the shelf from Captain Brannoc:|'Back late. Don't touch my blade. And feed the pigeon.'")
+    m.entry = [7, 12]
     return m
 
 

@@ -48,7 +48,7 @@ const { chromium } = require('playwright');
   r = await p.evaluate(() => { place('meadow', 3, 8, 0); step(40, ['up']); step(30, []); return LV.game.world.id; });
   check('house door leads inside', r === 'home', r);
   // 10. Chests open only when facing up into them, and give the item
-  r = await p.evaluate(() => { place('home', 3, 5, 0); step(1, [], ['action']); step(2, []); const got = !!LV.game.save.items.lantern; LV.game.dialog = null; return got; });
+  r = await p.evaluate(() => { place('home', 12, 5, 0); step(1, [], ['action']); step(2, []); const got = !!LV.game.save.items.lantern; LV.game.dialog = null; return got; });
   check('chest gives the Lantern', r === true, r);
   // 11. Bushes: the blade cuts them; the action button lifts and throws them
   r = await p.evaluate(() => { const g = LV.game; place('meadow', 18, 5, 1); step(16, [], ['attack']); const cut = g.world.c(19, 5); place('meadow', 18, 6, 1); step(1, [], ['action']); const carry = H().state; step(1, [], ['action']); step(30, []); return { cut: cut, carry: carry, after: g.world.c(19, 6) }; });

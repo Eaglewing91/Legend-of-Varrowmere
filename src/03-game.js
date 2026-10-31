@@ -98,7 +98,7 @@ LV.Game.prototype.collect = function (p) {
 LV.Game.prototype.heroDown = function () {
   const self = this; this.sfx('down');
   this.say(['You were hospitalized by a ' + (this.lastHitBy || 'nasty fall') + '.', 'The nurse patches you up. Your cash is safe... this time.'], function () {
-    self.fadeTo = function () { self.hero.hp = 12; self.enter('home', 7 * 16 + 8, 10 * 16 + 12, 2); };
+    self.fadeTo = function () { self.hero.hp = 12; self.enter('home', 7 * 16 + 8, 11 * 16 + 12, 2); };
   });
 };
 
