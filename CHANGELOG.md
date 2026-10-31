@@ -6,6 +6,12 @@ Dates are in TCT (Torn City Time).
 
 ---
 
+## 1.0.4 — 2026-10-31
+### New
+- **Space** now talks, reads, lifts and opens (like C).
+- **Mouse click** swings the sword (hold the button for a Spin Attack). A tap on the picture does the same on touch screens.
+- **Touch pad**, like Tornies': a D-pad on the left, Sword, Item and Talk buttons on the right, and Dash, Map and Menu at the top. Turn it on with 🎮 (in Torn Arcade's top bar, or beside Close in the game window). It's on by default on touch screens.
+
 ## 1.0.3 — 2026-10-31
 ### Fixed
 - The music was distorted and crackly: it had been squeezed to about 14 kbps to fit one script. It's now re-encoded from the original tracks at about 2.5 times the quality, in **two Soundtrack scripts** (Part 1: title, towns, fields and bosses; Part 2: Shadow world, dungeons, caves and the ending), each under 2 MB. If you already have the Soundtrack, it updates itself to Part 1; install Part 2 for the rest.

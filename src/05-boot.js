@@ -21,7 +21,7 @@ LV.open = function (opts) {
   const cv = document.createElement('canvas'); cv.width = LV.VIEW_W; cv.height = LV.VIEW_H; LV.canvas = cv;
   cv.style.cssText = 'image-rendering:pixelated;image-rendering:crisp-edges;box-shadow:0 0 0 2px #333';
   const bar = document.createElement('div'); bar.style.cssText = 'color:#ccc;font:12px sans-serif;margin-top:8px';
-  bar.textContent = 'Arrows/WASD move · Z sword (hold for Spin) · X item · C lift/talk/open · Enter items · M map · N music · Esc close';
+  bar.textContent = 'Arrows/WASD move · Z or click: sword (hold for Spin) · X item · C or Space: talk/lift/open · Enter items · M map · N music · Esc close';
   root.appendChild(cv); root.appendChild(bar); LV.bar = bar;
   if (!opts.noClose) {   // a close button too, for anyone who opened it with the mouse
     const x = document.createElement('button'); x.type = 'button'; x.textContent = '✕ Close'; x.title = 'Close (your game is saved)';

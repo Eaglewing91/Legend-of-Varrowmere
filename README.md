@@ -21,16 +21,16 @@ Legend of Varrowmere is a full adventure in the style of the 16-bit classics, ma
 
 The game and its music are separate scripts so each stays under 2 MB. Both update themselves through Tampermonkey. Your saves are kept in Tampermonkey's storage on your device, and updating keeps them.
 
-It plays with a keyboard, so it's best on a PC or laptop.
+It plays with a keyboard and mouse, or with the on-screen touch pad (🎮).
 
 ## 🎮 Controls
 
 | Key | Action |
 |---|---|
 | Arrows or WASD | Move |
-| Z (or J) | Sword (hold, then let go, for a Spin Attack) |
+| Z (or J), or mouse click | Sword (hold, then let go, for a Spin Attack) |
 | X (or K) | Use the selected item |
-| C (or L) | Talk, read, lift, open |
+| C, Space (or L) | Talk, read, lift, open |
 | Shift (or V) | Dash (once you have the Running Shoes) |
 | Enter | Items and status screen |
 | M | Map |
