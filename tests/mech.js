@@ -247,6 +247,24 @@ const { chromium } = require('playwright');
     maws.forEach(m => { m.hp = 1; m.state = 'up'; m.inv = 0; LV.applyHit(g, new LV.Hit({ team: 'hero', kind: 'arrow', power: 2, from: { x: H().x, y: H().y }, box: { x: 0, y: 0, w: 1, h: 1 } }), m); }); step(2, []);
     const cont = g.pickups.find(p => p.kind === 'container'); if (cont) g.collect(cont); const line = g.dialog && g.dialog.lines[1]; g.dialog = null; return { n: maws.length, line, crystal: !!g.save.items.crystal_vault }; });
   check('twin maws give the Crystal of the Deep', r.n === 2 && r.crystal && /Deep/.test(r.line), r);
+  // 55. Shadow Keep gate opens with both Crystals
+  r = await p.evaluate(() => { const g = LV.game; delete g.save.flags.crystals; delete g.save.items.crystal_vault; delete g.save.items.crystal_quarry; place('s_grove', 23, 8, 0); g.actors = []; const shut = g.world.c(23, 6);
+    g.save.items.crystal_vault = 1; g.save.items.crystal_quarry = 1; place('s_grove', 23, 8, 0); g.actors = []; step(60, ['up']); step(30, []); return { shut, map: g.world.id }; });
+  check('Shadow Keep opens with both Crystals', r.shut === 1 && r.map === 'keep', r);
+  // 56. Mirror secret: the gateless pen's heart piece, reached by mirroring in from the shadow side
+  r = await p.evaluate(() => { const g = LV.game; g.save.items.mirror = 1; g.save.equip = 'mirror'; delete g.save.opened['grove:13,7']; place('s_grove', 13, 8, 0); g.actors = []; step(1, [], ['item']); step(20, []);
+    const inPen = g.world.id === 'grove'; step(1, [], ['action']); const got = !!g.save.opened['grove:13,7']; g.dialog = null; return { inPen, got }; });
+  check('mirror secret: heart piece in the gateless pen', r.inPen && r.got, r);
+  // 57. Vex's Shadow: phase one falls, the Shade rises; only Sunfire Arrows stagger it; staggered, the blade cuts; its death rolls the credits
+  r = await p.evaluate(() => { const g = LV.game; delete g.save.flags.won; g.save.items.sunarrows = 1; place('keep', 40, 11, 0); g.area = g.world.areaAt(40 * 16, 8 * 16); g.actors = g.actors.filter(a => a.kind === 'vex'); const v = g.actors[0];
+    step(2, []); const intro = !!g.dialog; g.dialog = null; v.hp = 1; v.inv = 0; v.state = 'wait'; v.x = 40 * 16 + 8; v.y = 8 * 16;
+    const o = new LV.Orb(v, H()); o.reflect(g); o.x = v.x; o.y = v.y - 14; g.shots.push(o); step(2, []); while (g.dialog) step(1, [], ['action']); step(2, []);
+    const s = g.actors.find(a => a.kind === 'shade'); if (!s) return { intro, shade: false };
+    const hit = k => { s.inv = 0; return LV.applyHit(g, new LV.Hit({ team: 'hero', kind: k, power: 2, from: { x: H().x, y: H().y }, box: { x: 0, y: 0, w: 1, h: 1 } }), s); };
+    const blade1 = hit('blade'); const arrow = hit('arrow'); const stag = s.stagger > 0; const hp1 = s.hp; const blade2 = hit('blade'); s.hp = 1; hit('blade'); step(2, []); while (g.dialog) step(1, [], ['action']);
+    return { intro, shade: true, blade1, arrow, stag, hp1, blade2, mode: g.mode, won: !!g.save.flags.won }; });
+  check("Vex's Shadow: two phases, Sunfire Arrows, true ending", r.intro && r.shade && r.blade1 === 'immune' && r.arrow === 'hit' && r.stag && r.hp1 === 6 && r.blade2 === 'hit' && r.mode === 'ending' && r.won, r);
+  r = await p.evaluate(() => { const g = LV.game; g.mode = 'play'; return 1; });
   console.log(results.join('\n')); console.log('errors', errs);
   await b.close();
   process.exit(results.some(x => x.startsWith('FAIL')) || errs.length ? 1 : 0);

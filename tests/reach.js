@@ -1,5 +1,5 @@
 // Reachability check: flood-fill every map from its entry (doors treated as openable, both water levels).
-// Expected leftovers: chests only reachable with the Grapple, and the Shrine's north-west room (needs a mid-room switch).
+// Expected leftovers: chests only reachable with the Grapple (forge, castle) or the Twin Mirror (grove pen).
 const { chromium } = require('playwright');
 (async () => { const b = await chromium.launch(); const p = await b.newPage();
   await p.goto('file://' + process.cwd() + '/build/dev.html#mute'); await p.waitForFunction(() => window.ready);

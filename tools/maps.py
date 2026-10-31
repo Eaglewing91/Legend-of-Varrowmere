@@ -771,6 +771,14 @@ def grove():
     m.solid(7, 5, 1, 1, PEDESTAL)
     m.sign(4, 9, 'DAWN GROVE|Here rests the Dawnblade, for the one who carries all three Pendants.')
     m.spawn('log', 11, 9)
+    # a fenced pen with no gate: the heart piece inside is reached through the Twin Mirror
+    fence(m, 11, 15, 6)
+    fence(m, 11, 15, 10)
+    for y in (7, 8, 9):
+        for x in (11, 15):
+            m.stamp(OW, 0, 17, x, y, col=LOW)
+    m.chest(13, 7, 'heart_shard')
+    m.sign(10, 8, 'A pen with no gate. The farmer who built it swore it was "more secure that way".')
     # Ashford Castle: towers, the gate, and Vex's barrier
     road_ns(m, 23, 6, 13)
     m.stamp(OW, 0, 22, 17, 0, 3, 6, col=SOLID)
@@ -940,8 +948,22 @@ def shadow_world():
         if c == BARRIER:
             m.col[i] = SOLID
     m.sign(8, 9, 'Your own footprints lead away from the empty pedestal... but you have never been here.')
+    # no pen on this side of the glass
+    for y in range(6, 11):
+        for x in range(11, 16):
+            m.layers['deco'][y * m.w + x] = -1
+            m.col[y * m.w + x] = OPEN
+    m.signs.pop('10,8', None)
     m.spawn('captain', 20, 9)
-    m.spawn('wisp', 12, 9)
+    m.spawn('wisp', 12, 5)
+    # the Shadow Keep opens once both Crystals are held
+    before = m.snapshot()
+    for x in range(22, 26):
+        m.col[6 * m.w + x] = OPEN
+    m.warp(23, 5, 'keep', 23, 25, 0)
+    m.warp(24, 5, 'keep', 24, 25, 0)
+    m.variant('crystals', before)
+    m.sign(21, 7, 'SHADOW KEEP|Two crystal-shaped hollows are set into the gate.')
     out.append(m)
     return out
 
@@ -1077,8 +1099,85 @@ def hollow_quarry():
     return m
 
 
+def shadow_keep():
+    """The final dungeon: the Shadow Keep, a mix of everything.
+       (0,0) a ghostly nurse, rest      (1,0) Captain Brask returns; Big Chest (Sunfire Arrows)   (2,0) Vex's Shadow
+       (0,1) swim, grapple to the key   (1,1) entrance: boulders, fire bar; clear it to go north  (2,1) torches in lava: Big Key"""
+    m = Map('keep', 48, 28, 'Shadow Keep', indoor=True, music='dungeon')
+    for ry in range(2):
+        for rx in range(3):
+            room(m, rx, ry)
+    m.extra.update({'dungeon': 'keep', 'exit': ['s_grove', 23, 7], 'boss': True, 'shadow': True, 'lava': []})
+    def lava(x0, y0, x1, y1):
+        for y in range(y0, y1 + 1):
+            for x in range(x0, x1 + 1):
+                m.col[y * m.w + x] = PIT
+                m.extra['lava'].append(y * m.w + x)
+    def pool(x0, y0, x1, y1):
+        for y in range(y0, y1 + 1):
+            for x in range(x0, x1 + 1):
+                m.col[y * m.w + x] = DEEP
+    m.extra['flood'] = []
+    # entrance (1,1)
+    door(m, 1, 1, 's')
+    m.warp(23, 27, 's_grove', 23, 7, 2)
+    m.warp(24, 27, 's_grove', 24, 7, 2)
+    rocks(m, [(x, 21) for x in range(17, 31) if x not in (23, 24)])
+    m.spawn('firebar', 23, 21, len=3, sp=2.2)
+    door(m, 1, 1, 'n', SHUTTER, 'gate')
+    door(m, 1, 0, 's')
+    m.extra.setdefault('triggers', []).append({'type': 'clear', 'area': 4, 'open': 'gate'})
+    m.spawn('captain', 20, 18)
+    m.spawn('captain', 27, 18)
+    m.spawn('wisp', 29, 24)
+    door(m, 1, 1, 'w')
+    door(m, 0, 1, 'e')
+    door(m, 1, 1, 'e', LOCKED)
+    door(m, 2, 1, 'w', LOCKED)
+    # west room (0,1): swim the moat; grapple the island chest and the post back
+    pool(2, 18, 13, 22)
+    for (x, y) in [(7, 19), (8, 19), (7, 20), (8, 20)]:
+        m.col[y * m.w + x] = OPEN
+    m.chest(7, 19, 'key')
+    m.solid(7, 24, 1, 1, POST)
+    m.spawn('snapjaw', 4, 21)
+    m.spawn('snapjaw', 11, 19)
+    # east room (2,1): two torches in lava; light them with the Ember Rod and the Big Key appears
+    lava(34, 17, 36, 19)
+    lava(43, 17, 45, 19)
+    m.solid(35, 18, 1, 1, TORCH)
+    m.solid(44, 18, 1, 1, TORCH)
+    m.extra['lava'] = [i for i in m.extra['lava'] if i not in (18 * m.w + 35, 18 * m.w + 44)]
+    m.chests['40,17'] = {'item': 'bigkey', 'big': False}
+    m.extra.setdefault('reveal', {})['etorch'] = [[40, 17]]
+    m.extra['triggers'].append({'type': 'torches', 'at': [[35, 18], [44, 18]], 'open': 'etorch'})
+    m.spawn('wisp', 38, 23)
+    m.spawn('wisp', 43, 24)
+    m.spawn('archer', 46, 22)
+    # north room (1,0): Brask again, and the Big Chest
+    m.spawn('brask2', 23, 9)
+    bigchest(m, 23, 4, 'sunarrows')
+    lava(17, 3, 19, 5)
+    lava(17, 10, 19, 12)
+    lava(28, 3, 30, 5)
+    lava(28, 10, 30, 12)
+    door(m, 1, 0, 'w')
+    door(m, 0, 0, 'e')
+    door(m, 1, 0, 'e', BIGLOCK)
+    door(m, 2, 0, 'w', BIGLOCK)
+    # north-west room (0,0): rest before the end
+    m.spawn('villager', 7, 6, look='baker', roam=0, dir=2, heal=True, ghost=True, talk=[
+        [None, ['I was the castle nurse, on the other side. Here I am... whatever this is.', 'Sit. There. All mended. He is through the east doors. End it.']]])
+    m.chest(12, 5, 'arrows')
+    m.chest(3, 5, 'heart_shard')
+    # the throne room (2,0)
+    m.spawn('shadowvex', 40, 6)
+    m.entry = [23, 25]
+    return m
+
+
 if __name__ == '__main__':
-    out = {m.id: m.json() for m in (thistledown(), home(), cave1(), meadow_ruins(), riverhead(), sunken_shrine(), highlands(), ember_forge(), grove(), ashford_castle(), *shadow_world(), drowned_vault(), hollow_quarry())}
+    out = {m.id: m.json() for m in (thistledown(), home(), cave1(), meadow_ruins(), riverhead(), sunken_shrine(), highlands(), ember_forge(), grove(), ashford_castle(), *shadow_world(), drowned_vault(), hollow_quarry(), shadow_keep())}
     os.makedirs('src/data', exist_ok=True)
     json.dump(out, open('src/data/maps.json', 'w'), separators=(',', ':'))
     print('maps', {k: (v['w'], v['h']) for k, v in out.items()})
