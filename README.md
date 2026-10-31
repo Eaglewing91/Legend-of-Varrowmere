@@ -77,7 +77,7 @@ The game is entirely self-contained.
 - **Built with** Claude
 - **Art:**
   - "Zelda-like tilesets and sprites" by ArMM1998 ([OpenGameArt](https://opengameart.org/content/zelda-like-tilesets-and-sprites), CC0)
-  - Bosses, monsters, trees, rocks, extra terrain and sound effects from "Ninja Adventure" by Pixel-boy and AAA ([itch.io](https://pixel-boy.itch.io/ninja-adventure-asset-pack), CC0)
+  - The hero, people, bosses, monsters, terrain, water, houses, effects, item icons, font, dialog boxes, sound effects and music from "Ninja Adventure" by Pixel-boy and AAA ([itch.io](https://pixel-boy.itch.io/ninja-adventure-asset-pack), CC0)
 - Everything else © Eaglewing [571041]. All rights reserved.
 
 ## Developing

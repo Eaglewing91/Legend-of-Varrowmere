@@ -80,4 +80,8 @@ Fastest completion, fewest deaths, most secrets.
 - [x] Art pass: Ninja Adventure bosses, monsters, trees and rocks; soft rounded edges on dirt, grass banks and ponds;
   borders and forests packed from mixed trees and rocks (no straight hedges or rows of one boulder); hit flash.
 - [x] Sound pass: Ninja Adventure sound effects (the old generated beeps remain as a fallback).
+- [x] Full Ninja Adventure pass: animated hero (walk, idle, katana, spin, roll, swim, push, hurt), every villager a pack character
+  with a portrait, soldiers with katanas, pack grass, dirt paths, foamy water with ripples, cottages, cliff-walled dungeons,
+  snow, rain and leaves, pack effects and particles, item icons, pixel font, parchment dialog boxes, 8 music tracks.
+- [ ] Left from the old pack: signs, chests, fences, stalls, fountain, graves, castle, dungeon doors, house furniture.
 - [ ] Balance, a full human playtest, then release through Torn Arcade.
