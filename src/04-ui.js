@@ -27,6 +27,7 @@ LV.text = function (ctx, s, x, y, col, size) {
   s = String(s);
   if (!LV.fontPrep()) { ctx.font = 'bold ' + (size || 8) + 'px monospace'; ctx.textBaseline = 'top'; ctx.fillStyle = '#000'; ctx.fillText(s, x + 1, y + 1); ctx.fillStyle = col || '#fff'; ctx.fillText(s, x, y); return; }
   const k = Math.max(1, Math.round((size || 8) / 8)), ink = LV.fontTint(col || '#fff'), sh = LV.fontTint(col === LV.INK ? 'rgba(0,0,0,0)' : '#000');
+  if (ctx.textAlign === 'center') x -= LV.textWidth(s, size) / 2; else if (ctx.textAlign === 'right' || ctx.textAlign === 'end') x -= LV.textWidth(s, size);
   let cx = Math.round(x);
   for (const ch of s) {
     const g = ch.charCodeAt(0) - 32; if (g < 0 || g >= 120) { cx += 4 * k; continue; }

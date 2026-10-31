@@ -93,3 +93,8 @@
   LV.makeTarget = function (x, y, k) { const e = mt(x, y, k), old = e.draw;
     e.draw = function (ctx, ox, oy) { const im = IM('nadungeon'); if (!im) return old.call(this, ctx, ox, oy); ctx.drawImage(im, (4 + (k % 4)) * 16, 32, 16, 16, Math.round(this.x - ox - 8), Math.round(this.y - oy - 16), 16, 16); }; return e; };
 })();
+// the title's sword is the pack's katana, drawn large
+(function () {
+  const sw = LV.drawSword;
+  LV.drawSword = function (ctx, x, y) { const im = LV.IMG.it_katana; if (!im) return sw(ctx, x, y); const s = 3; ctx.save(); ctx.translate(x, y + 18); ctx.rotate(Math.PI / 4 * (im.width > im.height ? -1 : 0)); ctx.drawImage(im, -im.width * s / 2, -im.height * s / 2, im.width * s, im.height * s); ctx.restore(); };
+})();
