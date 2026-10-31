@@ -114,7 +114,7 @@ const { chromium } = require('playwright');
   // 30. Title: skip the opening, pick an empty file, the intro plays, the file is saved; erase needs two presses
   r = await p.evaluate(() => { const g = LV.game; const st = [0, 1, 2].map(() => LV.memoryStore()); st[1].set(Object.assign(LV.newSave(), { maxHp: 20 })); g.showTitle(st);
     step(30, []); step(1, [], ['menu']); step(45, []); step(1, [], ['menu']); const files = g.title.stage; step(1, [], ['down']); step(1, [], ['down']); step(1, [], ['menu']); const create = g.title.stage === 'create'; step(1, [], ['action']); step(40, []);
-    const mode = g.mode, intro = !!(g.dialog && /Pendants/.test(g.dialog.lines[0])), saved = !!(st[2].get() && st[2].get().flags.intro); g.dialog = null;
+    const mode = g.mode, intro = !!(g.scene && g.world.id === 'home' && g.save.flags.night), saved = !!(st[2].get() && st[2].get().flags.intro); g.dialog = null; g.scene = null; delete g.save.flags.night;
     g.showTitle(st); step(45, []); step(1, [], ['menu']); step(1, [], ['up']); step(1, [], ['right']); step(1, [], ['menu']); const er = g.title.erase; step(1, [], ['down']); step(1, [], ['down']); step(1, [], ['menu']); const still = !!st[1].get(); step(1, [], ['menu']); const gone = !st[1].get();
     g.mode = 'play'; g.title = null; return { files, create, mode, intro, saved, er, still, gone }; });
   check('title, file select, new game and erase', r.files === 'files' && r.create && r.mode === 'play' && r.intro && r.saved && r.er && r.still && r.gone, r);

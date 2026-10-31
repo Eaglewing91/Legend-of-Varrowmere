@@ -35,6 +35,8 @@ for f in sorted(glob.glob('art/ninja-adventure/fx/*.png')):
 MS = None
 if os.path.exists('art/private/ms_people.png'):
     ART['ms_people'] = 'private/ms_people.png'; MS = json.load(open('art/private/ms_people.json'))
+if MS and os.path.exists('art/private/ms_hero.png'):
+    ART['ms_hero'] = 'private/ms_hero.png'; MS['hero'] = json.load(open('art/private/ms_hero.json'))
 def lossless_png(path):
     """Re-save a PNG as small as possible without changing a single pixel (exact palette when there are 256
     colours or fewer, best zlib settings). Checked pixel-for-pixel; the original bytes are kept if anything differs."""

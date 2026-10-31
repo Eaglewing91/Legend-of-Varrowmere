@@ -186,7 +186,7 @@ LV.Game.prototype.render = function () {
   all.sort(function (a, b) { return a.y - b.y; });
   for (const a of all) LV.drawActor(ctx, a, ox, oy);
   for (const e of this.effects) e.draw(ctx, ox, oy);
-  if (this.hero.carry) ctx.drawImage(LV.IMG.overworld, 0, 16 * 16, 16, 16, Math.round(this.hero.x - ox - 8), Math.round(this.hero.y - oy - 30), 16, 16);
+  if (this.hero.carry) ctx.drawImage(LV.IMG.overworld, 0, 16 * 16, 16, 16, Math.round(this.hero.x - ox - 8), Math.round(this.hero.y - oy - (LV.CARRY_Y || 30)), 16, 16);
   LV.drawLayer(ctx, this.world, 'over', ox, oy);
   if (this.world.dark) this.drawDark(ctx, ox, oy);
   LV.drawHud(ctx, this);

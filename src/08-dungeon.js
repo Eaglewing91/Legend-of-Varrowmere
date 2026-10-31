@@ -91,7 +91,7 @@ LV.Game.prototype.checkTriggers = function (quiet) {
     let ok = false;
     if (t.type === 'plate') ok = t.at.every(function (p) { return w.c(p[0], p[1]) === LV.C.BLOCK || (Math.floor(h.x / 16) === p[0] && Math.floor((h.y - 3) / 16) === p[1]); });
     if (t.type === 'torches') ok = t.at.every(function (p) { return w.c(p[0], p[1]) === LV.C.TORCH_LIT; });
-    if (t.type === 'clear') { const a = w.areas[t.area], T = 16; ok = !quiet && self.area === a && !self.actors.some(function (e) { return !e.dead && e.x >= a[0] * T && e.x < (a[0] + a[2]) * T && e.y >= a[1] * T && e.y < (a[1] + a[3]) * T; }); }
+    if (t.type === 'clear') { const a = w.areas[t.area], T = 16; ok = !quiet && self.area === a && !self.actors.some(function (e) { return !e.dead && !e.npc && e.x >= a[0] * T && e.x < (a[0] + a[2]) * T && e.y >= a[1] * T && e.y < (a[1] + a[3]) * T; }); }
     if (ok) self.openShutters(t.open, quiet);
   });
 };

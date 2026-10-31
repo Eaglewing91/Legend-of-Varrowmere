@@ -9,6 +9,9 @@ Dates are in TCT (Torn City Time).
 ## 1.0.6 — 2026-10-31
 ### New
 - **New townsfolk.** Every villager, trader, guard, scholar and fisher is now drawn from the Mana Seed character art by Seliel the Shaper: 35 different people with full walking animation, and their own face beside what they say.
+- **Wren is redrawn too**, in a green Forester tunic and pointed hat, carrying a sword and shield: walking, running, sword swings, the Spin Attack, bow shots, lifting, throwing, pushing and swimming. Every tunic colour still works.
+- **A proper opening.** A new adventure starts at night, in bed, in a storm. A voice calls from beneath the Meadow Ruins; Captain Brannoc hears it too, tells Wren to stay put, and heads out into the rain. Thistledown stays dark and wet until you reach the ruins. (Press Enter to skip the scene.)
+- Brannoc turns up again: hurt inside the Meadow Ruins, and back home once you have the first Pendant.
 - Spirits are pale, see-through figures that drift gently.
 - The picture is drawn on a finer pixel grid, so the new people keep their detail.
 

@@ -82,6 +82,8 @@ PEOPLE = {
     'NinjaDark': P(5, ('fstr', 3), None, cloak=2, hood=2),
     # baker and the fairy-spring keeper
     'Princess': P(0, ('pfdr', 2), ('pon1', 3), ('pfbn', 2)),
+    # Captain Brannoc, who raised Wren (the opening scene)
+    'Brannoc': P(5, ('fstr', 3), ('flat', 10), mantle=8),
     'Blacksmith': P(7, ('bksm', 1), ('fro1', 0), ('band', 1)),
 }
 # a few people are better known by their trade in tools/maps.py
@@ -119,4 +121,102 @@ def main():
     json.dump({'names': names, 'cw': CW, 'ch': CH, 'fx': 32 - CX, 'fy': 44 - CY}, open(OUT + '/ms_people.json', 'w'))
     print('manaseed: %d people, %d bytes' % (len(names), os.path.getsize(OUT + '/ms_people.png')))
 
-if __name__ == '__main__': main()
+
+# ---------------- Wren, the hero ----------------
+# Every page she needs, dressed in the Forester tunic and pointed hat, with her sword and shield (or bow and quiver)
+# placed in front of or behind her frame by frame, as the artist's layer-order guides say.
+PAGE_IDX = {}
+for p in sorted(glob.glob(ROOT + '/**/char_a_p*.png', recursive=True), key=lambda q: 'optional files' in q):
+    m = re.match(r'char_a_(p\w+?)_(\d\w{3})_(\w{4})_(v\d\d)\.png$', os.path.basename(p))
+    # the sword pack's walking-page layers live in its "optional files"; everything else uses the supported files
+    if m and (('optional files' not in p) or m.group(2) in ('6tla', '7tlb')) and m.groups() not in PAGE_IDX: PAGE_IDX[m.groups()] = p
+_pc = {}
+def player(page, L, code, v):
+    k = (page, L, code, 'v%02d' % v)
+    if k not in PAGE_IDX: raise SystemExit('missing Mana Seed layer %s' % (k,))
+    if k not in _pc: _pc[k] = Image.open(PAGE_IDX[k]).convert('RGBA')
+    return _pc[k]
+def guide(name):
+    """Read a layer-order guide: per 64 x 64 cell, behind (blue) or in front (red), and + / - against the other item."""
+    path = (glob.glob(ROOT + '/**/guides/layer order, page ' + name + '.png', recursive=True) or [None])[0]
+    if not path: return None
+    im = Image.open(path).convert('RGB'); px = im.load(); out = {}
+    for r in range(8):
+        for c in range(8):
+            x0, y0 = c * 64, r * 64; R, G, B = px[x0 + 2, y0 + 2]
+            vert = 0
+            for x in range(x0 + 45, x0 + 62):
+                run = 0
+                for y in range(y0 + 36, y0 + 50):
+                    if sum(px[x, y]) < 200: run += 1; vert = max(vert, run)
+                    else: run = 0
+            out[(c, r)] = (B > R, vert >= 3)        # (behind, plus)
+    return out
+WREN = dict(skin=1, out=('fstr', 5), hair=('bob1', 3), hat=('pnty', 3))
+GEAR = {   # page -> [(layer, code, v, guide name)]
+    'p1': [('6tla', 'sw01', 1, '1 (sword)'), ('7tlb', 'sh01', 1, '1 (shield)')],
+    'pONE1': [('6tla', 'sw01', 1, 'ONE-hand 1 (sword)'), ('7tlb', 'sh01', 1, 'ONE-hand 1 (shield)')],
+    'pONE3': [('6tla', 'sw01', 1, 'ONE-hand 3 (sword)'), ('7tlb', 'sh01', 1, 'ONE-hand 3 (shield)')],
+    'pBOW3': [('6tla', 'bo01', 1, 'BOW 3 (bow)'), ('7tlb', 'qv01', 1, 'BOW 3 (quiver)')],
+    'p2': []}
+# name -> (page, [(col, row) per frame] for dirs down, up, right, left)
+HERO_ANIMS = {
+    'idle': ('p1', lambda d: [(0, d)]),
+    'walk': ('p1', lambda d: [(k, 4 + d) for k in range(6)]),
+    'run': ('p1', lambda d: [(k, 4 + d) for k in (0, 1, 6, 3, 4, 7)]),
+    'push': ('p1', lambda d: [(1, d), (2, d)]),
+    'slash': ('pONE3', lambda d: [(k, d) for k in range(4)]),
+    'thrust': ('pONE3', lambda d: [(k, 4 + d) for k in range(4)]),
+    'hurt': ('pONE1', lambda d: [(5, d)]),
+    'dead': ('pONE1', lambda d: [(6, d), (7, d)]),
+    'lift': ('p2', lambda d: [(k, 4 + d) for k in range(4, 8)]),
+    'throw': ('p2', lambda d: [(k, d) for k in range(4, 8)]),
+    'bow': ('pBOW3', lambda d: [(k, 4 + d) for k in range(8)]),
+}
+def hero_cell(page, col, row, guides):
+    body = [('0bas', 'humn', WREN['skin']), ('1out',) + WREN['out'], ('4har',) + WREN['hair'], ('5hat',) + WREN['hat']]
+    back, front = [], []
+    for (L, code, v, gname) in GEAR.get(page, []):
+        g = guides.get(gname) or {}; behind, plus = g.get((col, row), (True, True))
+        (back if behind else front).append((plus, (L, code, v)))
+    back.sort(key=lambda t: t[0]); front.sort(key=lambda t: t[0])
+    cell = Image.new('RGBA', (64, 64))
+    for L in [t[1] for t in back] + body + [t[1] for t in front]:
+        cell.alpha_composite(player(page, *L).crop((col * 64, row * 64, col * 64 + 64, row * 64 + 64)))
+    return cell
+def hero_main():
+    guides = {}
+    for gl in GEAR.values():
+        for (_, _, _, gname) in gl: guides[gname] = guide(gname)
+    built, meta = [], {}
+    for name, (page, fr) in HERO_ANIMS.items():
+        cells = [[hero_cell(page, c, r, guides) for (c, r) in fr(d)] for d in range(4)]
+        box = None
+        for row in cells:
+            for c in row:
+                b = c.getbbox()
+                if b: box = b if not box else (min(box[0], b[0]), min(box[1], b[1]), max(box[2], b[2]), max(box[3], b[3]))
+        built.append((name, cells, box))
+    W = max(len(c[0]) * (b[2] - b[0]) for (_, c, b) in built); H = sum(4 * (b[3] - b[1]) for (_, _, b) in built)
+    atlas = Image.new('RGBA', (W, H)); y = 0
+    for (name, cells, b) in built:
+        w, h = b[2] - b[0], b[3] - b[1]
+        for d, row in enumerate(cells):
+            for k, c in enumerate(row): atlas.alpha_composite(c.crop(b), (k * w, y + d * h))
+        meta[name] = {'y': y, 'w': w, 'h': h, 'n': len(cells[0]), 'fx': 32 - b[0], 'fy': 44 - b[1]}
+        y += 4 * h
+    save_indexed(atlas, OUT + '/ms_hero.png')
+    # tunic colours: those only the outfit and hat use (not skin, hair or gear), so other tunics can swap them
+    tun, other = set(), set()
+    for page in {p for (p, _) in HERO_ANIMS.values()}:
+        for L in [('1out',) + WREN['out'], ('5hat',) + WREN['hat']]:
+            tun |= {p[:3] for p in player(page, *L).get_flattened_data() if p[3]}
+        for L in [('0bas', 'humn', WREN['skin']), ('4har',) + WREN['hair']] + [g[:3] for g in GEAR.get(page, [])]:
+            other |= {p[:3] for p in player(page, *L).get_flattened_data() if p[3]}
+    meta['tunic'] = sorted(tun - other)
+    json.dump(meta, open(OUT + '/ms_hero.json', 'w'))
+    print('manaseed: hero %dx%d, %d bytes, %d tunic colours' % (W, H, os.path.getsize(OUT + '/ms_hero.png'), len(meta['tunic'])))
+
+if __name__ == '__main__':
+    main()
+    if os.path.isdir(ROOT): hero_main()

@@ -834,6 +834,10 @@ def home():
     m.warp(7, 13, 'meadow', 3, 7, 2)
     m.warp(8, 13, 'meadow', 3, 7, 2)
     m.chest(12, 4, 'lantern')
+    # Brannoc, home again once Wren has the first Pendant
+    m.spawn('villager', 11, 5, look='guard', who='Brannoc', roam=0, dir=2, when='pendant_ruins1', talk=[
+        [None, ['BRANNOC: The Pendant of Valor. You actually did it.', 'Your mother would have grounded you for a month. Then she would have told the whole village.',
+                'Two more Pendants are out there, and Vex knows it now too.', 'Go on, then. Just... come home in one piece. And feed the pigeon.']]])
     m.sign(8, 2, "A note pinned to the shelf from Captain Brannoc:|'Back late. Don't touch my blade. And feed the pigeon.'")
     m.entry = [7, 12]
     return m
@@ -956,6 +960,12 @@ def meadow_ruins():
     for x in (18, 29):
         statue_pair(m, x, 15)
     m.sign(22, 16, "Carved in the stone:|'The meadow's valor sleeps behind three locks.'")
+    # Captain Brannoc, who went ahead in the storm and came off worse
+    m.spawn('villager', 26, 25, look='guard', who='Brannoc', roam=0, dir=3, when='!pendant_ruins1', talk=[
+        [None, ['BRANNOC: Wren?! I told you to stay in bed!', '...Of course you didn\'t. You never have.',
+                'Vex\'s lot jumped me at the gate. Took my blade, my pride and my sandwich.',
+                'The voice is coming from somewhere deep under here. I can\'t go on with this leg... but you can.',
+                'Go on. Find whatever is calling. I\'ll be right here, being embarrassed.']]])
     # west room (0,1): push the block onto the switch to open the shutter to the key
     for (x, y) in [(10, 20), (12, 19), (7, 22)]:
         m.solid(x, y, 1, 1, BLOCK)
