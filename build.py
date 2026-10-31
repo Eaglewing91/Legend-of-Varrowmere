@@ -5,7 +5,7 @@ Art sheets are embedded as base64 PNG; maps come from tools/maps.py.
 """
 import base64, glob, json, os, subprocess
 
-VERSION = '1.0.0'
+VERSION = '1.0.1'
 os.makedirs('build', exist_ok=True)
 subprocess.run(['python3', 'tools/maps.py'], check=True)
 subprocess.run(['python3', 'tools/patch_sheets.py'], check=True)
@@ -156,7 +156,10 @@ header = f"""// ==UserScript==
  */
 """
 launcher = """
-const play = function () { return boot().then(function (LV) { if (LV.root) return LV.open({ title: true }); return LV.loadArt().then(function () { LV.open({ title: true }); }); }); };
+// unpack the game and decode its art, once; both Play and a preload share the same work
+let readying = null;
+const ready = function () { return readying || (readying = boot().then(function (LV) { return LV.loadArt().then(function () { return LV; }); }).catch(function (e) { readying = null; throw e; })); };
+const play = function () { return ready().then(function (LV) { LV.open({ title: true }); }); };
 if (typeof GM_registerMenuCommand === 'function') GM_registerMenuCommand('Play Legend of Varrowmere', play);
 // Torn Arcade link: the two scripts talk through page events (no requests, nothing shared but these three messages).
 //   Arcade sends 'varrowmere:ping'  -> this script answers 'varrowmere:here' { version, music }   (so the phone can show the app;
@@ -165,6 +168,8 @@ if (typeof GM_registerMenuCommand === 'function') GM_registerMenuCommand('Play L
 //   When the game window closes it also sends 'varrowmere:scores' with those numbers.
 //   Arcade sends 'varrowmere:open'  -> the game opens over the page; when it closes, 'varrowmere:closed' goes back
 document.addEventListener('varrowmere:ping', function () { document.dispatchEvent(new CustomEvent('varrowmere:here', { detail: JSON.stringify({ version: '""" + VERSION + """', music: document.documentElement.dataset.varrowmereMusic || '', scores: (function () { try { return JSON.parse(GM_getValue('lv_scores', 'null')); } catch (e) { return null; } })() }) })); });
+//   Arcade sends 'varrowmere:preload' (only if you turned on Preload Legend) -> the game unpacks itself when the page is idle
+document.addEventListener('varrowmere:preload', function () { const go = function () { ready().catch(function () {}); }; if (typeof requestIdleCallback === 'function') requestIdleCallback(go, { timeout: 3000 }); else setTimeout(go, 500); });
 document.addEventListener('varrowmere:open', function () { play().then(function () { document.documentElement.dataset.varrowmereOpen = '1'; }); });
 document.documentElement.dataset.varrowmere = '""" + VERSION + """';
 """

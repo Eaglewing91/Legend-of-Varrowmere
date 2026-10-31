@@ -6,6 +6,10 @@ Dates are in TCT (Torn City Time).
 
 ---
 
+## 1.0.1 — 2026-10-31
+### New
+- **Preload Legend:** with Torn Arcade 2.54.1's new setting turned on, the game gets itself ready in the background when you open the phone, so it starts straight away. Nothing is downloaded or saved.
+
 ## 1.0.0 — 2026-10-31
 ### First public release
 - A full top-down action-adventure: two worlds (Varrowmere and its Shadow twin), 19 multi-floor dungeons with puzzles, mini-bosses and unique bosses, and the story from Thistledown to the Shadow Keep and the true ending.
