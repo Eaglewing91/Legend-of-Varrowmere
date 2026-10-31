@@ -32,10 +32,13 @@ art = {k: base64.b64encode(open('art/' + f, 'rb').read()).decode() for k, f in A
 
 snd = {os.path.basename(f)[:-4]: base64.b64encode(open(f, 'rb').read()).decode() for f in sorted(glob.glob('art/ninja-adventure/sfx/*.mp3'))}
 mus = {os.path.basename(f)[:-4]: base64.b64encode(open(f, 'rb').read()).decode() for f in sorted(glob.glob('art/ninja-adventure/music/*.ogg'))}
+import sys as _s; _s.path.insert(0, 'tools'); import worldplan as _P
+plan = {'towns': {k.replace(' (city)', ''): v for k, v in _P.TOWNS.items()},
+        'regions': {r[0]: [r[1] + r[3] / 2, r[2] + r[4] / 2] for r in _P.REGIONS.values()}}
 src = '\n'.join(open(f).read() for f in sorted(glob.glob('src/*.js')))
 maps = open('src/data/maps.json').read()
 unrle = "(function () { const un = function (a) { const o = []; for (let i = 0; i < a.length; i += 2) for (let k = 0; k < a[i + 1]; k++) o.push(a[i]); return o; }; Object.values(LV.MAPS).forEach(function (d) { if (!d.rle) return; Object.keys(d.layers).forEach(function (k) { d.layers[k] = un(d.layers[k]); }); d.col = un(d.col); delete d.rle; }); })();"
-body = src + '\nLV.MAPS = ' + maps + ';\n' + unrle + '\nLV.ART = ' + json.dumps(art) + ';\nLV.SOUNDS = ' + json.dumps(snd) + ';\nLV.MUSIC = ' + json.dumps(mus) + ';\n'
+body = src + '\nLV.MAPS = ' + maps + ';\n' + unrle + '\nLV.ART = ' + json.dumps(art) + ';\nLV.SOUNDS = ' + json.dumps(snd) + ';\nLV.MUSIC = ' + json.dumps(mus) + ';\nLV.WORLDPLAN = ' + json.dumps(plan) + ';\n'
 
 header = f"""// ==UserScript==
 // @name         Legend of Varrowmere
