@@ -25,7 +25,12 @@ LV.open = function (opts) {
   fit(); addEventListener('resize', fit);
   const bar = document.createElement('div'); bar.style.cssText = 'color:#ccc;font:12px sans-serif;margin-top:8px';
   bar.textContent = 'Arrows/WASD move · Z sword (hold for Spin) · X item · C lift/talk/open · Enter items · M map · N music · Esc close';
-  root.appendChild(cv); root.appendChild(bar); (opts.parent || document.body).appendChild(root);
+  root.appendChild(cv); root.appendChild(bar);
+  if (!opts.noClose) {   // a close button too, for anyone who opened it with the mouse (from the Torn Arcade phone, say)
+    const x = document.createElement('button'); x.type = 'button'; x.textContent = '✕ Close'; x.title = 'Close (your game is saved)';
+    x.style.cssText = 'position:absolute;top:10px;right:12px;padding:6px 12px;border:1px solid #555;border-radius:6px;background:#222;color:#ddd;font:600 13px sans-serif;cursor:pointer';
+    x.addEventListener('click', function () { LV.close(); }); root.appendChild(x);
+  } (opts.parent || document.body).appendChild(root);
   const game = new LV.Game(cv, { store: opts.store || LV.storeFor(), muted: opts.muted });
   LV.game = game;
   if (opts.title) game.showTitle(opts.stores);

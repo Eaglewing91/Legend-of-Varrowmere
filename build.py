@@ -5,7 +5,7 @@ Art sheets are embedded as base64 PNG; maps come from tools/maps.py.
 """
 import base64, glob, json, os, subprocess
 
-VERSION = '0.36.2'
+VERSION = '0.37.0'
 os.makedirs('build', exist_ok=True)
 subprocess.run(['python3', 'tools/maps.py'], check=True)
 subprocess.run(['python3', 'tools/patch_sheets.py'], check=True)
@@ -82,10 +82,16 @@ maps_gz = base64.b64encode(gzip.compress(maps.encode(), 9, mtime=0)).decode()
 # just reads the data as plain text (fast) and adds the menu entry: no game code runs, nothing is unpacked, no images
 # are decoded until you press Play.
 unrle = "const un = function (a) { const o = new Array(0); for (let i = 0; i < a.length; i += 2) { const v = a[i]; for (let k = a[i + 1]; k > 0; k--) o.push(v); } return o; }; Object.values(LV.MAPS).forEach(function (d) { if (!d.rle) return; Object.keys(d.layers).forEach(function (k) { d.layers[k] = un(d.layers[k]); }); d.col = un(d.col); delete d.rle; });"
-data = ('let DATA = null;\n// the data lives inside a function too, so a page that never opens the game never builds it\nfunction loadData() { return DATA || (DATA = { maps: ' + json.dumps(maps_gz) + ',\n art: ' + json.dumps(art) + ',\n sounds: ' + json.dumps(snd) + ',\n music: ' + json.dumps(mus)
+data = ('let DATA = null;\n// the data lives inside a function too, so a page that never opens the game never builds it\nfunction loadData() { return DATA || (DATA = { maps: ' + json.dumps(maps_gz) + ',\n art: ' + json.dumps(art) + ',\n sounds: ' + json.dumps(snd)
         + ',\n plan: ' + json.dumps(plan) + ' }); }\n')
-engine = 'function engine(MAPS) {\n' + src + '\nLV.MAPS = MAPS;\n' + unrle + '\nLV.ART = DATA.art; LV.SOUNDS = DATA.sounds; LV.MUSIC = DATA.music; LV.WORLDPLAN = DATA.plan;\nreturn LV;\n}\n'
+engine = 'function engine(MAPS) {\n' + src + '\nLV.MAPS = MAPS;\n' + unrle + '\nLV.ART = DATA.art; LV.SOUNDS = DATA.sounds; LV.MUSIC = MUSIC(); LV.WORLDPLAN = DATA.plan;\nreturn LV;\n}\n'
 boot = """let booting = null;
+// The music lives in the separate Legend of Varrowmere - Soundtrack script (so each script stays under 2 MB). It hands the
+// tracks over through one page event when the game starts. Without it the game plays its own synthesised tunes.
+let music = null, LV_ = null;
+document.addEventListener('varrowmere-music', function (e) { try { music = JSON.parse(e.detail); } catch (x) { music = null; } if (music && LV_) LV_.MUSIC = music; });
+function MUSIC() { if (!music) document.dispatchEvent(new CustomEvent('varrowmere-music:request')); return music || {}; }
+
 // unpack the maps (gzip, with the browser's own decompressor) and start the engine, once
 function boot() {
   if (booting) return booting;
@@ -95,7 +101,7 @@ function boot() {
     const bin = atob(DATA.maps), bytes = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
     const text = await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
-    return engine(JSON.parse(text));
+    return (LV_ = engine(JSON.parse(text)));
   })();
   booting.catch(function (e) { booting = null; alert(e.message); });
   return booting;
@@ -121,9 +127,10 @@ launcher = """
 const play = function () { return boot().then(function (LV) { if (LV.root) return LV.open({ title: true }); return LV.loadArt().then(function () { LV.open({ title: true }); }); }); };
 if (typeof GM_registerMenuCommand === 'function') GM_registerMenuCommand('Play Legend of Varrowmere', play);
 // Torn Arcade link: the two scripts talk through page events (no requests, nothing shared but these three messages).
-//   Arcade sends 'varrowmere:ping'  -> this script answers 'varrowmere:here' { version }   (so the phone can show the app)
+//   Arcade sends 'varrowmere:ping'  -> this script answers 'varrowmere:here' { version, music }   (so the phone can show the app;
+//                                      music is the Soundtrack script's version, or '' when it isn't installed)
 //   Arcade sends 'varrowmere:open'  -> the game opens over the page; when it closes, 'varrowmere:closed' goes back
-document.addEventListener('varrowmere:ping', function () { document.dispatchEvent(new CustomEvent('varrowmere:here', { detail: JSON.stringify({ version: '""" + VERSION + """' }) })); });
+document.addEventListener('varrowmere:ping', function () { document.dispatchEvent(new CustomEvent('varrowmere:here', { detail: JSON.stringify({ version: '""" + VERSION + """', music: document.documentElement.dataset.varrowmereMusic || '' }) })); });
 document.addEventListener('varrowmere:open', function () { play().then(function () { document.documentElement.dataset.varrowmereOpen = '1'; }); });
 document.documentElement.dataset.varrowmere = '""" + VERSION + """';
 """
@@ -134,4 +141,31 @@ dev = """<!doctype html><html><head><meta charset="utf-8"><title>Legend of Varro
 boot().then(function (LV) { window.LV = LV; return LV.loadArt().then(function () { LV.open({ noClose: true, muted: /mute/.test(location.hash), store: LV.memoryStore(), title: /title/.test(location.hash), stores: [0, 1, 2].map(function () { return LV.memoryStore(); }) }); window.ready = true; }); });
 </script></body></html>"""
 open('build/dev.html', 'w').write(dev)
+snd_header = f"""// ==UserScript==
+// @name         Legend of Varrowmere - Soundtrack
+// @namespace    eaglewing.legend-of-varrowmere
+// @version      {VERSION}
+// @description  Optional music for Legend of Varrowmere: the full soundtrack for the towns, fields, dungeons and bosses. Hands them to the game when it starts; makes no requests and stores nothing.
+// @author       Eaglewing [571041]
+// @match        https://www.torn.com/*
+// @updateURL    https://github.com/Eaglewing91/Legend-of-Varrowmere/raw/dev/build/Legend-of-Varrowmere-Soundtrack.user.js
+// @downloadURL  https://github.com/Eaglewing91/Legend-of-Varrowmere/raw/dev/build/Legend-of-Varrowmere-Soundtrack.user.js
+// @grant        none
+// @run-at       document-idle
+// @noframes
+// ==/UserScript==
+/* Music from "Ninja Adventure" by Pixel-boy and AAA (CC0). Packaging (c) Eaglewing [571041], all rights reserved.
+   Terms of service: this script makes no requests, stores nothing and needs no API key. It only answers the game's
+   'varrowmere-music:request' page event with one 'varrowmere-music' event carrying the tracks. */
+"""
+snd_body = """(function () {
+  // the tracks sit inside a function, so a page that never starts the game never builds them
+  let payload = null;
+  function tracks() { return """ + json.dumps(mus) + """; }
+  document.addEventListener('varrowmere-music:request', function () { if (!payload) payload = JSON.stringify(tracks()); document.dispatchEvent(new CustomEvent('varrowmere-music', { detail: payload })); });
+  document.documentElement.dataset.varrowmereMusic = '""" + VERSION + """';
+})();
+"""
+open('build/Legend-of-Varrowmere-Soundtrack.user.js', 'w').write(snd_header + snd_body)
+print('soundtrack', os.path.getsize('build/Legend-of-Varrowmere-Soundtrack.user.js'), 'bytes')
 print('built', os.path.getsize('build/Legend-of-Varrowmere.user.js'), 'bytes')
