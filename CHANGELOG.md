@@ -6,6 +6,10 @@ Dates are in TCT (Torn City Time).
 
 ---
 
+## 1.0.5 — 2026-10-31
+### Fixed
+- Torn Arcade's speaker (mute) button now mutes Legend of Varrowmere's music and sound effects too.
+
 ## 1.0.4 — 2026-10-31
 ### New
 - **Space** now talks, reads, lifts and opens (like C).

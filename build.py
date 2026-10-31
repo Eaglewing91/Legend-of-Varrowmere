@@ -5,7 +5,7 @@ Art sheets are embedded as base64 PNG; maps come from tools/maps.py.
 """
 import base64, glob, json, os, subprocess
 
-VERSION = '1.0.4'
+VERSION = '1.0.5'
 os.makedirs('build', exist_ok=True)
 subprocess.run(['python3', 'tools/maps.py'], check=True)
 subprocess.run(['python3', 'tools/patch_sheets.py'], check=True)
@@ -159,7 +159,7 @@ launcher = """
 // unpack the game and decode its art, once; both Play and a preload share the same work
 let readying = null;
 const ready = function () { return readying || (readying = boot().then(function (LV) { return LV.loadArt().then(function () { return LV; }); }).catch(function (e) { readying = null; throw e; })); };
-const play = function (parent, pad) { return ready().then(function (LV) { LV.open({ title: true, parent: parent || null, pad: pad }); }); };
+const play = function (parent, pad, muted) { return ready().then(function (LV) { LV.open({ title: true, parent: parent || null, pad: pad, muted: muted }); }); };
 if (typeof GM_registerMenuCommand === 'function') GM_registerMenuCommand('Play Legend of Varrowmere', function () { play(); });
 // Torn Arcade link: the two scripts talk through page events (no requests, nothing shared but these three messages).
 //   Arcade sends 'varrowmere:ping'  -> this script answers 'varrowmere:here' { version, music }   (so the phone can show the app;
@@ -173,9 +173,11 @@ document.addEventListener('varrowmere:preload', function () { const go = functio
 //   (with detail { host: id } the game opens inside that element on the page, i.e. inside the phone, instead of over the page)
 //   Arcade sends 'varrowmere:close' -> the game closes (and saves), as when you leave it on the phone
 document.addEventListener('varrowmere:open', function (e) {
-  let host = null, pad; try { const d = JSON.parse(e.detail || 'null'); if (d && typeof d.host === 'string') host = document.getElementById(d.host); if (d && typeof d.pad === 'boolean') pad = d.pad; } catch (x) {}
-  play(host, pad).then(function () { document.documentElement.dataset.varrowmereOpen = '1'; });
+  let host = null, pad, muted; try { const d = JSON.parse(e.detail || 'null'); if (d && typeof d.host === 'string') host = document.getElementById(d.host); if (d && typeof d.pad === 'boolean') pad = d.pad; if (d && typeof d.muted === 'boolean') muted = d.muted; } catch (x) {}
+  play(host, pad, muted).then(function () { document.documentElement.dataset.varrowmereOpen = '1'; });
 });
+//   Arcade sends 'varrowmere:mute' { muted } -> sound and music off or on (the phone's speaker button)
+document.addEventListener('varrowmere:mute', function (e) { let m = false; try { m = !!JSON.parse(e.detail).muted; } catch (x) {} if (readying) readying.then(function (LV) { if (LV.setMuted) LV.setMuted(m); }); });
 //   Arcade sends 'varrowmere:pad' { on } -> the touch pad turns on or off (the phone's 🎮 button)
 document.addEventListener('varrowmere:pad', function (e) { let on = false; try { on = !!JSON.parse(e.detail).on; } catch (x) {} if (readying) readying.then(function (LV) { if (LV.setPad) LV.setPad(on); }); });
 document.addEventListener('varrowmere:close', function () { if (readying) readying.then(function (LV) { if (LV.root && LV.root.style.display !== 'none') LV.close(); }); });

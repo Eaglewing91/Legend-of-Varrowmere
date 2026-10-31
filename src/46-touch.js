@@ -94,3 +94,15 @@ LV.Input.prototype.key = (function (orig) {
     return g;
   };
 })();
+
+/* ---------- mute: from Torn Arcade's speaker button (or opts.muted) ---------- */
+LV.setMuted = function (m) {
+  LV.mutedWanted = !!m;
+  const g = LV.game; if (!g) return;
+  g.muted = !!m;
+  if (g.music) { g.music.stop(); g.music.track = null; }   // the next frame starts the right track again, or stays silent
+};
+(function () {
+  const open = LV.open;
+  LV.open = function (opts) { opts = opts || {}; const g = open.call(this, opts); if (opts.muted !== undefined && opts.muted !== null) LV.setMuted(opts.muted); return g; };
+})();
