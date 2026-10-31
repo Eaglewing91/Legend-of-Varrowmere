@@ -46,20 +46,33 @@ LV.now = function () { return (typeof performance !== 'undefined' ? performance 
 })();
 
 /* ================= Music: Ninja Adventure tracks (CC0), looped. The old chiptune tunes play if a track can't be decoded. ================= */
+// dungeon moods: [track, speed, filter, volume]
+LV.MUSIC_STYLES = {
+  d_crypt: ['cave', 0.88, ['lowpass', 1600], 1.2], d_mine: ['cave', 1.0, null], d_sunken: ['cave', 0.8, ['lowpass', 1100], 1.3],
+  d_swamp: ['dungeon', 0.86, ['lowpass', 1400], 1.2], d_fire: ['dungeon', 1.12, null], d_palace: ['shadow', 1.04, null],
+  d_den: ['dungeon', 0.95, ['lowpass', 2200], 1.1], d_ice: ['shadow', 0.84, ['highpass', 320]], d_tower: ['shadow', 1.1, ['highpass', 220]],
+  d_mirror: ['shadow', 0.9, ['bandpass', 900], 1.4], d_glass: ['dungeon', 1.06, ['highpass', 400]], d_keep: ['shadow', 0.92, null],
+  d_arcade: ['village', 1.18, ['lowpass', 2600]], d_dungeon: ['dungeon', 1, null],
+  miniboss: ['boss', 1.08, ['lowpass', 2400]]
+};
 (function () {
   const synthPlay = LV.Music.prototype.play, synthStop = LV.Music.prototype.stop, decoded = {}, pending = {};
   const ALIAS = { overworld: 'village' };
   LV.Music.prototype.play = function (name) {
     if (this.track === name) return;
-    const key = ALIAS[name] || name, g = this.g;
-    if (!LV.MUSIC || !LV.MUSIC[key] || g.muted || !this.on || typeof AudioContext === 'undefined') { this.stop(); return synthPlay.call(this, name === 'ending' ? 'home' : name); }
+    const style = LV.MUSIC_STYLES[name], key = style ? style[0] : (ALIAS[name] || name), g = this.g;
+    if (!LV.MUSIC || !LV.MUSIC[key] || g.muted || !this.on || typeof AudioContext === 'undefined') { this.stop(); return synthPlay.call(this, name === 'ending' ? 'home' : style ? (name === 'miniboss' ? 'boss' : 'dungeon') : name); }
     this.stop(); this.track = name;
     try { if (!g.audio) g.audio = new AudioContext(); } catch (e) { return; }
     const ac = g.audio, self = this;
     const start = function (buf) {
       if (self.track !== name || !self.on) return;
-      const src = ac.createBufferSource(), gn = ac.createGain(); src.buffer = buf; src.loop = true; gn.gain.value = 0.32;
-      src.connect(gn); gn.connect(ac.destination); src.start(); self.src = src;
+      const src = ac.createBufferSource(), gn = ac.createGain(); src.buffer = buf; src.loop = true; gn.gain.value = 0.32 * (style && style[3] || 1);
+      // each kind of dungeon plays its track its own way: slower and darker, brighter and quicker
+      if (style) src.playbackRate.value = style[1];
+      let out = src;
+      if (style && style[2]) { const f = ac.createBiquadFilter(); f.type = style[2][0]; f.frequency.value = style[2][1]; out.connect(f); out = f; }
+      out.connect(gn); gn.connect(ac.destination); src.start(); self.src = src;
     };
     if (decoded[key]) return start(decoded[key]);
     if (pending[key]) { pending[key].push(start); return; }

@@ -32,14 +32,14 @@ LV.VARIANTS = {
   slimered:    { base: 'slime', tint: 'hue-rotate(-110deg) saturate(1.6)', hp: 4, dmg: 2, sp: 60, ai: 'hopper', split: 'slime' },
   slimeblue:   { base: 'slime3', tint: 'hue-rotate(120deg)', hp: 5, dmg: 3, sp: 70, ai: 'hopper', split: 'slime3' },
   eyered:      { base: 'eye', tint: 'hue-rotate(-60deg) saturate(1.8)', hp: 4, dmg: 3, sp: 30, ai: 'blinker', bolt: 'fire' },
-  cyclopered:  { base: 'cyclope', tint: 'hue-rotate(-40deg) saturate(1.7)', hp: 10, dmg: 6, sp: 34, ai: 'chase', heavy: true },
-  cyclopeice:  { base: 'cyclope', tint: 'hue-rotate(160deg) saturate(1.4)', hp: 9, dmg: 5, sp: 30, ai: 'chase', heavy: true },
-  beastgold:   { base: 'beast', tint: 'hue-rotate(40deg) saturate(2) brightness(1.15)', hp: 6, dmg: 4, sp: 50, ai: 'charger' },
+  cyclopered:  { base: 'cyclope', tint: 'hue-rotate(-40deg) saturate(1.7)', hp: 7, dmg: 6, sp: 34, ai: 'chase', heavy: true },
+  cyclopeice:  { base: 'cyclope', tint: 'hue-rotate(160deg) saturate(1.4)', hp: 6, dmg: 5, sp: 30, ai: 'chase', heavy: true },
+  beastgold:   { base: 'beast', tint: 'hue-rotate(40deg) saturate(2) brightness(1.15)', hp: 5, dmg: 4, sp: 50, ai: 'charger' },
   lizardice:   { base: 'lizard', tint: 'hue-rotate(150deg)', hp: 5, dmg: 3, sp: 50, ai: 'shooter', bolt: 'ice' },
   molefire:    { base: 'mole', tint: 'hue-rotate(-30deg) saturate(2)', hp: 5, dmg: 4, sp: 55, ai: 'burrow' },
   moledirt:    { base: 'mole', tint: '', hp: 4, dmg: 3, sp: 50, ai: 'burrow' },
   spiderblue:  { base: 'spiderred', tint: 'hue-rotate(200deg) saturate(1.5)', hp: 3, dmg: 3, sp: 95, ai: 'chase' },
-  reptilegold: { base: 'reptile2', tint: 'hue-rotate(50deg) saturate(1.7)', hp: 7, dmg: 4, sp: 50, ai: 'charger' },
+  reptilegold: { base: 'reptile2', tint: 'hue-rotate(50deg) saturate(1.7)', hp: 5, dmg: 4, sp: 50, ai: 'charger' },
   snakefire:   { base: 'snake', tint: 'hue-rotate(-90deg) saturate(2)', hp: 3, dmg: 3, sp: 55, ai: 'shooter', bolt: 'fire' },
   octopusblue: { base: 'octopus', tint: 'hue-rotate(180deg)', hp: 4, dmg: 3, sp: 30, ai: 'shooter', bolt: 'ice', triple: true },
   shroomspore: { base: 'mushroom', tint: 'hue-rotate(250deg) saturate(1.8)', hp: 3, dmg: 2, sp: 25, ai: 'shooter', bolt: 'spore', ring: true },
@@ -295,4 +295,16 @@ Object.keys(LV.BIG).forEach(function (k) { LV.ENEMIES[k] = LV.makeBigFoe(LV.BIG[
     this.actors = all.filter(function (e) { return e.x > cx - 48 && e.x < cx + W + 48 && e.y > cy - 32 && e.y < cy + H + 80; });
     try { render.call(this); } finally { this.actors = all; }
   };
+})();
+
+/* ---------- difficulty by place in the adventure: new bosses scale to the sword you'll have; shots hit as hard as the foes ---------- */
+(function () {
+  const enter = LV.Game.prototype.enter;
+  LV.Game.prototype.enter = function (mapId, x, y, dir, first) {
+    enter.call(this, mapId, x, y, dir, first);
+    const sc = this.world.def.bossScale; if (!sc || sc === 1) return;
+    for (const a of this.actors) if (a.boss && a.bigfoe && !a.scaled) { a.scaled = true; a.hp = Math.max(4, Math.round(a.hp * sc)); a.maxHp = a.hp; }
+  };
+  const bu = LV.Bolt.prototype.update;
+  LV.Bolt.prototype.update = function (g, dt) { if (!this.tiered) { this.tiered = true; const t = g.world.def.tier || 1; if (t > 1) this.power = Math.ceil(this.power * (1 + (t - 1) * 0.5)); } return bu.call(this, g, dt); };
 })();

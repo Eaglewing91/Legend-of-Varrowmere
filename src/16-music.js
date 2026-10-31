@@ -61,7 +61,8 @@ LV.Music.prototype.toggle = function () { this.on = !this.on; const t = this.tra
     if (this.mode === 'ending') want = 'ending';
     else if (this.mode !== 'title' && this.world) {
       const self = this, bossNear = this.actors.some(function (a) { return a.boss && !a.dead && self.world.areaAt(a.x, a.y - 8) === self.area; });
-      want = bossNear ? 'boss' : (this.world.def.music || 'overworld');
+      const miniNear = !bossNear && this.world.def.dungeon && this.actors.some(function (a) { return a.bigfoe && !a.dead && !a.summoned && self.world.areaAt(a.x, a.y - 8) === self.area; });
+      want = bossNear ? 'boss' : miniNear ? 'miniboss' : (this.world.def.music || 'overworld');
     }
     this.music.play(want);
   };

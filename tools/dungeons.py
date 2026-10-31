@@ -2050,6 +2050,16 @@ ROSTER = {
     'turtle':  ['beast', 'lizard', 'eye', 'reptile2', 'molefire', 'snakefire', 'eyered', 'batfire', 'beastgold', 'reptilegold', 'cyclopered'],
 }
 
+# where each dungeon sits in the adventure: regular foes' strength (x hit points, damage grows half as fast),
+# the new bosses' hit points (the early ones meet a plainer sword), and the dungeon's music
+DIFF = {
+    'ruins1': (1.0, 1.0, 'crypt'), 'shrine': (1.1, 1.0, 'sunken'), 'olddepths': (1.2, 0.6, 'mine'), 'barrow': (1.25, 0.6, 'crypt'),
+    'brambletemple': (1.3, 0.65, 'swamp'), 'forge': (1.3, 1.0, 'fire'), 'castle': (1.4, 1.0, 'palace'), 'vault': (1.5, 1.0, 'sunken'),
+    'quarry': (1.6, 1.0, 'mine'), 'bonehollow': (1.7, 1.0, 'crypt'), 'thievesden': (1.75, 1.0, 'den'), 'frostmere': (1.8, 1.0, 'ice'),
+    'mirefen': (1.85, 1.0, 'swamp'), 'turtleback': (1.9, 1.0, 'fire'), 'stormspire': (1.95, 1.0, 'tower'), 'mirrortemple': (2.0, 1.1, 'mirror'),
+    'glassspire': (2.05, 1.0, 'glass'), 'keep': (2.2, 1.0, 'keep'), 'arcadevault': (2.4, 1.3, 'arcade'),
+}
+
 # floors in the order you go through them, the floor you come in on first; rooms; grid of one floor; Small Keys
 PLANS = {
     'barrow':        dict(floors=['1F', 'B1', 'B2'], rooms=26, grid=(5, 4), keys=3),
@@ -2433,6 +2443,10 @@ def build_full(M, mid, name, back, theme, item, crystal, mini, boss, gate, plan=
                         'floorName': f, 'floors': floors + ([plan['core']] if wing else []), 'floorIds': ids, 'stairs': [], 'drops': []})
         if wing:
             m.extra['boss'] = False; m.extra['wingOf'] = core_map.id; m.extra['shadow'] = core_map.extra.get('shadow', False)
+        tier, bscale, tune = DIFF.get(mid, (1.5, 1.0, 'dungeon'))
+        m.extra['tier'] = round(tier * (1 + min(0.15, 0.04 * fi)), 2)          # a little tougher on each floor further in
+        m.extra['bossScale'] = bscale
+        m.music = 'd_' + tune
         m.extra['triggers'] = []
         for y in range(m.h):
             for x in range(m.w):
