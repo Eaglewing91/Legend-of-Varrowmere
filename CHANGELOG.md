@@ -6,6 +6,11 @@ Dates are in TCT (Torn City Time).
 
 ---
 
+## 1.0.8 — 2026-10-31
+### Fixed
+- Closing the game during the opening scene no longer leaves Wren stuck in bed: the scene plays again from the start.
+- Wren never starts a game stuck inside something solid; she steps to the nearest free spot.
+
 ## 1.0.7 — 2026-10-31
 ### Fixed
 - Torn Arcade's volume slider now sets Legend of Varrowmere's volume too (music and sound effects).

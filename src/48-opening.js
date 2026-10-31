@@ -66,6 +66,9 @@ LV.OPENING = function () {
 LV.Game.prototype.startFile = (function (orig) {
   return function (i) {
     const st = this.title && this.title.stores[i], s = (st && st.get()) || LV.newSave();
+    // a file closed before the opening finished (still in bed): play it again from the start
+    const unfinished = s.flags && s.flags.intro && s.flags.night && s.map === 'home' && s.x === BED.x + 8 && s.y === BED.y;
+    if (unfinished) { orig.call(this, i); this.fade = 1; this.startOpening(); return; }
     if (s.flags && s.flags.intro) return orig.call(this, i);
     // a brand-new file: wake up at home, at night
     s.flags = s.flags || {}; s.flags.intro = 1; s.flags.night = 1; s.map = 'home'; s.x = BED.x + 8; s.y = BED.y; s.dir = 2;
@@ -159,5 +162,20 @@ LV.Game.prototype.enter = (function (orig) {
         'Past the cave, through the old gate. Mind the soldiers. And the logs. Especially the logs.']]] }));
     }
     return r;
+  };
+})(LV.Game.prototype.enter);
+
+// never start stuck inside something solid (a file saved while Wren was still in bed, say): step to the nearest free spot
+LV.Game.prototype.enter = (function (orig) {
+  return function (mapId, x, y, dir, first) {
+    const r = orig.call(this, mapId, x, y, dir, first), h = this.hero, w = this.world;
+    if (!h || !w || this.scene || !w.boxBlocked(h.bodyBox(), 'hero')) return r;
+    const x0 = h.x, y0 = h.y;
+    for (let rad = 1; rad <= 6; rad++) for (let dy = -rad; dy <= rad; dy++) for (let dx = -rad; dx <= rad; dx++) {
+      if (Math.max(Math.abs(dx), Math.abs(dy)) !== rad) continue;
+      h.x = (Math.floor(x0 / 16) + dx) * 16 + 8; h.y = (Math.floor(y0 / 16) + dy) * 16 + 12;
+      if (!w.boxBlocked(h.bodyBox(), 'hero') && !w.warpAt(Math.floor(h.x / 16), Math.floor((h.y - 3) / 16))) { h.safe = { x: h.x, y: h.y }; return r; }
+    }
+    h.x = x0; h.y = y0; return r;
   };
 })(LV.Game.prototype.enter);
