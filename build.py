@@ -5,12 +5,12 @@ Art sheets are embedded as base64 PNG; maps come from tools/maps.py.
 """
 import base64, glob, json, os, subprocess
 
-VERSION = '0.8.0'
+VERSION = '0.8.1'
 os.makedirs('build', exist_ok=True)
 subprocess.run(['python3', 'tools/maps.py'], check=True)
 
-ART = {'overworld': 'Overworld.png', 'inner': 'Inner.png', 'cave': 'cave.png', 'objects': 'objects.png', 'hero': 'character.png', 'log': 'log.png', 'npc': 'NPC_test.png'}
-art = {k: base64.b64encode(open('art/pack-armm1998/' + f, 'rb').read()).decode() for k, f in ART.items()}
+ART = {'overworld': 'pack-armm1998/Overworld.png', 'inner': 'pack-armm1998/Inner.png', 'cave': 'pack-armm1998/cave.png', 'objects': 'pack-armm1998/objects.png', 'hero': 'pack-armm1998/character.png', 'log': 'pack-armm1998/log.png', 'na': 'ninja-adventure/monsters.png'}
+art = {k: base64.b64encode(open('art/' + f, 'rb').read()).decode() for k, f in ART.items()}
 
 src = '\n'.join(open(f).read() for f in sorted(glob.glob('src/*.js')))
 maps = open('src/data/maps.json').read()
@@ -28,7 +28,7 @@ header = f"""// ==UserScript==
 // @grant        GM_registerMenuCommand
 // @run-at       document-idle
 // ==/UserScript==
-/* Art: "Zelda-like tilesets and sprites" by ArMM1998 (OpenGameArt, CC0). Everything else (c) Eaglewing [571041], all rights reserved. */
+/* Art: "Zelda-like tilesets and sprites" by ArMM1998 (OpenGameArt, CC0); squid and spirit monsters from "Ninja Adventure" by Pixel-boy and AAA (CC0). Everything else (c) Eaglewing [571041], all rights reserved. */
 """
 launcher = """
 (function () {

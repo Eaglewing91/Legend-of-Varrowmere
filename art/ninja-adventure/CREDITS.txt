@@ -1,0 +1,3 @@
+Squid and spirit monster sprites from the "Ninja Adventure" asset pack by Pixel-boy and AAA, licence CC0.
+https://pixel-boy.itch.io/ninja-adventure-asset-pack
+(taken from the CC0 copy in github.com/clear-code-projects/Zelda; downscaled from 4x)

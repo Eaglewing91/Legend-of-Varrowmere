@@ -176,7 +176,7 @@ LV.CREDITS = [
   ['A Torn Arcade adventure', '#f8d040'], ['', ''],
   ['Created by', '#a0a0c0'], ['Eaglewing', '#fff'], ['', ''],
   ['Built with', '#a0a0c0'], ['Claude', '#fff'], ['', ''],
-  ['Art', '#a0a0c0'], ['ArMM1998 (CC0 pack)', '#fff'], ['', ''], ['', ''],
+  ['Art', '#a0a0c0'], ['ArMM1998 (CC0 pack)', '#fff'], ['Pixel-boy and AAA (Ninja Adventure, CC0)', '#fff'], ['', ''], ['', ''],
   ['THANKS FOR PLAYING', '#f8d040']
 ];
 (function () {
