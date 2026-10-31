@@ -265,6 +265,20 @@ const { chromium } = require('playwright');
     return { intro, shade: true, blade1, arrow, stag, hp1, blade2, mode: g.mode, won: !!g.save.flags.won }; });
   check("Vex's Shadow: two phases, Sunfire Arrows, true ending", r.intro && r.shade && r.blade1 === 'immune' && r.arrow === 'hit' && r.stag && r.hp1 === 6 && r.blade2 === 'hit' && r.mode === 'ending' && r.won, r);
   r = await p.evaluate(() => { const g = LV.game; g.mode = 'play'; return 1; });
+  // 58. The world joins up: off the end of Thistledown's jetty and onto Marrowgate's bridge, and back
+  r = await p.evaluate(() => { const g = LV.game; place('meadow', 7, 12, 2); g.actors = []; step(50, ['down']); step(30, []); const a = g.world.id, x = Math.floor(H().x / 16);
+    step(10, []); step(60, ['up']); step(30, []); return { a, x, back: g.world.id }; });
+  check('regions join: Thistledown jetty to Marrowgate bridge', r.a === 'marrowgate' && r.x === 23 && r.back === 'meadow', r);
+  // 59. Lucky Lids: pay 20, two picks, prizes paid out
+  r = await p.evaluate(() => { const g = LV.game; g.save.cash = 100; place('mg_chests', 7, 7, 0); step(1, [], ['action']); let n = 0; while (g.dialog && !g.dialog.choices && n++ < 5) step(1, [], ['action']);
+    step(1, [], ['action']); const paid = g.save.cash === 80; n = 0; while (g.dialog && !g.dialog.choices && n++ < 5) step(1, [], ['action']); step(1, [], ['action']); n = 0; while (g.dialog && !g.dialog.choices && n++ < 5) step(1, [], ['action']); step(1, [], ['down']); step(1, [], ['action']); n = 0; while (g.dialog && n++ < 8) step(1, [], ['action']);
+    return { paid, cash: g.save.cash, picks: g.chestPick && g.chestPick.opened.length }; });
+  check('chest game: two picks for twenty', r.paid && r.picks === 2 && r.cash > 80, r);
+  // 60. Shooting gallery: a round runs, targets can be hit, prize paid
+  r = await p.evaluate(() => { const g = LV.game; g.save.items.bow = 1; g.save.cash = 50; place('mg_gallery', 12, 8, 0); g.hero.x = 12 * 16 + 8; g.hero.y = 8 * 16 + 12; g.gallery(); step(1, [], ['action']); const started = !!g.galleryRun;
+    g.dialog = null; const t = g.actors.find(a => a.kind === 'target'); LV.applyHit(g, new LV.Hit({ team: 'hero', kind: 'arrow', power: 2, from: { x: 0, y: 0 }, box: { x: 0, y: 0, w: 1, h: 1 } }), t); const hits = g.galleryRun.hits;
+    g.galleryRun.t = 0; step(2, []); const line = g.dialog && g.dialog.lines[0]; g.dialog = null; return { started, hits, line, cash: g.save.cash }; });
+  check('shooting gallery round', r.started && r.hits === 1 && /1 hits/.test(r.line) && r.cash === 42, r);
   console.log(results.join('\n')); console.log('errors', errs);
   await b.close();
   process.exit(results.some(x => x.startsWith('FAIL')) || errs.length ? 1 : 0);

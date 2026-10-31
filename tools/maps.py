@@ -181,9 +181,126 @@ def signboard(m, x, y, text):
     m.sign(x, y, text)
 
 
+# ---------- region painting: author whole screens as text ----------
+# .  grass        =  stone road      -  stone path      :  dry earth     ~  deep water (edges drawn automatically)
+# F  forest wall  b  bush            r  boulder (Glove) O  big boulder (2x2, top-left)   *  flowers
+# H  house (5x5, top-left; the door is the middle of its bottom row)   f  fence (ends joined)   |  fence post
+# S  market stall (5x6, top-left)   W  fountain (3x3, top-left)   B  barrels (2x2)   p  pit
+def paint(m, rows, ox=0, oy=0):
+    H_ = len(rows)
+    W_ = max(len(r) for r in rows)
+    g = [r.ljust(W_, '.') for r in rows]
+    at = lambda x, y: g[y][x] if 0 <= y < H_ and 0 <= x < W_ else None
+    grass(m, ox, oy, ox + W_ - 1, oy + H_ - 1)
+    for y in range(H_):
+        for x in range(W_):
+            c, X, Y = g[y][x], ox + x, oy + y
+            if c == '=':
+                m.put('ground', OW, 8 + (X % 2), 23 if Y % 2 else 24, X, Y)
+                m.col[Y * m.w + X] = OPEN
+            elif c == '-':
+                m.put('ground', OW, 8, 23, X, Y)
+            elif c == ':':
+                m.put('ground', OW, 12, 13, X, Y)
+            elif c == '~':
+                wet = lambda a, b: at(a, b) in ('~', None)
+                cx = 0 if not wet(x - 1, y) else 2 if not wet(x + 1, y) else 1
+                cy = 0 if not wet(x, y - 1) else 2 if not wet(x, y + 1) else 1
+                m.put('ground', OW, 2 + cx, 6 + cy, X, Y)
+                m.col[Y * m.w + X] = DEEP
+            elif c == 'F':
+                j = Y % 6
+                m.put('over' if j < 3 else 'deco', OW, 4 + X % 4, 9 + j, X, Y)
+                m.col[Y * m.w + X] = SOLID
+            elif c == 'b':
+                bush(m, X, Y)
+            elif c == 'r':
+                m.put('deco', CV, 5, 4, X, Y)
+                m.col[Y * m.w + X] = ROCK
+            elif c == '*':
+                m.put('deco', OW, 1, 8, X, Y)
+            elif c == 'p':
+                m.put('ground', CV, 1, 1, X, Y)
+                m.col[Y * m.w + X] = PIT
+    for y in range(H_):
+        for x in range(W_):
+            c, X, Y = g[y][x], ox + x, oy + y
+            if c == 'O':
+                boulder(m, X, Y)
+            elif c == 'H':
+                m.stamp(OW, 6, 0, X, Y, 5, 5, col=SOLID)
+            elif c == 'S':
+                stall(m, X, Y)
+            elif c == 'W':
+                fountain(m, X, Y)
+            elif c == 'B':
+                barrels(m, X, Y)
+            elif c == 'f' and at(x - 1, y) != 'f':
+                x1 = x
+                while at(x1 + 1, y) == 'f':
+                    x1 += 1
+                fence(m, X, ox + x1, Y)
+            elif c == '|':
+                m.stamp(OW, 0, 17, X, Y, col=LOW)
+
+
+def interior(mid, name, back, kind='house', npcs=(), chests=(), signs=()):
+    """A one-room interior (16x14) with furniture by kind; the door at the bottom returns to back = (map, x, y)."""
+    m = Map(mid, 16, 14, name, indoor=True, music='home')
+    m.fill(IN, 1, 1, 0, 0, 15, 13)
+    m.fill(IN, 0, 4, 2, 3, 13, 12)
+    for x in range(2, 14):
+        for r in range(3):
+            m.put('ground', IN, 5 + (x % 3), 6 + r, x, r)
+    m.solid(0, 0, 16, 3)
+    m.solid(0, 0, 2, 14)
+    m.solid(14, 0, 2, 14)
+    m.solid(0, 13, 16, 1)
+    for x in (7, 8):
+        m.put('ground', IN, 0, 4, x, 13)
+        m.solid(x, 13, 1, 1, OPEN)
+        m.warp(x, 13, back[0], back[1], back[2], 2)
+    if kind in ('house', 'inn'):
+        m.stamp(IN, 16, 1, 2, 3, 2, 3, col=SOLID)
+        m.stamp(IN, 10, 1, 9, 6, 3, 3, col=SOLID)
+        m.stamp(IN, 12, 10, 11, 2, 2, 3, col=SOLID)
+    if kind in ('shop', 'smith', 'tavern', 'library', 'game'):
+        for x in range(3, 13):
+            m.put('deco', IN, 10 if x == 3 else 12 if x == 12 else 11, 3, x, 6)
+            m.col[6 * m.w + x] = LOW if kind == 'game' else SOLID
+    if kind == 'library':
+        for x0 in (2, 6, 10):
+            m.stamp(IN, 3, 12, x0, 3, 3, 2, col=SOLID)
+    if kind == 'tavern':
+        m.stamp(IN, 6, 9, 2, 8, 3, 3, col=SOLID)
+        m.stamp(IN, 10, 1, 10, 9, 3, 3, col=SOLID)
+    if kind == 'smith':
+        m.stamp(IN, 12, 10, 11, 2, 2, 3, col=SOLID)
+    m.put('deco', IN, 8, 12, 13, 11)
+    for n in npcs:
+        m.spawn('villager', n[0], n[1], **n[2])
+    for c in chests:
+        m.chest(*c)
+    for sg in signs:
+        m.sign(*sg)
+    m.entry = [7, 12]
+    return m
+
+
+def region(mid, name, wx, wy, sw, sh, rows, music='village'):
+    m = Map(mid, sw * 16, sh * 14, name, music=music)
+    for j in range(sh):
+        for i in range(sw):
+            m.area(i * 16, j * 14)
+    m.extra['world'] = [wx, wy]
+    paint(m, rows)
+    return m
+
+
 # ---------- the first area: Thistledown and the east meadow ----------
 def thistledown():
     m = Map('meadow', 48, 14, 'Thistledown')
+    m.extra['world'] = [3, 4]
     m.area(0, 0)
     m.area(16, 0)
     m.area(32, 0)
@@ -897,6 +1014,78 @@ def ashford_castle():
     return m
 
 
+def marrowgate():
+    """Marrowgate, the big town south across the water from Thistledown (world screens 2-5, 5-6)."""
+    ns = {}
+    exec(open('tools/regions/marrowgate_terrain.py').read(), ns)
+    m = region('marrowgate', 'Marrowgate', 2, 5, 4, 2, ns['ROWS'])
+    m.extra['names'] = ['West Marrowgate', 'Market Bridge', 'Marrowgate Square', 'East Marrowgate', 'Old Lane', 'South Road', 'The Commons', 'Rock Garden']
+    houses = [  # (x, y, interior id, name, kind)
+        (8, 3, 'mg_tavern', 'The Rusty Nail', 'tavern'), (14, 3, 'mg_smith', 'Brannock Smithy', 'smith'),
+        (27, 3, 'mg_library', 'Marrowgate Library', 'library'), (33, 3, 'mg_store', 'Odds and Ends', 'shop'),
+        (44, 3, 'mg_chests', 'Lucky Lids', 'game'), (49, 3, 'mg_elder', "Mayor Tull's House", 'house'),
+        (9, 11, 'mg_gallery', 'Shooting Gallery', 'game'), (15, 13, 'mg_house', "The Wexford House", 'house'),
+        (47, 13, 'mg_clinic', 'Marrowgate Clinic', 'house')]
+    for (x, y, iid, nm, kind) in houses:
+        house(m, x, y, (iid, 7, 12, 0))
+    m.stamp(OW, 22, 9, 30, 13, 3, 3, col=SOLID)
+    stall(m, 33, 10)
+    stall(m, 44, 9)
+    signboard(m, 22, 9, 'MARROWGATE|Biggest town this side of the Chancellor. Mind your purse.')
+    signboard(m, 25, 4, 'NORTH: Thistledown across the water.')
+    fence(m, 12, 22, 21)
+    for y in range(22, 26):
+        for x in range(12, 23):
+            m.put('ground', OW, 12, 13, x, y)
+    m.sign(11, 23, 'THE DIG FIELD|Closed until the Shovel shipment arrives.')
+    people = [
+        (20, 10, 'farmer', 20, [[None, ['Welcome to Marrowgate! Everything is for sale here except my opinion. That is free.', 'Well. It is five cash.']]]),
+        (36, 17, 'trader', 0, [[None, ['Fresh fish! Yesterday\'s fish! Fish of uncertain age!']]]),
+        (46, 16, 'scholar', 0, [[None, ['The Chancellor\'s tax collectors come every Tuesday. We all go on holiday on Tuesdays.']]]),
+        (29, 17, 'baker', 16, [[None, ['I bake bread for the whole town. Nobody pays. They just say "put it on my tab".', 'I do not have a tab. I have never had a tab.']]]),
+        (56, 11, 'guard', 0, [[None, ['Town watch. Nothing to report. Somebody stole a plushie from a stall, but the plushie seemed happy to go.']]]),
+        (8, 18, 'elder', 10, [[None, ['In my day we walked to the hospital. Uphill. Both ways. After being mugged. Both ways.']]]),
+        (52, 22, 'farmer', 0, [[None, ['Those boulders? Been there since my grandfather tried to move them. He is still trying, in a way.', 'Folk say a strong pair of gloves would shift them.']]]),
+        (16, 24, 'fisher', 0, [[None, ['This is the dig field. Pay me, dig a hole, keep what you find.', 'I have no shovels to lend, though. The last batch was "borrowed".']]]),
+    ]
+    for (x, y, look, roam, talk) in people:
+        m.spawn('villager', x, y, look=look, roam=roam, talk=talk)
+    m.spawn('log', 58, 24)
+    m.spawn('soldier', 36, 22)
+    m.entry = [23, 4]
+    return m
+
+
+def marrowgate_interiors():
+    back = lambda x, y: ('marrowgate', x + 2, y + 5)
+    out = []
+    out.append(interior('mg_tavern', 'The Rusty Nail', back(8, 3), 'tavern', npcs=[
+        (7, 5, dict(look='trader', roam=0, dir=2, talk=[[None, ['What will it be? We have ale, stronger ale, and a drink called "Hospital Visit".', 'Do not order the Hospital Visit.']]])),
+        (4, 11, dict(look='guard', roam=0, dir=1, talk=[[None, ['Off duty. Do not tell the Captain. Especially not Brask. He takes everything personally.']]])),
+        (11, 8, dict(look='farmer', roam=8, talk=[[None, ['I put my whole savings in the stock market. Now the stock market has my savings, and I have a lovely story.']]])),
+        (12, 11, dict(look='scholar', roam=0, dir=3, talk=[[None, ['They say a bird lives on top of Frostspire that will carry you anywhere if you play it a tune.', 'Do you play? No? Neither do I. I just hum at it.']]]))]))
+    out.append(interior('mg_smith', 'Brannock Smithy', back(14, 3), 'smith', npcs=[
+        (7, 5, dict(look='guard', roam=0, dir=2, talk=[[None, ['Brannock, smith. My brother Durn and I used to temper blades together.', 'He went into Whisperwood after a rare ore and never came back.', 'Find him, and I will make your blade sing.']]]))]))
+    out.append(interior('mg_library', 'Marrowgate Library', back(27, 3), 'library', npcs=[
+        (7, 8, dict(look='scholar', roam=0, dir=2, talk=[[None, ['Shh. This is a library.', 'The Book of Old Script is on the top shelf. Nobody can reach it. We put it there in a fit of ambition.', 'A good hard run into the shelf might knock it down.']]]))]))
+    out.append(interior('mg_store', 'Odds and Ends', back(33, 3), 'shop', npcs=[
+        (7, 5, dict(look='trader', roam=0, dir=2, shop=True, talk=[[None, ['Odds and Ends! Mostly ends. Have a look.']]]))]))
+    out.append(interior('mg_chests', 'Lucky Lids', back(44, 3), 'game', npcs=[
+        (7, 5, dict(look='trader', roam=0, dir=2, chestgame=True, talk=[[None, ['Lucky Lids! Twenty cash, pick two chests, keep what is inside.', 'The house always wins, but sometimes the house is having a bad day.']]]))]))
+    out.append(interior('mg_elder', "Mayor Tull's House", back(49, 3), 'house', npcs=[
+        (7, 7, dict(look='elder', roam=6, talk=[
+            ['pendant_forge', ['Three Pendants? Then the old songs were true. The Dawnblade waits in the grove east of the Highlands.']],
+            [None, ['Mayor Tull. I would offer you a job, but the Chancellor takes ninety percent of the town budget.', 'The other ten percent goes on ribbon for ribbon-cutting ceremonies. We cut a lot of ribbons.']]]))]))
+    out.append(interior('mg_gallery', 'Shooting Gallery', back(9, 11), 'game', npcs=[
+        (12, 9, dict(look='guard', roam=0, dir=3, gallery=True, talk=[[None, ['Shooting gallery! Ten cash a round. Hit the targets, win prizes.']]]))]))
+    out.append(interior('mg_house', 'The Wexford House', back(15, 13), 'house', npcs=[
+        (5, 8, dict(look='baker', roam=6, talk=[[None, ['My husband went to buy milk three years ago. He sends letters. He is "still looking for the right milk".']]])),
+        (10, 9, dict(look='farmer', roam=4, talk=[[None, ['I am not lazy. I am in energy-saving mode.']]]))], chests=[(12, 4, 'cash50')]))
+    out.append(interior('mg_clinic', 'Marrowgate Clinic', back(47, 13), 'house', npcs=[
+        (7, 6, dict(look='baker', roam=0, dir=2, heal=True, talk=[[None, ['Clinic! Sit down, you look like you have been through a wall. Several walls.', 'There. All patched. No charge, the Mayor pays. Well, the Mayor promises to pay.']]]))]))
+    return out
+
+
 def shadowize(m, name):
     """Copy an overworld map into Shadow Varrowmere: same ground, darker palette, no people, new enemies."""
     import copy
@@ -1206,7 +1395,7 @@ def shadow_keep():
 
 
 if __name__ == '__main__':
-    out = {m.id: m.json() for m in (thistledown(), home(), cave1(), meadow_ruins(), riverhead(), sunken_shrine(), highlands(), ember_forge(), grove(), ashford_castle(), *shadow_world(), drowned_vault(), hollow_quarry(), shadow_keep())}
+    out = {m.id: m.json() for m in (thistledown(), home(), cave1(), meadow_ruins(), riverhead(), sunken_shrine(), highlands(), ember_forge(), grove(), ashford_castle(), *shadow_world(), drowned_vault(), hollow_quarry(), shadow_keep(), marrowgate(), *marrowgate_interiors())}
     out.update({g.id: g.json() for g in GROTTOS})
     os.makedirs('src/data', exist_ok=True)
     json.dump(out, open('src/data/maps.json', 'w'), separators=(',', ':'))

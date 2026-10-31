@@ -89,7 +89,7 @@ LV.Game.prototype.interact = (function (orig) {
   return function (h) {
     // talk across a counter: if the tile in front is solid, reach one tile further
     const d = LV.DIRS[h.dir], near = { x: h.x + d.x * 12 - 6, y: h.y - 10 + d.y * 12, w: 12, h: 12 };
-    const far = { x: near.x + d.x * 16, y: near.y + d.y * 16, w: 12, h: 12 }, solid = this.world.c(Math.floor((near.x + 6) / 16), Math.floor((near.y + 6) / 16)) === LV.C.SOLID;
+    const far = { x: near.x + d.x * 16, y: near.y + d.y * 16, w: 12, h: 12 }, nc = this.world.c(Math.floor((near.x + 6) / 16), Math.floor((near.y + 6) / 16)), solid = nc === LV.C.SOLID || nc === LV.C.LOW;
     for (const a of this.actors) if (a.npc && (LV.overlap(near, a.hurtBox()) || (solid && LV.overlap(far, a.hurtBox())))) {
       a.dir = (h.dir + 2) % 4; a.goal = null; a.facing = 1.5;
       const self = this, lines = a.lines(this);
