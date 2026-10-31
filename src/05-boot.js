@@ -24,7 +24,7 @@ LV.open = function (opts) {
   const fit = function () { const s = Math.max(1, Math.floor(Math.min(innerWidth / LV.VIEW_W, (innerHeight - 40) / LV.VIEW_H))); cv.style.width = LV.VIEW_W * s + 'px'; cv.style.height = LV.VIEW_H * s + 'px'; };
   fit(); addEventListener('resize', fit);
   const bar = document.createElement('div'); bar.style.cssText = 'color:#ccc;font:12px sans-serif;margin-top:8px';
-  bar.textContent = 'Arrows/WASD move · Z attack (hold for Spin) · C lift/read/open · Enter pause · Esc close';
+  bar.textContent = 'Arrows/WASD move · Z sword (hold for Spin) · X item · C lift/talk/open · Enter items · M map · N music · Esc close';
   root.appendChild(cv); root.appendChild(bar); (opts.parent || document.body).appendChild(root);
   const game = new LV.Game(cv, { store: opts.store || LV.storeFor(), muted: opts.muted });
   LV.game = game;
