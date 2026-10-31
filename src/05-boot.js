@@ -16,21 +16,38 @@ LV.storeFor = function () {
 /* Open the game in a window over the current page. Keys only drive the game while it's open and you're not typing. */
 LV.open = function (opts) {
   opts = opts || {};
-  if (LV.root) { LV.root.style.display = 'flex'; if (LV.loop) LV.loop.start(); return LV.game; }
+  if (LV.root) { LV.place(opts.parent); LV.root.style.display = 'flex'; if (LV.loop) LV.loop.start(); return LV.game; }
   const root = document.createElement('div'); LV.root = root;
-  root.style.cssText = 'position:fixed;inset:0;z-index:2147483000;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;flex-direction:column';
-  const cv = document.createElement('canvas'); cv.width = LV.VIEW_W; cv.height = LV.VIEW_H;
+  const cv = document.createElement('canvas'); cv.width = LV.VIEW_W; cv.height = LV.VIEW_H; LV.canvas = cv;
   cv.style.cssText = 'image-rendering:pixelated;image-rendering:crisp-edges;box-shadow:0 0 0 2px #333';
-  const fit = function () { const s = Math.max(1, Math.floor(Math.min(innerWidth / LV.VIEW_W, (innerHeight - 40) / LV.VIEW_H))); cv.style.width = LV.VIEW_W * s + 'px'; cv.style.height = LV.VIEW_H * s + 'px'; };
-  fit(); addEventListener('resize', fit);
   const bar = document.createElement('div'); bar.style.cssText = 'color:#ccc;font:12px sans-serif;margin-top:8px';
   bar.textContent = 'Arrows/WASD move · Z sword (hold for Spin) · X item · C lift/talk/open · Enter items · M map · N music · Esc close';
-  root.appendChild(cv); root.appendChild(bar);
-  if (!opts.noClose) {   // a close button too, for anyone who opened it with the mouse (from the Torn Arcade phone, say)
+  root.appendChild(cv); root.appendChild(bar); LV.bar = bar;
+  if (!opts.noClose) {   // a close button too, for anyone who opened it with the mouse
     const x = document.createElement('button'); x.type = 'button'; x.textContent = '✕ Close'; x.title = 'Close (your game is saved)';
     x.style.cssText = 'position:absolute;top:10px;right:12px;padding:6px 12px;border:1px solid #555;border-radius:6px;background:#222;color:#ddd;font:600 13px sans-serif;cursor:pointer';
-    x.addEventListener('click', function () { LV.close(); }); root.appendChild(x);
-  } (opts.parent || document.body).appendChild(root);
+    x.addEventListener('click', function () { LV.close(); }); root.appendChild(x); LV.closeBtn = x;
+  }
+  // the window fills the page, or (inside the Torn Arcade phone) the box it's given; the picture scales to fit
+  LV.fit = function () {
+    const host = root.parentNode, inside = host && host !== document.body && LV.embedded;
+    const W = inside ? host.clientWidth : innerWidth, H = inside ? host.clientHeight : innerHeight - 40;
+    let s = Math.min(W / LV.VIEW_W, H / LV.VIEW_H);
+    s = inside ? Math.max(0.5, s) : Math.max(1, Math.floor(s));
+    cv.style.width = Math.floor(LV.VIEW_W * s) + 'px'; cv.style.height = Math.floor(LV.VIEW_H * s) + 'px';
+  };
+  addEventListener('resize', LV.fit);
+  if (typeof ResizeObserver === 'function') LV.ro = new ResizeObserver(function () { LV.fit(); });
+  LV.place = function (parent) {
+    LV.embedded = !!parent;
+    root.style.cssText = parent ? 'position:absolute;inset:0;background:#000;display:flex;align-items:center;justify-content:center;flex-direction:column'
+      : 'position:fixed;inset:0;z-index:2147483000;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;flex-direction:column';
+    bar.style.display = parent ? 'none' : ''; if (LV.closeBtn) LV.closeBtn.style.display = parent ? 'none' : '';
+    const host = parent || document.body; if (root.parentNode !== host) host.appendChild(root);
+    if (LV.ro) { LV.ro.disconnect(); if (parent) LV.ro.observe(parent); }
+    LV.fit();
+  };
+  LV.place(opts.parent);
   const game = new LV.Game(cv, { store: opts.store || LV.storeFor(), muted: opts.muted });
   LV.game = game;
   if (opts.title) game.showTitle(opts.stores);

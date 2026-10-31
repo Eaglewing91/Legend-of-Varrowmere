@@ -6,6 +6,10 @@ Dates are in TCT (Torn City Time).
 
 ---
 
+## 1.0.2 — 2026-10-31
+### Changed
+- From Torn Arcade, the game now opens **inside the phone**, turned sideways like Tornies, instead of in its own window over the page. The Home button (or Esc) takes you back to the phone and saves. From the Tampermonkey menu it still opens in its own window.
+
 ## 1.0.1 — 2026-10-31
 ### New
 - **Preload Legend:** with Torn Arcade 2.54.1's new setting turned on, the game gets itself ready in the background when you open the phone, so it starts straight away. Nothing is downloaded or saved.

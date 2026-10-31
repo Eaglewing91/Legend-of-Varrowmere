@@ -5,7 +5,7 @@ Art sheets are embedded as base64 PNG; maps come from tools/maps.py.
 """
 import base64, glob, json, os, subprocess
 
-VERSION = '1.0.1'
+VERSION = '1.0.2'
 os.makedirs('build', exist_ok=True)
 subprocess.run(['python3', 'tools/maps.py'], check=True)
 subprocess.run(['python3', 'tools/patch_sheets.py'], check=True)
@@ -142,7 +142,7 @@ header = f"""// ==UserScript==
  *   no websockets. Every picture and sound is built into the script (the music is in the optional Soundtrack script).
  * - Your three save files are kept in Tampermonkey storage on your device.
  * - Torn Arcade link (page events only): 'varrowmere:ping' / 'varrowmere:here' (is it installed? version, Soundtrack
- *   version, leaderboard numbers), 'varrowmere:open' (you tapped Play), 'varrowmere:closed' and 'varrowmere:scores'
+ *   version, leaderboard numbers), 'varrowmere:open' (you tapped Play: the game opens inside the phone), 'varrowmere:close' (you left it), 'varrowmere:closed' and 'varrowmere:scores'
  *   (total playtime, completion and monsters defeated, for the Arcade's leaderboards; only sent on by the Arcade if
  *   you turned on its optional Online play).
  *
@@ -159,18 +159,24 @@ launcher = """
 // unpack the game and decode its art, once; both Play and a preload share the same work
 let readying = null;
 const ready = function () { return readying || (readying = boot().then(function (LV) { return LV.loadArt().then(function () { return LV; }); }).catch(function (e) { readying = null; throw e; })); };
-const play = function () { return ready().then(function (LV) { LV.open({ title: true }); }); };
-if (typeof GM_registerMenuCommand === 'function') GM_registerMenuCommand('Play Legend of Varrowmere', play);
+const play = function (parent) { return ready().then(function (LV) { LV.open({ title: true, parent: parent || null }); }); };
+if (typeof GM_registerMenuCommand === 'function') GM_registerMenuCommand('Play Legend of Varrowmere', function () { play(); });
 // Torn Arcade link: the two scripts talk through page events (no requests, nothing shared but these three messages).
 //   Arcade sends 'varrowmere:ping'  -> this script answers 'varrowmere:here' { version, music }   (so the phone can show the app;
 //                                      music is the Soundtrack script's version, or '' when it isn't installed; scores
 //                                      are the leaderboard numbers saved when the game last closed: { time, completion, kills })
 //   When the game window closes it also sends 'varrowmere:scores' with those numbers.
-//   Arcade sends 'varrowmere:open'  -> the game opens over the page; when it closes, 'varrowmere:closed' goes back
+//   Arcade sends 'varrowmere:open'  -> the game opens; when it closes, 'varrowmere:closed' goes back
 document.addEventListener('varrowmere:ping', function () { document.dispatchEvent(new CustomEvent('varrowmere:here', { detail: JSON.stringify({ version: '""" + VERSION + """', music: document.documentElement.dataset.varrowmereMusic || '', scores: (function () { try { return JSON.parse(GM_getValue('lv_scores', 'null')); } catch (e) { return null; } })() }) })); });
 //   Arcade sends 'varrowmere:preload' (only if you turned on Preload Legend) -> the game unpacks itself when the page is idle
 document.addEventListener('varrowmere:preload', function () { const go = function () { ready().catch(function () {}); }; if (typeof requestIdleCallback === 'function') requestIdleCallback(go, { timeout: 3000 }); else setTimeout(go, 500); });
-document.addEventListener('varrowmere:open', function () { play().then(function () { document.documentElement.dataset.varrowmereOpen = '1'; }); });
+//   (with detail { host: id } the game opens inside that element on the page, i.e. inside the phone, instead of over the page)
+//   Arcade sends 'varrowmere:close' -> the game closes (and saves), as when you leave it on the phone
+document.addEventListener('varrowmere:open', function (e) {
+  let host = null; try { const d = JSON.parse(e.detail || 'null'); if (d && typeof d.host === 'string') host = document.getElementById(d.host); } catch (x) {}
+  play(host).then(function () { document.documentElement.dataset.varrowmereOpen = '1'; });
+});
+document.addEventListener('varrowmere:close', function () { if (readying) readying.then(function (LV) { if (LV.root && LV.root.style.display !== 'none') LV.close(); }); });
 document.documentElement.dataset.varrowmere = '""" + VERSION + """';
 """
 open('build/Legend-of-Varrowmere.user.js', 'w').write(header + '(function () {\n' + body + launcher + '\n})();\n')
