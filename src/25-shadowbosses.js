@@ -12,7 +12,7 @@ LV.makeVillager = (function (orig) {
     const e = orig(x, y, s);
     if (s && s.vault) e.onTalk = function (g) {
       if (LV.crystals(g.save) < 7) return;
-      g.ask(['Seven Crystals. You are a member. Go down?'], ['Down we go', 'Not yet'], function (i) { if (i) return; g.fadeTo = function () { g.enter('arcadevault', 23 * 16 + 8, 25 * 16 + 12, 0); g.fade = 1; }; });
+      g.ask(['Seven Crystals. You are a member. Go down?'], ['Down we go', 'Not yet'], function (i) { if (i) return; g.fadeTo = function () { g.enter('arcadevault', LV.MAPS.arcadevault.entry[0] * 16 + 8, LV.MAPS.arcadevault.entry[1] * 16 + 12, 0); g.fade = 1; }; });
     };
     return e;
   };

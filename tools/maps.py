@@ -469,6 +469,8 @@ def naremap(m):
                     G[i] = ref(NI, 1 + (x + y * 2) % 3, 1)
                 elif 5 <= tt[0] <= 7 and 6 <= tt[1] <= 8 and not (W == 16 and H == 14):
                     G[i] = ref(NR, tt[0] - 1, tt[1] - 6)
+            if g >= 0 and sh(g) == CV and t(g) == (0, 0) and m.extra.get('floor'):
+                G[i] = ref(NI, *m.extra['floor'])
             d = D[i]
             if d >= 0 and sh(d) == OW:
                 tt = t(d)
@@ -2074,96 +2076,193 @@ def shadow_regions():
     return out
 
 
+# ---------- dungeon layouts: every generated dungeon has its own shape, puzzles and hazards ----------
+# rooms: (rx, ry) -> role. Roles: E entrance, K small key (puzzle), C compass, M map, H hall, B mini-boss (Big Key),
+# T Big Chest, G item gate (treasure behind it), X boss. edges: (a, b, kind) kind: open, locked, big, shut (opens when
+# room a is cleared of enemies), crack (bomb the wall).  puzzle: how each K room's key alcove opens.  look: hazard shapes.
+LAYOUTS = {
+    'cross': dict(size=(3, 3), rooms={(1, 2): 'E', (0, 2): 'K', (2, 2): 'C', (1, 1): 'H', (0, 1): 'M', (2, 1): 'B', (1, 0): 'T', (0, 0): 'G', (2, 0): 'X'},
+                  edges=[((1, 2), (0, 2), 'open'), ((1, 2), (2, 2), 'open'), ((1, 2), (1, 1), 'shut'), ((1, 1), (0, 1), 'open'), ((1, 1), (2, 1), 'locked'),
+                         ((1, 1), (1, 0), 'open'), ((1, 0), (0, 0), 'open'), ((1, 0), (2, 0), 'big')]),
+    'long': dict(size=(4, 2), rooms={(1, 1): 'E', (0, 1): 'K', (2, 1): 'H', (3, 1): 'B', (1, 0): 'T', (0, 0): 'G', (2, 0): 'M', (3, 0): 'X'},
+                 edges=[((1, 1), (0, 1), 'open'), ((1, 1), (2, 1), 'open'), ((1, 1), (1, 0), 'shut'), ((1, 0), (0, 0), 'open'), ((2, 1), (3, 1), 'locked'),
+                        ((1, 0), (2, 0), 'open'), ((2, 0), (3, 0), 'big')]),
+    'tower': dict(size=(2, 4), rooms={(0, 3): 'E', (1, 3): 'K', (0, 2): 'H', (1, 2): 'C', (0, 1): 'B', (1, 1): 'M', (0, 0): 'T', (1, 0): 'X'},
+                  edges=[((0, 3), (1, 3), 'open'), ((0, 3), (0, 2), 'shut'), ((0, 2), (1, 2), 'open'), ((0, 2), (0, 1), 'locked'), ((0, 1), (1, 1), 'open'),
+                         ((0, 1), (0, 0), 'open'), ((0, 0), (1, 0), 'big'), ((1, 2), (1, 1), 'crack')]),
+    'ring': dict(size=(3, 3), rooms={(1, 2): 'E', (0, 2): 'H', (2, 2): 'K', (0, 1): 'M', (2, 1): 'C', (0, 0): 'B', (1, 0): 'T', (2, 0): 'G', (1, 1): 'X'},
+                 edges=[((1, 2), (0, 2), 'open'), ((1, 2), (2, 2), 'open'), ((0, 2), (0, 1), 'shut'), ((2, 2), (2, 1), 'open'), ((0, 1), (0, 0), 'locked'),
+                        ((0, 0), (1, 0), 'open'), ((1, 0), (2, 0), 'open'), ((2, 1), (2, 0), 'crack'), ((1, 0), (1, 1), 'big')]),
+    'wide': dict(size=(4, 3), rooms={(1, 2): 'E', (0, 2): 'C', (2, 2): 'K', (3, 2): 'H', (1, 1): 'H', (0, 1): 'M', (2, 1): 'K', (3, 1): 'B', (1, 0): 'T', (0, 0): 'G', (2, 0): 'H', (3, 0): 'X'},
+                 edges=[((1, 2), (0, 2), 'open'), ((1, 2), (2, 2), 'open'), ((2, 2), (3, 2), 'open'), ((1, 2), (1, 1), 'shut'), ((1, 1), (0, 1), 'open'),
+                        ((1, 1), (2, 1), 'locked'), ((2, 1), (3, 1), 'locked'), ((1, 1), (1, 0), 'open'), ((1, 0), (0, 0), 'open'), ((1, 0), (2, 0), 'open'), ((2, 0), (3, 0), 'big'),
+                        ((3, 2), (3, 1), 'crack')]),
+}
+DUNGEON_STYLE = {   # id -> (layout, key puzzles in order, hazard look)
+    'bonehollow': ('cross', ['torches'], 'pillars'), 'thievesden': ('long', ['clear'], 'maze'), 'frostmere': ('ring', ['plate'], 'islands'),
+    'mirefen': ('wide', ['plate', 'torches'], 'moat'), 'turtleback': ('tower', ['torches'], 'stripes'), 'arcadevault': ('wide', ['clear', 'torches'], 'checker'),
+    'olddepths': ('tower', ['plate'], 'stripes'), 'barrow': ('cross', ['plate'], 'ring'), 'brambletemple': ('long', ['torches'], 'moat'),
+    'stormspire': ('ring', ['clear'], 'checker'), 'mirrortemple': ('cross', ['torches'], 'islands'), 'glassspire': ('wide', ['torches', 'plate'], 'pillars'),
+}
+
+
+def hazard_cells(look, k):
+    """Hazard tiles inside a room (room-local 1..14 x 3..12), never on the central cross so every door stays reachable."""
+    cells = set()
+    for y in range(4, 12):
+        for x in range(2, 14):
+            if x in (6, 7, 8, 9) or y in (7, 8):
+                continue
+            on = {'pillars': (x % 4 == 2 and y % 3 == 1), 'maze': ((x + k) % 3 == 0 and y not in (5, 10)) or (y in (5, 10) and x % 5 == 1),
+                  'islands': ((x // 2 + y // 2 + k) % 3 == 0), 'moat': (x in (2, 3, 12, 13) or y in (4, 11)), 'stripes': ((y + k) % 3 == 0),
+                  'checker': ((x + y + k) % 2 == 0 and x not in (5, 10)), 'ring': (x in (4, 11) or y in (5, 10)) and 3 < x < 12}[look]
+            if on:
+                cells.add((x, y))
+    return cells
+
+
 def make_dungeon(mid, name, back, theme, item, crystal, mini, boss, gate):
-    """A Shadow dungeon from the common plan, dressed by theme, with an item gate that needs the dungeon's own item:
-       (0,0) secret room behind the item gate (heart piece)   (1,0) Big Chest, boss door east   (2,0) BOSS
-       (0,1) the Small Key behind a puzzle                    (1,1) entrance: clear it to go north (2,1) mini-boss, then the Big Key"""
-    m = Map(mid, 48, 28, name, indoor=True, music='dungeon')
-    for ry in range(2):
-        for rx in range(3):
-            room(m, rx, ry)
+    """A dungeon laid out by its own layout (LAYOUTS / DUNGEON_STYLE): its own room arrangement, key puzzles, hazards and secrets."""
+    lay, puzzles, look = DUNGEON_STYLE.get(mid, ('cross', ['torches'], 'pillars'))
+    L = LAYOUTS[lay]
+    gw, gh = L['size']
+    m = Map(mid, gw * 16, gh * 14, name, indoor=True, music='dungeon')
+    order = sorted(L['rooms'], key=lambda p: (p[1], p[0]))
+    for (rx, ry) in order:
+        room(m, rx, ry)
+    area = {p: i for i, p in enumerate(order)}
     m.extra.update({'dungeon': mid, 'exit': [back[0], back[1], back[2]], 'boss': True, 'pendant': crystal, 'shadow': True, 'lava': [], 'flood': [], 'spill': []})
-    def lava(x0, y0, x1, y1):
-        for y in range(y0, y1 + 1):
-            for x in range(x0, x1 + 1):
-                m.col[y * m.w + x] = PIT
-                m.extra['lava'].append(y * m.w + x)
-    def pit(x0, y0, x1, y1):
-        for y in range(y0, y1 + 1):
-            for x in range(x0, x1 + 1):
-                m.col[y * m.w + x] = PIT
-                m.put('ground', CV, 1, 1, x, y)
-    def pool(x0, y0, x1, y1, kind=None):
-        for y in range(y0, y1 + 1):
-            for x in range(x0, x1 + 1):
-                if kind:
-                    m.extra[kind].append(y * m.w + x)
-                else:
-                    m.col[y * m.w + x] = DEEP
-    hazard = {'forest': pit, 'thieves': pit, 'ice': pool, 'swamp': lambda *a: pool(*a, kind='flood'), 'turtle': lava}[theme]
+    m.extra.setdefault('triggers', [])
+
+    def haz(x, y):
+        if theme == 'turtle':
+            m.col[y * m.w + x] = PIT; m.extra['lava'].append(y * m.w + x)
+        elif theme == 'swamp':
+            m.extra['flood'].append(y * m.w + x)
+        elif theme == 'ice':
+            m.col[y * m.w + x] = DEEP
+        else:
+            m.col[y * m.w + x] = PIT; m.put('ground', CV, 1, 1, x, y)
     foes = {'forest': ['skull', 'bluebat', 'mushroom'], 'thieves': ['soldier', 'archer', 'spiderred'], 'ice': ['slime3', 'skullblue', 'bluebat'],
             'swamp': ['snake', 'octopus', 'slime'], 'turtle': ['beast', 'eye', 'lizard']}[theme]
-    # entrance (1,1)
-    door(m, 1, 1, 's')
-    m.warp(23, 27, back[0], back[1], back[2], 2)
-    m.warp(24, 27, back[0], back[1], back[2], 2)
-    door(m, 1, 1, 'n', SHUTTER, 'hall')
-    door(m, 1, 0, 's')
-    m.extra.setdefault('triggers', []).append({'type': 'clear', 'area': 4, 'open': 'hall'})
-    hazard(18, 18, 20, 21)
-    hazard(27, 18, 29, 21)
-    for k, (x, y) in enumerate([(21, 19), (26, 19), (23, 22)]):
-        m.spawn(foes[k % 3], x, y)
-    door(m, 1, 1, 'w')
-    door(m, 0, 1, 'e')
-    door(m, 1, 1, 'e', LOCKED)
-    door(m, 2, 1, 'w', LOCKED)
-    # west room (0,1): the Small Key in an alcove opened by a switch (push the block on, or light the torches)
-    for (x, y) in [(2, 17), (2, 18), (5, 17), (5, 18), (2, 19), (5, 19)]:
-        m.solid(x, y, 1, 1, SOLID)
-        m.put('deco', IN, 6, 7, x, y)
-    m.solid(3, 19, 2, 1, SHUTTER)
-    m.extra.setdefault('shutters', {})['wkey'] = [[3, 19], [4, 19]]
-    m.chest(3, 17, 'key')
-    if theme in ('forest', 'turtle'):
-        m.solid(8, 17, 1, 1, TORCH)
-        m.solid(13, 17, 1, 1, TORCH)
-        m.extra['triggers'].append({'type': 'torches', 'at': [[8, 17], [13, 17]], 'open': 'wkey'})
-    else:
-        m.solid(10, 21, 1, 1, BLOCK)
-        m.extra['plates'] = [[10, 24]]
-        m.solid(10, 24, 1, 1, PLATE)
-        m.extra['triggers'].append({'type': 'plate', 'at': [[10, 24]], 'open': 'wkey'})
-    hazard(2, 22, 5, 24)
-    m.spawn(foes[0], 12, 19)
-    m.spawn(foes[1], 7, 25)
-    m.chest(13, 25, 'compass')
-    # east room (2,1): the mini-boss; the Big Key appears when it falls
-    m.spawn(mini, 40, 21)
-    m.chests['40,17'] = {'item': 'bigkey', 'big': False}
-    m.extra.setdefault('reveal', {})['mini'] = [[40, 17]]
-    m.extra['triggers'].append({'type': 'clear', 'area': 5, 'open': 'mini'})
-    m.chest(45, 25, 'map')
-    # north room (1,0): the Big Chest, hazards, the boss door east, and the item gate west
-    bigchest(m, 23, 4, item)
-    hazard(17, 8, 19, 11)
-    hazard(28, 8, 30, 11)
-    m.spawn(foes[2], 20, 6)
-    m.spawn(foes[0], 27, 10)
-    door(m, 1, 0, 'e', BIGLOCK)
-    door(m, 2, 0, 'w', BIGLOCK)
-    door(m, 1, 0, 'w')
-    door(m, 0, 0, 'e')
-    # north-west room (0,0): the item gate guards a heart piece and some cash
-    for y in range(3, 13):
-        m.solid(11, y, 1, 1, gate)
-    m.chest(5, 5, 'cash100')
-    m.chest(8, 5, 'plushie' if mid == 'thievesden' else 'arrows')
-    # the boss room (2,0)
-    m.spawn(boss, 40, 7)
-    if boss == 'shellback':
-        rocks(m, [(35, 5), (44, 5), (35, 11), (44, 11)])
-    m.entry = [23, 25]
+    side = lambda a, b: 'e' if b[0] > a[0] else 'w' if b[0] < a[0] else 's' if b[1] > a[1] else 'n'
+    for k, (a, b, kind) in enumerate(L['edges']):
+        if kind == 'open':
+            door(m, a[0], a[1], side(a, b)); door(m, b[0], b[1], side(b, a))
+        elif kind == 'locked':
+            door(m, a[0], a[1], side(a, b), LOCKED); door(m, b[0], b[1], side(b, a), LOCKED)
+        elif kind == 'big':
+            door(m, a[0], a[1], side(a, b), BIGLOCK); door(m, b[0], b[1], side(b, a), BIGLOCK)
+        elif kind == 'shut':
+            g = 'hall%d' % k
+            door(m, a[0], a[1], side(a, b), SHUTTER, g); door(m, b[0], b[1], side(b, a))
+            m.extra['triggers'].append({'type': 'clear', 'area': area[a], 'open': g})
+        elif kind == 'crack':                # a cracked wall: bomb it through
+            for (p, q) in ((a, b), (b, a)):
+                door(m, p[0], p[1], side(p, q))
+            X, Y = a[0] * 16, a[1] * 14
+            sd = side(a, b)
+            cells = {'n': [(X + 7, Y + 2), (X + 8, Y + 2)], 's': [(X + 7, Y + 13), (X + 8, Y + 13)], 'w': [(X, Y + 7), (X, Y + 8)], 'e': [(X + 15, Y + 7), (X + 15, Y + 8)]}[sd]
+            for (x, y) in cells:
+                m.solid(x, y, 1, 1, CRACK)
+    keys = list(puzzles)
+    n = 0
+    for (rx, ry), role in sorted(L['rooms'].items(), key=lambda kv: (kv[0][1], kv[0][0])):
+        X, Y = rx * 16, ry * 14
+        n += 1
+        if role in 'EHCMK':
+            for (x, y) in hazard_cells(look, n):
+                if role == 'K' and y <= 5 and 3 <= x <= 12:
+                    continue
+                haz(X + x, Y + y)
+        if role == 'E':
+            door(m, rx, ry, 's')
+            for x in (7, 8):
+                m.warp(X + x, Y + 13, back[0], back[1], back[2], 2)
+            m.entry = [X + 7, Y + 11]
+            for j, (x, y) in enumerate([(4, 6), (11, 6), (7, 4)]):
+                m.spawn(foes[j % 3], X + x, Y + y)
+        elif role == 'H':
+            for j, (x, y) in enumerate([(4, 5), (11, 5), (4, 10), (11, 10)]):
+                m.spawn(foes[(j + n) % 3], X + x, Y + y)
+        elif role == 'K':             # the Small Key sits in an alcove behind a shutter (at the top, or the bottom if a door is north)
+            pz = keys.pop(0) if keys else 'clear'
+            north = any((e[0] == (rx, ry) and side(e[0], e[1]) == 'n') or (e[1] == (rx, ry) and side(e[1], e[0]) == 'n') for e in L['edges'])
+            ay, sy_ = (10, 9) if north else (3, 5)
+            for (x, y) in [(6, ay), (6, ay + 1), (9, ay), (9, ay + 1)]:
+                m.solid(X + x, Y + y, 1, 1, SOLID); m.put('deco', IN, 6, 7, X + x, Y + y)
+            g = 'key%d' % n
+            m.solid(X + 7, Y + sy_, 2, 1, SHUTTER)
+            m.extra.setdefault('shutters', {})[g] = [[X + 7, Y + sy_], [X + 8, Y + sy_]]
+            m.chest(X + 7, Y + ay, 'key')
+            if north:
+                for (x, y) in [(7, 12), (8, 12)]:
+                    m.solid(X + x, Y + y, 1, 1, SOLID); m.put('deco', IN, 6, 7, X + x, Y + y)
+            if pz == 'torches':
+                for (x, y) in ((3, 4), (12, 4), (3, 11), (12, 11)):
+                    m.solid(X + x, Y + y, 1, 1, TORCH)
+                m.extra['triggers'].append({'type': 'torches', 'at': [[X + 3, Y + 4], [X + 12, Y + 4], [X + 3, Y + 11], [X + 12, Y + 11]], 'open': g})
+            elif pz == 'plate':
+                m.solid(X + 4, Y + 9, 1, 1, BLOCK); m.solid(X + 11, Y + 9, 1, 1, BLOCK)
+                m.extra.setdefault('plates', []).extend([[X + 4, Y + 11], [X + 11, Y + 11]])
+                m.solid(X + 4, Y + 11, 1, 1, PLATE); m.solid(X + 11, Y + 11, 1, 1, PLATE)
+                for (x, y) in ((4, 8), (11, 8), (4, 9), (11, 9), (4, 10), (11, 10), (4, 11), (11, 11), (4, 12), (11, 12), (3, 9), (5, 9), (10, 9), (12, 9)):
+                    i = (Y + y) * m.w + X + x
+                    if m.col[i] in (PIT, DEEP) or i in m.extra['lava'] or i in m.extra['flood']:
+                        m.col[i] = OPEN
+                        if i in m.extra['lava']: m.extra['lava'].remove(i)
+                        if i in m.extra['flood']: m.extra['flood'].remove(i)
+                        m.put('ground', CV, 0, 0, X + x, Y + y)
+                m.extra['triggers'].append({'type': 'plate', 'at': [[X + 4, Y + 11], [X + 11, Y + 11]], 'open': g})
+            else:
+                for j, (x, y) in enumerate([(4, 6), (11, 6), (4, 10), (11, 10)]):
+                    m.spawn(foes[j % 3], X + x, Y + y)
+                m.extra['triggers'].append({'type': 'clear', 'area': area[(rx, ry)], 'open': g})
+        elif role == 'C':
+            m.chest(X + 12, Y + 11, 'compass'); m.spawn(foes[n % 3], X + 5, Y + 6)
+        elif role == 'M':
+            m.chest(X + 3, Y + 11, 'map'); m.spawn(foes[(n + 1) % 3], X + 10, Y + 6)
+        elif role == 'B':
+            m.spawn(mini, X + 8, Y + 8)
+            m.chests['%d,%d' % (X + 8, Y + 4)] = {'item': 'bigkey', 'big': False}
+            m.extra.setdefault('reveal', {})['mini'] = [[X + 8, Y + 4]]
+            m.extra['triggers'].append({'type': 'clear', 'area': area[(rx, ry)], 'open': 'mini'})
+        elif role == 'T':
+            bigchest(m, X + 7, Y + 4, item)
+            for (x, y) in hazard_cells(look, n + 3):
+                if y >= 9:
+                    haz(X + x, Y + y)
+            m.spawn(foes[2], X + 4, Y + 9); m.spawn(foes[0], X + 11, Y + 9)
+        elif role == 'G':             # the item gate: a wall of pegs or dark rocks between the way in and the treasure
+            ins = [side((rx, ry), e[1] if e[0] == (rx, ry) else e[0]) for e in L['edges'] if (rx, ry) in (e[0], e[1])]
+            d0 = ins[0] if ins else 'w'
+            if d0 in 'ew':
+                gx, cx = (4, 2) if d0 == 'e' else (11, 13)
+                for y in range(3, 13):
+                    m.solid(X + gx, Y + y, 1, 1, gate)
+                m.chest(X + cx, Y + 5, 'cash100')
+                m.chest(X + cx, Y + 10, 'plushie' if mid == 'thievesden' else 'arrows')
+            else:
+                gy, cy = (6, 4) if d0 == 's' else (9, 11)
+                for x in range(1, 15):
+                    m.solid(X + x, Y + gy, 1, 1, gate)
+                m.chest(X + 4, Y + cy, 'cash100')
+                m.chest(X + 11, Y + cy, 'plushie' if mid == 'thievesden' else 'arrows')
+            for (x, y) in ((4, 5), (4, 10)):
+                m.spawn(foes[1], X + x, Y + y)
+        elif role == 'X':
+            m.spawn(boss, X + 8, Y + 7)
+            if boss == 'shellback':
+                rocks(m, [(X + 3, Y + 5), (X + 12, Y + 5), (X + 3, Y + 11), (X + 12, Y + 11)])
+    # soft-edged pits and pools, and a floor that suits the theme
+    import blend as _B
+    for y in range(m.h):
+        for x in range(m.w):
+            c = m.col[y * m.w + x]
+            if c in (PIT, DEEP) and y * m.w + x not in m.extra['lava']:
+                k = _B.mask(lambda a, b: m.ok(a, b) and m.col[b * m.w + a] == c and b * m.w + a not in m.extra['lava'], x, y)
+                m.put('ground', BL, k & 15, (8 if c == PIT else 7) * 16 + (k >> 4), x, y)
+    m.extra['floor'] = {'forest': (12, 7), 'swamp': (13, 8), 'ice': (1, 1), 'turtle': (1, 7), 'thieves': None}[theme]
     return m
 
 
@@ -2187,6 +2286,12 @@ if __name__ == '__main__':
     built = [thistledown(), home(), cave1(), meadow_ruins(), riverhead(), sunken_shrine(), highlands(), ember_forge(), grove(), ashford_castle(), *shadow_world(), drowned_vault(), hollow_quarry(), shadow_keep(), marrowgate(), *marrowgate_interiors(), *willowfen(), *whisperwood(), *outer_regions(), *shadow_regions(), *shadow_dungeons(), arcade_vault()]
     import world as WORLD
     built = WORLD.rebuild(built, sys.modules[__name__])      # lay the overworld out to tools/worldplan.py
+    entries = {m.id: m.entry for m in built if m.id in DUNGEON_STYLE}
+    for m in built + GROTTOS:
+        for w in m.warps:
+            if w['to'] in entries and (w['tx'], w['ty']) in ((23, 25), (24, 25)):
+                e = entries[w['to']]
+                w['tx'], w['ty'] = e[0] + (w['tx'] - 23), e[1]
     out = {m.id: m.json() for m in built}
     out.update({g.id: g.json() for g in GROTTOS})
     os.makedirs('src/data', exist_ok=True)
