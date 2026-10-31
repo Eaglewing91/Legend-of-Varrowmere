@@ -118,3 +118,21 @@ LV.ENEMIES.shade = function (x, y) {
     return kill.call(this, a);
   };
 })();
+
+/* ---------- balance: the shadow world hits harder; the Shadow Mail (hidden in a grotto there) halves damage ---------- */
+(function () {
+  const ah = LV.applyHit;
+  LV.applyHit = function (game, hit, t) {
+    if (t.isHero && hit.team === 'enemy' && game.world && game.world.def.shadow && !hit.scaled) { hit.scaled = true; hit.power = Math.ceil(hit.power * 1.5); }
+    return ah(game, hit, t);
+  };
+  const enter = LV.Game.prototype.enter;
+  LV.Game.prototype.enter = function (mapId, x, y, dir, first) { enter.call(this, mapId, x, y, dir, first); this.hero.armourLv = this.save.items.mail ? 1 : 0; };
+})();
+LV.Game.prototype.openChest = (function (orig) {
+  return function (mapId, key, tx, ty, ch) {
+    if (ch.item !== 'mail') return orig.call(this, mapId, key, tx, ty, ch);
+    orig.call(this, mapId, key, tx, ty, Object.assign({}, ch, { item: '__m' })); delete this.save.items.__m; this.dialog = null;
+    this.save.items.mail = 1; this.hero.armourLv = 1; this.say(['You got the Shadow Mail!', 'Dark chainmail, light as a shirt. You take half damage from now on.', 'Previous owner: "lost in a duel over a parking space."']);
+  };
+})(LV.Game.prototype.openChest);

@@ -64,7 +64,7 @@ const { chromium } = require('playwright');
   r = await p.evaluate(() => { const g = LV.game; place('cave1', 6, 10, 1); g.actors = []; H().hp = 12; step(1, [], ['item']); step(130, []); return H().hp; });
   check('standing on a bomb hurts', r === 8, r);
   // 14. Shield: an enemy arrow from the front is blocked, from behind it hits
-  r = await p.evaluate(() => { const g = LV.game; place('meadow', 20, 9, 1); g.actors = []; H().hp = 12; g.shots.push(new LV.Arrow(24 * 16, 9 * 16 + 4, 3, 'enemy')); step(60, []); const front = H().hp; H().inv = 0; g.shots.push(new LV.Arrow(16 * 16, 9 * 16 + 4, 1, 'enemy')); step(60, []); return { front: front, back: H().hp }; });
+  r = await p.evaluate(() => { const g = LV.game; place('meadow', 20, 9, 1); g.actors = []; H().hp = 12; g.shots.push(new LV.Arrow(24 * 16, 9 * 16 + 4, 3, 'enemy')); step(60, []); const front = H().hp; H().inv = 0; g.shots.push(new LV.Arrow(19 * 16 + 4, 9 * 16 + 4, 1, 'enemy')); step(60, []); return { front: front, back: H().hp }; });
   check('shield blocks arrows from the front only', r.front === 12 && r.back === 10, r);
   // 15. Hero arrows hurt enemies and stop at walls
   r = await p.evaluate(() => { const g = LV.game; g.save.items.bow = 1; g.save.arrows = 5; g.save.equip = 'bow'; place('meadow', 20, 9, 1); g.actors = []; const i = addLog(24, 9); const e = g.actors[i]; e.hp = 5; step(1, [], ['item']); step(60, []); return { hp: e.hp, arrows: g.save.arrows }; });

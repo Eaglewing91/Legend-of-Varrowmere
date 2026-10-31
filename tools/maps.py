@@ -280,6 +280,7 @@ def thistledown():
     m.warp(7, 0, 'highlands', 7, 26, 0)
     m.warp(8, 0, 'highlands', 8, 26, 0)
     m.variant('pendant_shrine', before)
+    secret_cave(m, 17, 9, 'grotto1', ['heart_shard', 'dice'], 'Someone hid their winnings here. Probably from a very lucky night of cards.')
     m.entry = [8, 8]
     return m
 
@@ -575,6 +576,30 @@ def sunken_shrine():
     return m
 
 
+GROTTOS = []
+
+
+def secret_cave(m, x, y, gid, items, text):
+    """A cracked boulder: bomb it open and a hidden grotto lies behind. Its tiles must be clear ground."""
+    for (i, j) in [(0, 0), (1, 0), (0, 1), (1, 1), (0, 2)]:
+        assert m.col[(y + j) * m.w + x + i] == OPEN, (m.id, x + i, y + j)
+    boulder(m, x, y)
+    m.warp(x, y + 1, gid, 7, 11, 0)
+    m.solid(x, y + 1, 1, 1, CRACK)
+    g = Map(gid, 16, 14, 'Hidden Grotto', indoor=True, music='cave')
+    room(g, 0, 0)
+    door(g, 0, 0, 's')
+    g.warp(7, 13, m.id, x, y + 2, 2)
+    g.warp(8, 13, m.id, x, y + 2, 2)
+    for k, it in enumerate(items):
+        g.chest(6 + k * 3 - (len(items) - 1), 5, it)
+    g.sign(11, 8, text)
+    if m.extra.get('shadow'):
+        g.extra['shadow'] = True
+    g.entry = [7, 11]
+    GROTTOS.append(g)
+
+
 def boulder(m, x, y):                 # a big 2x2 mountain boulder
     m.stamp(OW, 9, 11, x, y, 2, 2, col=SOLID)
 
@@ -655,6 +680,7 @@ def highlands():
     signboard(m, 26, 20, 'OVERLOOK|East, past the mountains, the towers of Ashford Castle. West, a cow. Mostly the castle.')
     m.spawn('log', 24, 18)
     m.spawn('soldier', 19, 24)
+    secret_cave(m, 22, 17, 'grotto2', ['cash50', 'arrows'], 'A miner\'s stash. A note says: DO NOT TELL THE TAXMAN.')
     m.entry = [7, 26]
     return m
 
@@ -880,6 +906,7 @@ def shadowize(m, name):
     s.extra.pop('variants', None)
     s.spawns, s.chests, s.signs = [], {}, {}
     s.warps = [dict(w, to='s_' + w['to']) for w in m.warps if w['to'] in ('meadow', 'highlands', 'grove', 'riverhead')]
+    s.col = [SOLID if c == CRACK else c for c in s.col]      # light-world secret caves don't exist here
     # chests from the light world are gone in the shadow: put the floor back where they stood
     for k in m.chests:
         x, y = map(int, k.split(','))
@@ -913,6 +940,7 @@ def shadow_world():
     m.warp(44, 6, 'vault', 24, 25, 0)
     rocks(m, [(0, 9), (1, 8), (2, 9), (1, 10), (0, 10), (2, 10)])
     m.chest(1, 9, 'heart_shard')
+    secret_cave(m, 14, 9, 'grotto3', ['heart_shard'], 'The walls are scratched with tally marks. Thousands of them.')
     m.sign(5, 9, 'A sign, half rotted:|"HOLLOWDOWN. Population: fewer every year."')
     for (k, x, y) in [('captain', 5, 8), ('wisp', 12, 11), ('soldierBlue', 21, 9), ('archer', 26, 4), ('wisp', 24, 7), ('captain', 34, 7), ('snapjaw', 40, 6), ('snapjaw', 45, 9)]:
         m.spawn(k, x, y)
@@ -940,6 +968,7 @@ def shadow_world():
         m.spawn(k, x, y)
     rocks(m, [(20, 20), (21, 21), (22, 20)])
     m.chest(21, 20, 'bombs')
+    secret_cave(m, 16, 22, 'grotto4', ['heart_shard', 'mail'], 'A shadow merchant\'s vault. Whoever they were, they will not be needing it.')
     out.append(m)
     # Shadow Grove: where the Twin Mirror drops you; the shadow castle's gate is sealed (for now)
     m = shadowize(grove(), 'Shadow Grove')
@@ -1178,6 +1207,7 @@ def shadow_keep():
 
 if __name__ == '__main__':
     out = {m.id: m.json() for m in (thistledown(), home(), cave1(), meadow_ruins(), riverhead(), sunken_shrine(), highlands(), ember_forge(), grove(), ashford_castle(), *shadow_world(), drowned_vault(), hollow_quarry(), shadow_keep())}
+    out.update({g.id: g.json() for g in GROTTOS})
     os.makedirs('src/data', exist_ok=True)
     json.dump(out, open('src/data/maps.json', 'w'), separators=(',', ':'))
     print('maps', {k: (v['w'], v['h']) for k, v in out.items()})
