@@ -166,17 +166,31 @@ LV.Game.prototype.enter = (function (orig) {
 })(LV.Game.prototype.enter);
 
 // never start a file stuck inside something solid (one saved while Wren was still in bed, say): step to the nearest free spot
-LV.Game.prototype.unstick = function () {
-  const h = this.hero, w = this.world;
-  if (!h || !w || this.scene || !w.boxBlocked(h.bodyBox(), 'hero')) return;
+LV.Game.prototype.unstick = function (inArea) {
+  const h = this.hero, w = this.world, a = inArea && this.area;
+  if (!h || !w || this.scene || !w.boxBlocked(h.bodyBox(), 'hero')) return false;
   const x0 = h.x, y0 = h.y;
-  for (let rad = 1; rad <= 6; rad++) for (let dy = -rad; dy <= rad; dy++) for (let dx = -rad; dx <= rad; dx++) {
+  for (let rad = 1; rad <= (inArea ? 10 : 6); rad++) for (let dy = -rad; dy <= rad; dy++) for (let dx = -rad; dx <= rad; dx++) {
     if (Math.max(Math.abs(dx), Math.abs(dy)) !== rad) continue;
-    h.x = (Math.floor(x0 / 16) + dx) * 16 + 8; h.y = (Math.floor(y0 / 16) + dy) * 16 + 12;
-    if (!w.boxBlocked(h.bodyBox(), 'hero') && !w.warpAt(Math.floor(h.x / 16), Math.floor((h.y - 3) / 16))) { h.safe = { x: h.x, y: h.y }; return; }
+    const tx = Math.floor(x0 / 16) + dx, ty = Math.floor(y0 / 16) + dy;
+    if (a && (tx < a[0] || ty < a[1] || tx >= a[0] + a[2] || ty >= a[1] + a[3])) continue;      // stay on this screen
+    h.x = tx * 16 + 8; h.y = ty * 16 + 12;
+    if (!w.boxBlocked(h.bodyBox(), 'hero') && !w.warpAt(tx, Math.floor((h.y - 3) / 16))) { h.safe = { x: h.x, y: h.y }; return true; }
   }
-  h.x = x0; h.y = y0;
+  h.x = x0; h.y = y0; return false;
 };
+// sliding onto a new screen can set Wren down inside a bush or a tree: if so, she steps to the nearest free spot on it
+LV.Game.prototype.stepScroll = (function (orig) {
+  return function (dt) {
+    const s = this.scroll, r = orig.call(this, dt);
+    if (s && !this.scroll && !this.unstick(true) && this.world.boxBlocked(this.hero.bodyBox(), 'hero')) {
+      // nowhere to stand on that screen: step back where she came from
+      const h = this.hero; h.x = s.hx; h.y = s.hy; h.x -= LV.DIRS[s.dir].x * 6; h.y -= LV.DIRS[s.dir].y * 6;
+      this.area = this.world.areaAt(h.x, h.y - 3); this.cam = this.camFor(this.area); h.safe = { x: h.x, y: h.y };
+    }
+    return r;
+  };
+})(LV.Game.prototype.stepScroll);
 LV.Game.prototype.startFile = (function (orig) {
   return function (i) { const r = orig.call(this, i); if (this.mode === 'play') this.unstick(); return r; };
 })(LV.Game.prototype.startFile);

@@ -6,6 +6,10 @@ Dates are in TCT (Torn City Time).
 
 ---
 
+## 1.0.10 — 2026-10-31
+### Fixed
+- Walking onto the next screen could set Wren down inside a bush, tree or rock, leaving her stuck. She now steps to the nearest free spot on the new screen (or back, if there is none). Checked at every screen edge in the game.
+
 ## 1.0.9 — 2026-10-31
 ### Fixed
 - Roads across the countryside no longer run along the edge of the screen: they cross from one screen to the next and keep to the middle ground (the longest edge-hugging stretch went from 24 tiles to none).
