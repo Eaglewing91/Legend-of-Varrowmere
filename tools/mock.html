@@ -255,7 +255,51 @@ function dungeon(t) {
   g.globalCompositeOperation = 'source-over';
   hud();
 }
-(MODE === 'dungeon' ? dungeon : park)(1.3);
+
+/* ---------- daytime village, designed tiles in the original's manner (original layout and art) ---------- */
+function day() {
+  const G1 = '#4fa84a', G2 = '#3d8c3c', G3 = '#6cc464', OUT = '#183018';
+  const grassT = (x, y) => { px(x, y, G1, T, T); for (const [a, b] of [[4, 6], [20, 4], [12, 18], [26, 22], [6, 26]]) { px(x + a, y + b, G2, 1, 3); px(x + a + 2, y + b - 1, G2, 1, 4); px(x + a + 4, y + b, G2, 1, 3); px(x + a + 2, y + b - 1, G3, 1, 1); } };
+  const pathT = (x, y) => { px(x, y, '#e2c898', T, T); for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++) { const ox = x + i * 8 + (j % 2) * 4 - 2, oy = y + j * 8; px(ox + 1, oy + 1, '#d4b480', 6, 6); px(ox + 1, oy + 1, '#f0dcb0', 6, 1); px(ox + 6, oy + 2, '#bb9a68', 1, 5); } };
+  const edgeT = (x, y) => { px(x, y, '#9ad890', T, T); for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) { px(x + i * 8 + 2, y + j * 8 + 2, '#b8ecb0', 4, 3); px(x + i * 8 + 2, y + j * 8 + 5, '#78bc70', 4, 1); } };
+  const hedgeT = (x, y, top) => { px(x, y, '#2f8a34', T, T); for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++) { px(x + i * 8 + (j % 2) * 4, y + j * 8 + 2, '#5cc054', 3, 2); px(x + i * 8 + (j % 2) * 4 + 1, y + j * 8 + 4, '#1f6a26', 3, 2); } if (top) px(x, y, OUT, T, 2); };
+  const bushT = (x, y) => { grassT(x, y); px(x + 3, y + 4, OUT, 26, 25); px(x + 5, y + 2, OUT, 22, 2); px(x + 4, y + 5, '#2f8a34', 24, 22); px(x + 6, y + 3, '#2f8a34', 20, 2); for (const [a, b] of [[8, 7], [16, 6], [11, 14], [20, 13], [8, 20], [17, 20]]) { px(x + a, y + b, '#5cc054', 4, 3); px(x + a + 1, y + b + 3, '#1f6a26', 4, 2); } };
+  const fenceT = (x, y) => { grassT(x, y); for (let i = 0; i < 4; i++) { const fx = x + i * 8; px(fx + 1, y + 6, OUT, 7, 22); px(fx + 2, y + 7, '#b07a40', 5, 20); px(fx + 2, y + 7, '#d8a060', 2, 20); px(fx + 1, y + 5, OUT, 7, 2); } px(x, y + 12, '#7a4a20', T, 3); };
+  const flowerT = (x, y) => { grassT(x, y); for (const [a, b] of [[6, 6], [20, 8], [12, 20], [26, 22]]) { px(x + a, y + b, '#ffffff', 4, 4); px(x + a + 1, y + b + 1, '#f0d040', 2, 2); px(x + a + 1, y + b + 4, '#2f8a34', 2, 2); } };
+  const cliffT = (x, y, top) => { px(x, y, '#a86a38', T, T); for (let j = 0; j < 2; j++) for (let i = 0; i < 2; i++) { const ox = x + i * 16 + (j % 2) * 8 - 4, oy = y + j * 16; px(ox + 1, oy + 2, '#c88850', 13, 11); px(ox + 1, oy + 2, '#e0a868', 13, 2); px(ox + 1, oy + 12, '#7a4620', 13, 2); } if (top) { px(x, y, '#3d8c3c', T, 6); px(x, y + 6, OUT, T, 2); for (let i = 0; i < 4; i++) px(x + i * 8 + 2, y + 2, '#6cc464', 4, 2); } };
+  const stairT = (x, y) => { px(x, y, '#4a9a78', T, T); for (let j = 0; j < 4; j++) { px(x, y + j * 8, '#9ae0b8', T, 3); px(x, y + j * 8 + 3, '#6ab894', T, 3); px(x, y + j * 8 + 6, '#2a6a50', T, 2); } };
+  const tileAt = (cx, cy) => {
+    if (cy >= 11) return (cx === 5 || cx === 6) ? 'stair' : (cy === 11 ? 'cliffTop' : 'cliff');
+    if (cx === 5 || cx === 6) return 'path';
+    if (cx === 4 || cx === 7) return 'edge';
+    return 'grass';
+  };
+  for (let y = 0; y < 14; y++) for (let x = 0; x < 16; x++) {
+    const k = tileAt(x, y), X = x * T, Y = y * T;
+    if (k === 'grass') grassT(X, Y); else if (k === 'path') pathT(X, Y); else if (k === 'edge') edgeT(X, Y); else if (k === 'stair') stairT(X, Y); else cliffT(X, Y, k === 'cliffTop');
+  }
+  // hedge block (a garden enclosure) with a gap and lattice windows
+  for (let y = 2; y < 6; y++) for (let x = 8; x < 13; x++) hedgeT(x * T, y * T, y === 2);
+  px(8 * T, 6 * T - 4, OUT, 5 * T, 4);
+  px(8 * T, 5 * T + 8, '#4a7a6a', 5 * T, 24); for (let i = 0; i < 5; i++) { px(8 * T + i * T + 6, 5 * T + 12, OUT, 20, 16); px(8 * T + i * T + 8, 5 * T + 14, '#2a4a40', 16, 12); px(8 * T + i * T + 15, 5 * T + 14, '#4a7a6a', 2, 12); }
+  px(10 * T + 2, 5 * T + 8, OUT, 28, 26); px(10 * T + 4, 5 * T + 10, '#183018', 24, 24);
+  // house with roof and door (right)
+  px(13 * T, 1 * T, OUT, 3 * T + 8, 4 * T); px(13 * T + 2, 1 * T + 2, '#b03a3a', 3 * T + 6, 2 * T + 8); for (let j = 0; j < 5; j++) px(13 * T + 2, 1 * T + 10 + j * 12, '#8a2a2a', 3 * T + 6, 2);
+  px(13 * T + 2, 3 * T + 10, '#e8c890', 3 * T + 6, T + 18); for (let j = 0; j < 3; j++) px(13 * T + 2, 3 * T + 14 + j * 10, '#d0a870', 3 * T + 6, 2);
+  px(14 * T + 8, 4 * T, OUT, 24, 28); px(14 * T + 10, 4 * T + 2, '#8a5a30', 20, 26); px(14 * T + 10, 4 * T + 2, '#b07a48', 20, 3); px(14 * T + 26, 4 * T + 14, '#f0d040', 2, 3);
+  // big tree (left), bushes, fence, flowers
+  const blob = (cx, cy, r, c) => { for (let j = -r; j <= r; j++) for (let i = -r; i <= r; i++) if (i * i + j * j <= r * r) px(cx + i, cy + j, c); };
+  blob(56, 70, 52, OUT); blob(56, 70, 50, '#2f7a34'); for (let k = 0; k < 4; k++) { for (let a = 0; a < 6.28; a += 0.5) blob(56 + Math.cos(a + k) * (14 + k * 9), 70 + Math.sin(a + k) * (14 + k * 9), 5, k % 2 ? '#3f9a40' : '#256a2a'); } blob(44, 56, 12, '#58b44e');
+  px(40, 112, OUT, 34, 30); px(42, 112, '#9a6030', 30, 28); px(42, 112, '#c08048', 6, 28); px(30, 136, '#8a5028', 54, 6);
+  [[3, 8], [3, 9], [2, 9], [12, 6], [13, 6], [14, 6]].forEach(p => bushT(p[0] * T, p[1] * T));
+  for (let x = 8; x < 16; x++) fenceT(x * T, 9 * T);
+  [[10, 7], [11, 8], [12, 7], [9, 8]].forEach(p => flowerT(p[0] * T, p[1] * T));
+  hero(9 * T - 6, 6 * T + 4);
+  goon(13 * T, 7 * T + 2, true);
+  hud();
+}
+
+({ dungeon: dungeon, park: park, day: day }[MODE] || park)(1.3);
 out.drawImage(g0, 0, 0, 1024, 896);
 window.done = true;
 </script></body></html>
