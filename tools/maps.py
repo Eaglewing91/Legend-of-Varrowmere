@@ -11,7 +11,7 @@ Collision codes: 0 open, 1 solid, 2 deep water, 3 pit, 4 ledge (jump south), 5 l
 """
 import json, os
 OW, IN, CV, OB = 0, 1, 2, 3
-OPEN, SOLID, DEEP, PIT, LEDGE, LOW, BUSH, ROCK, SHALLOW, CRACK, TORCH, TORCH_LIT = range(12)
+OPEN, SOLID, DEEP, PIT, LEDGE, LOW, BUSH, ROCK, SHALLOW, CRACK, TORCH, TORCH_LIT, LOCKED, BIGLOCK, BLOCK, PLATE, SHUTTER, BIGCHEST = range(18)
 
 
 def ref(sheet, tx, ty):
@@ -26,6 +26,7 @@ class Map:
         self.areas, self.warps, self.signs, self.chests, self.spawns = [], [], {}, {}, []
         self.indoor, self.dark, self.music = indoor, dark, music
         self.entry = [2, 2]
+        self.extra = {}
 
     def ok(self, x, y):
         return 0 <= x < self.w and 0 <= y < self.h
@@ -86,7 +87,7 @@ class Map:
         return {'id': self.id, 'name': self.name, 'w': self.w, 'h': self.h, 'layers': self.layers, 'col': self.col,
                 'areas': self.areas or [[0, 0, self.w, self.h]], 'warps': self.warps, 'signs': self.signs,
                 'chests': self.chests, 'spawns': self.spawns, 'indoor': self.indoor, 'dark': self.dark,
-                'music': self.music, 'entry': self.entry}
+                'music': self.music, 'entry': self.entry, **self.extra}
 
 
 # ---------- stamps (art pack pieces with their collision) ----------
@@ -189,7 +190,7 @@ def thistledown():
     m.stamp(OW, 10, 31, 27, 5, 4, 3, col=SOLID)    # cave mouth in rock
     m.warp(28, 7, 'cave1', 7, 12, 0)
     m.warp(29, 7, 'cave1', 8, 12, 0)
-    for (x, y) in [(19, 5), (20, 5), (19, 6), (23, 10), (24, 10), (25, 4)]:
+    for (x, y) in [(22, 4), (23, 4), (22, 5), (23, 10), (24, 10), (25, 4)]:
         bush(m, x, y)
     flowers(m, [(21, 9), (22, 6), (26, 9), (18, 9)])
     signboard(m, 25, 7, 'EAST CAVE|Beware of the logs. They are not just logs.')
@@ -197,6 +198,10 @@ def thistledown():
     m.spawn('soldier', 22, 10)
     m.spawn('archer', 26, 4)
     m.chest(30, 4, 'bombs')
+    m.stamp(OW, 4, 31, 17, 3, 4, 3, col=SOLID)        # ruined gate to the Meadow Ruins
+    m.warp(18, 5, 'ruins1', 23, 25, 0)
+    m.warp(19, 5, 'ruins1', 24, 25, 0)
+    m.sign(21, 6, 'MEADOW RUINS|Keep out. By order of Chancellor Vex.')
     for (x, y) in [(29, 4), (30, 5), (31, 4)]:
         bush(m, x, y)
     m.entry = [8, 8]
@@ -258,7 +263,7 @@ def cave1():
     m.solid(2, 4, 1, 1, TORCH)
     m.solid(13, 4, 1, 1, TORCH)
     m.chest(7, 4, 'heart_shard')
-    m.chest(23, 6, 'bow')
+    m.chest(23, 6, 'heart_shard')
     m.chest(20, 10, 'arrows')
     m.warp(7, 13, 'meadow', 28, 8, 2)
     m.warp(8, 13, 'meadow', 29, 8, 2)
@@ -270,8 +275,135 @@ def cave1():
     return m
 
 
+# ---------- dungeons ----------
+def room(m, rx, ry):
+    """A 16x14 dungeon room: stone wall face along the top, dark walls round the sides, brown floor."""
+    X, Y = rx * 16, ry * 14
+    m.area(X, Y)
+    m.fill(CV, 0, 0, X, Y, X + 15, Y + 13)
+    for x in range(X, X + 16):
+        for r in range(3):
+            m.put('ground', IN, 5 + (x % 3), 6 + r, x, Y + r)
+    for y in range(Y, Y + 14):
+        m.put('ground', IN, 1, 1, X, y)
+        m.put('ground', IN, 1, 1, X + 15, y)
+    for x in range(X, X + 16):
+        m.put('ground', IN, 1, 1, x, Y + 13)
+    m.solid(X, Y, 16, 3)
+    m.solid(X, Y, 1, 14)
+    m.solid(X + 15, Y, 1, 14)
+    m.solid(X, Y + 13, 16, 1)
+
+
+def door(m, rx, ry, side, kind=OPEN, group=None):
+    """A 2-tile doorway in a room wall. kind: OPEN, LOCKED, BIGLOCK or SHUTTER (with a group name)."""
+    X, Y = rx * 16, ry * 14
+    if side == 'n':
+        cells = [(X + 7, Y + r) for r in range(3)] + [(X + 8, Y + r) for r in range(3)]
+        gate = [(X + 7, Y + 2), (X + 8, Y + 2)]
+    elif side == 's':
+        cells = [(X + 7, Y + 13), (X + 8, Y + 13)]
+        gate = cells
+    elif side == 'w':
+        cells = [(X, Y + 7), (X, Y + 8)]
+        gate = cells
+    else:
+        cells = [(X + 15, Y + 7), (X + 15, Y + 8)]
+        gate = cells
+    for (x, y) in cells:
+        m.put('ground', CV, 0, 0, x, y)
+        m.solid(x, y, 1, 1, OPEN)
+    for (x, y) in gate:
+        m.solid(x, y, 1, 1, kind)
+    if kind == SHUTTER:
+        m.extra.setdefault('shutters', {}).setdefault(group, []).extend([list(c) for c in gate])
+
+
+def bigchest(m, x, y, item):
+    m.chests['%d,%d' % (x, y)] = {'item': item, 'big': True}
+    m.stamp(OB, 9, 0, x, y, 2, 1, col=BIGCHEST)
+
+
+def statue_pair(m, x, y):
+    m.stamp(CV, 6, 0, x, y, 1, 3, col=None)
+    m.solid(x, y + 1, 1, 2)
+
+
+def meadow_ruins():
+    """Dungeon 1. Rooms (rx, ry) in a 3x2 grid:
+       (0,0) Big Key   (1,0) torches/map   (2,0) BOSS: the Stone Sentinels
+       (0,1) blocks    (1,1) entrance      (2,1) Big Chest (Bow)"""
+    m = Map('ruins1', 48, 28, 'Meadow Ruins', indoor=True, music='dungeon')
+    for ry in range(2):
+        for rx in range(3):
+            room(m, rx, ry)
+    m.extra.update({'dungeon': 'ruins1', 'exit': ['meadow', 19, 6], 'boss': True})
+    # entrance (1,1): way out south; west open; east locked; north shutter opens when the room is clear
+    door(m, 1, 1, 's')
+    m.warp(23, 27, 'meadow', 19, 6, 2)
+    m.warp(24, 27, 'meadow', 19, 6, 2)
+    door(m, 1, 1, 'w')
+    door(m, 0, 1, 'e')
+    door(m, 1, 1, 'e', LOCKED)
+    door(m, 2, 1, 'w', LOCKED)
+    door(m, 1, 1, 'n', SHUTTER, 'entrance')
+    door(m, 1, 0, 's')
+    m.extra.setdefault('triggers', []).append({'type': 'clear', 'area': 4, 'open': 'entrance'})
+    m.spawn('soldier', 20, 21)
+    m.spawn('soldier', 27, 21)
+    m.spawn('log', 24, 18)
+    for x in (18, 29):
+        statue_pair(m, x, 15)
+    m.sign(22, 16, "Carved in the stone:|'The meadow's valor sleeps behind three locks.'")
+    # west room (0,1): push the block onto the switch to open the shutter to the key
+    for (x, y) in [(5, 19), (10, 19), (7, 22)]:
+        m.solid(x, y, 1, 1, BLOCK)
+    m.extra['plates'] = [[7, 24]]
+    m.solid(7, 24, 1, 1, PLATE)
+    m.extra['triggers'].append({'type': 'plate', 'at': [[7, 24]], 'open': 'westkey'})
+    for x in range(2, 6):
+        m.solid(x, 17, 1, 1, SOLID)
+        m.put('deco', IN, 6, 7, x, 17)
+    m.solid(2, 15, 1, 2, SOLID)
+    m.solid(5, 15, 1, 2, SOLID)
+    for y in (15, 16):
+        m.put('deco', IN, 6, 7, 2, y)
+        m.put('deco', IN, 6, 7, 5, y)
+    m.solid(3, 17, 2, 1, SHUTTER)
+    m.extra.setdefault('shutters', {})['westkey'] = [[3, 17], [4, 17]]
+    m.chest(3, 15, 'key')
+    m.chest(12, 22, 'compass')
+    m.spawn('log', 11, 23)
+    # north room (1,0): light both torches to open the west shutter; the map is here
+    m.solid(18, 4, 1, 1, TORCH)
+    m.solid(29, 4, 1, 1, TORCH)
+    door(m, 1, 0, 'w', SHUTTER, 'torches')
+    door(m, 0, 0, 'e')
+    m.extra['triggers'].append({'type': 'torches', 'at': [[18, 4], [29, 4]], 'open': 'torches'})
+    m.chest(23, 4, 'map')
+    m.spawn('archer', 22, 8)
+    m.spawn('soldier', 26, 10)
+    door(m, 1, 0, 'e', BIGLOCK)
+    door(m, 2, 0, 'w', BIGLOCK)
+    # north-west room (0,0): the Big Key, guarded; a cracked wall hides a fairy... (a nurse) spring later
+    m.chest(7, 4, 'bigkey')
+    m.spawn('soldierBlue', 6, 8)
+    m.spawn('archer', 10, 10)
+    m.solid(1, 8, 1, 1, CRACK)
+    # east room (2,1): the Big Chest with the Bow
+    bigchest(m, 39, 19, 'bow')
+    m.spawn('log', 36, 23)
+    m.spawn('log', 42, 23)
+    # boss room (2,0)
+    m.spawn('sentinel0', 36, 7)
+    m.spawn('sentinel1', 40, 6)
+    m.spawn('sentinel2', 44, 7)
+    m.entry = [23, 25]
+    return m
+
+
 if __name__ == '__main__':
-    out = {m.id: m.json() for m in (thistledown(), home(), cave1())}
+    out = {m.id: m.json() for m in (thistledown(), home(), cave1(), meadow_ruins())}
     os.makedirs('src/data', exist_ok=True)
     json.dump(out, open('src/data/maps.json', 'w'), separators=(',', ':'))
     print('maps', {k: (v['w'], v['h']) for k, v in out.items()})

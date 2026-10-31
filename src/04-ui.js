@@ -42,7 +42,7 @@ LV.drawSpecialTiles = function (ctx, g, ox, oy) {
     const c = w.col[ty * w.w + tx], X = tx * 16 - ox, Y = ty * 16 - oy;
     if (c === LV.C.TORCH || c === LV.C.TORCH_LIT) {
       ctx.fillStyle = '#171717'; ctx.fillRect(X + 2, Y + 4, 12, 12); ctx.fillStyle = '#8a8a9a'; ctx.fillRect(X + 3, Y + 5, 10, 10); ctx.fillStyle = '#b8b8c8'; ctx.fillRect(X + 3, Y + 5, 10, 2); ctx.fillStyle = '#4a4a5a'; ctx.fillRect(X + 4, Y + 8, 8, 2);
-      if (c === LV.C.TORCH_LIT) ctx.drawImage(LV.IMG.objects, (4 + Math.floor(g.t * 10) % 6) * 16, 32, 16, 16, X, Y - 8, 16, 16);
+      if (c === LV.C.TORCH_LIT) ctx.drawImage(LV.IMG.objects, (4 + Math.floor(g.t * 10) % 7) * 16, 48, 16, 16, X, Y - 9, 16, 16);
     } else if (c === LV.C.CRACK) {
       ctx.fillStyle = '#171717'; ctx.fillRect(X + 7, Y + 2, 1, 5); ctx.fillRect(X + 5, Y + 6, 3, 1); ctx.fillRect(X + 4, Y + 7, 1, 5); ctx.fillRect(X + 8, Y + 7, 4, 1); ctx.fillRect(X + 11, Y + 8, 1, 4);
     }

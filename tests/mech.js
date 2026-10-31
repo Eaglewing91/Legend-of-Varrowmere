@@ -51,7 +51,7 @@ const { chromium } = require('playwright');
   r = await p.evaluate(() => { place('home', 12, 5, 0); step(1, [], ['action']); step(2, []); const got = !!LV.game.save.items.lantern; LV.game.dialog = null; return got; });
   check('chest gives the Lantern', r === true, r);
   // 11. Bushes: the blade cuts them; the action button lifts and throws them
-  r = await p.evaluate(() => { const g = LV.game; place('meadow', 18, 5, 1); step(16, [], ['attack']); const cut = g.world.c(19, 5); place('meadow', 18, 6, 1); step(1, [], ['action']); const carry = H().state; step(1, [], ['action']); step(30, []); return { cut: cut, carry: carry, after: g.world.c(19, 6) }; });
+  r = await p.evaluate(() => { const g = LV.game; place('meadow', 21, 4, 1); step(16, [], ['attack']); const cut = g.world.c(22, 4); place('meadow', 21, 5, 1); step(1, [], ['action']); const carry = H().state; step(1, [], ['action']); step(30, []); return { cut: cut, carry: carry, after: g.world.c(22, 5) }; });
   check('blade cuts bushes, lift and throw', r.cut === 0 && r.carry === 'carry' && r.after === 0, r);
   // 12. Signs are read from in front
   r = await p.evaluate(() => { place('meadow', 9, 6, 0); step(1, [], ['action']); return !!LV.game.dialog; });
@@ -81,6 +81,27 @@ const { chromium } = require('playwright');
   // 19. Lantern lights torches
   r = await p.evaluate(() => { const g = LV.game; g.save.items.lantern = 1; g.save.equip = 'lantern'; place('cave1', 2, 5, 0); g.actors = []; step(1, [], ['item']); step(5, []); return g.world.c(2, 4); });
   check('lantern lights torches', r === 11, r);
+
+  // 20. Dungeon: the entrance room's shutter opens once every enemy in the room is beaten
+  r = await p.evaluate(() => { const g = LV.game; place('ruins1', 23, 24, 0); const before = g.world.c(23, 16); g.actors.forEach(a => g.kill(a)); step(5, []); return { before: before, after: g.world.c(23, 16) }; });
+  check('room clear opens shutter', r.before === 16 && r.after === 0, r);
+  // 21. Locked doors: bump into one with a Small Key to open it (the key is used up)
+  r = await p.evaluate(() => { const g = LV.game; g.save.keys.ruins1 = 1; place('ruins1', 30, 21, 1); g.actors = []; step(40, ['right']); return { door: g.world.c(31, 21), keys: g.save.keys.ruins1 }; });
+  check('small key opens locked door', r.door === 0 && r.keys === 0, r);
+  r = await p.evaluate(() => { const g = LV.game; g.save.keys.ruins1 = 0; delete g.save.flags['ruins1:door:31,21']; delete g.save.flags['ruins1:door:31,22']; delete g.save.flags['ruins1:door:32,21']; delete g.save.flags['ruins1:door:32,22']; place('ruins1', 30, 21, 1); g.actors = []; step(40, ['right']); return { door: g.world.c(31, 21), msg: !!g.dialog }; });
+  check('no key, door stays shut and says so', r.door === 12 && r.msg, r);
+  // 22. Push the block onto the switch to open the shutter
+  r = await p.evaluate(() => { const g = LV.game; place('ruins1', 7, 21, 2); g.actors = []; const b = g.world.c(7, 22), sh = g.world.c(3, 17); step(25, ['down']); const one = g.world.c(7, 23); step(40, ['down']); step(5, []); return { block: b, shutBefore: sh, oneTile: one, onPlate: g.world.c(7, 24), shutter: g.world.c(3, 17) }; });
+  check('block slides a tile at a time onto the switch, shutter opens', r.block === 14 && r.shutBefore === 16 && r.oneTile === 14 && r.onPlate === 14 && r.shutter === 0, r);
+  // 23. Lighting both torches opens the shutter
+  r = await p.evaluate(() => { const g = LV.game; g.save.items.lantern = 1; g.save.equip = 'lantern'; place('ruins1', 18, 5, 0); g.actors = []; step(1, [], ['item']); step(15, []); const one = g.world.c(16, 7); place('ruins1', 29, 5, 0); g.actors = []; step(1, [], ['item']); step(15, []); return { one: one, both: g.world.c(16, 7) }; });
+  check('two torches open shutter', r.one === 16 && r.both === 0, r);
+  // 24. Big Chest needs the Big Key
+  r = await p.evaluate(() => { const g = LV.game; delete g.save.items.bigkey_ruins1; delete g.save.items.bow; place('ruins1', 39, 20, 0); g.actors = []; step(1, [], ['action']); const shut = !g.save.items.bow; g.dialog = null; g.save.items.bigkey_ruins1 = 1; step(1, [], ['action']); return { shut: shut, bow: !!g.save.items.bow }; });
+  check('big chest needs big key', r.shut && r.bow, r);
+  // 25. Boss: beating all three Stone Sentinels gives a Life Container, then out to the meadow
+  r = await p.evaluate(() => { const g = LV.game; delete g.save.flags['ruins1:boss']; place('ruins1', 40, 10, 0); g.area = g.world.areaAt(40 * 16, 10 * 16); const before = g.save.maxHp; g.actors.filter(a => a.boss).forEach(a => g.kill(a)); step(2, []); const pk = g.pickups.find(p => p.kind === 'container'); if (!pk) return { none: g.actors.map(a => a.kind), pk: g.pickups.map(p => p.kind) }; H().x = pk.x; H().y = pk.y + 4; step(2, []); for (let i = 0; i < 5; i++) step(1, [], ['action']); step(40, []); return { hp: g.save.maxHp - before, map: g.world.id, pendant: !!g.save.items.pendant_ruins1 }; });
+  check('boss gives life container and pendant, then exits', r.hp === 4 && r.pendant && r.map === 'meadow', r);
 
   console.log(results.join('\n')); console.log('errors', errs);
   await b.close();

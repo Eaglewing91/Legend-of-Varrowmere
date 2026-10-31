@@ -217,7 +217,7 @@ LV.Pickup.prototype.draw = function (ctx, ox, oy) {
   if (this.t > this.life - 2 && Math.floor(this.t * 10) % 2) return;
   const b = Math.abs(Math.sin(Math.min(this.t, 0.6) * 8)) * Math.max(0, 4 - this.t * 7), X = Math.round(this.x - ox), Y = Math.round(this.y - oy - b);
   const o = LV.IMG.objects;
-  if (this.kind === 'heart') ctx.drawImage(o, 0, 32, 16, 16, X - 8, Y - 12, 16, 16);
+  if (this.kind === 'heart') ctx.drawImage(o, 0, 48, 16, 16, X - 8, Y - 12, 16, 16);
   else ctx.drawImage(o, this.kind === 'cash5' ? 16 : 0, 64, 16, 16, X - 8, Y - 12, 16, 16);
 };
 LV.Effect = function (x, y, kind) { this.x = x; this.y = y; this.kind = kind; this.t = 0; this.dead = false; };
