@@ -82,5 +82,78 @@ def mask(isB, x, y):
     return k
 
 
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# Dungeon walls (art/generated/dwall.png): thick walls with rounded corners, a dark outline, a light rim, and a brick
+# face wherever the floor lies below, in the pack's stone and brick textures. One block of 256 tiles per material,
+# tile = mask of wall neighbours (same bits as above).
+WALL_MATS = [   # name, top texture (sheet, tx, ty), face texture, floor, tint (r, g, b multipliers)
+    ('moss', ('ni', 12, 6), ('ni', 13, 13), ('ni', 12, 7), (0.9, 1.0, 0.85)),
+    ('brick', ('ni', 1, 7), ('ni', 1, 7), ('ni', 1, 7), (0.85, 0.7, 0.6)),
+    ('ice', ('ni', 1, 1), ('ni', 1, 1), ('ni', 1, 1), (0.75, 0.88, 1.1)),
+    ('dark', ('ni', 12, 13), ('ni', 14, 13), ('ni', 12, 13), (1.15, 1.1, 1.15)),
+    ('sand', ('ni', 1, 13), ('ni', 2, 13), ('ni', 1, 13), (1.0, 0.92, 0.8)),
+    ('pale', ('ni', 1, 1), ('ni', 2, 1), ('ni', 1, 1), (0.95, 0.85, 0.8)),
+]
+
+
+def wall_inside(k, x, y):
+    px, py = x + 0.5, y + 0.5
+    n, e, s, w = k & N, k & E, k & S, k & W
+    R = 5
+    for (a, b, cx, cy) in ((n, w, R, R), (n, e, 16 - R, R), (s, w, R, 16 - R), (s, e, 16 - R, 16 - R)):
+        if not a and not b and ((px < cx) if cx == R else (px > cx)) and ((py < cy) if cy == R else (py > cy)):
+            if math.hypot(px - cx, py - cy) > R:
+                return False
+    for (a, b, d, cx, cy) in ((n, w, k & NW, 0, 0), (n, e, k & NE, 16, 0), (s, w, k & SW, 0, 16), (s, e, k & SE, 16, 16)):
+        if a and b and not d and math.hypot(px - cx, py - cy) < 2.6:
+            return False
+    return True
+
+
+def build_walls():
+    sheets = {k: Image.open(os.path.join(ART, f)).convert('RGBA') for k, f in SHEETS.items()}
+    out = Image.new('RGBA', (256, 256 * len(WALL_MATS)), (0, 0, 0, 0))
+    tint = lambda c, t, f=1.0: (min(255, int(c[0] * t[0] * f)), min(255, int(c[1] * t[1] * f)), min(255, int(c[2] * t[2] * f)), 255)
+    for p, (name, top, face, floor, t) in enumerate(WALL_MATS):
+        T, Fc, Fl = tile(sheets, top), tile(sheets, face), tile(sheets, floor)
+        for k in range(256):
+            img = Fl.copy()
+            ins = [[wall_inside(k, x, y) for x in range(16)] for y in range(16)]
+            facing = not (k & S)
+            for y in range(16):
+                for x in range(16):
+                    if not ins[y][x]:
+                        continue
+                    out_n = lambda dx, dy: not (0 <= x + dx < 16 and 0 <= y + dy < 16) and (
+                        (dx == -1 and not k & W) or (dx == 1 and not k & E) or (dy == -1 and not k & N) or (dy == 1 and not k & S))
+                    edge = any((0 <= x + dx < 16 and 0 <= y + dy < 16 and not ins[y + dy][x + dx]) or out_n(dx, dy) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))
+                    if facing and y >= 9:
+                        c = tint(Fc.getpixel((x, y)), t, 0.78 if y > 9 else 0.45)
+                    else:
+                        c = tint(T.getpixel((x, y)), t, 1.0)
+                        if (y <= 1 and not k & N) or (x <= 1 and not k & W):
+                            c = tint(c, (1, 1, 1), 1.18)
+                    if edge:
+                        c = (24, 18, 22, 255)
+                    img.putpixel((x, y), c)
+            out.paste(img, ((k & 15) * 16, p * 256 + (k >> 4) * 16))
+    # matching floors, tinted like their walls (one row: material p at x = p * 16; a lighter variant at x + 6 * 16)
+    fl = Image.new('RGBA', (16 * 12, 16), (0, 0, 0, 0))
+    for p, (name, top, face, floor, t) in enumerate(WALL_MATS):
+        F = tile(sheets, floor)
+        for v, f in ((0, 0.92), (6, 1.0)):
+            img = Image.new('RGBA', (16, 16))
+            for y in range(16):
+                for x in range(16):
+                    img.putpixel((x, y), tint(F.getpixel((x, y)), t, f))
+            fl.paste(img, ((p + v) * 16, 0))
+    out.paste(Image.new('RGBA', (256, 0)), (0, 0))
+    out.save(os.path.join(ART, 'generated', 'dwall.png'))
+    fl.save(os.path.join(ART, 'generated', 'dfloor.png'))
+
+
 if __name__ == '__main__':
     build()
+    build_walls()

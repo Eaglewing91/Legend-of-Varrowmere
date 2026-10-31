@@ -13,12 +13,15 @@ import json, os, sys
 sys.path.insert(0, os.path.dirname(__file__))
 import blend as BLEND
 BLEND.build()
+BLEND.build_walls()
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 OW, IN, CV, OB = 0, 1, 2, 3
 NF, NN = 4, 5          # Ninja Adventure floor and nature sheets
 BL = 6                 # generated soft-edge ground transitions (tools/blend.py)
 NW, NH, NR, NE, ND, NI = 7, 8, 9, 10, 11, 12   # pack water, houses, cliffs, elements, floor details, interior floors
 LM = 13                # landmarks (generated in tools/patch_sheets.py)
+DW = 14                # dungeon walls (generated in tools/blend.py)
+DF = 15                # dungeon floors to match
 OPEN, SOLID, DEEP, PIT, LEDGE, LOW, BUSH, ROCK, SHALLOW, CRACK, TORCH, TORCH_LIT, LOCKED, BIGLOCK, BLOCK, PLATE, SHUTTER, BIGCHEST, LEVER, SWITCH, POST, _21, PEDESTAL, BARRIER, PEG, DARKROCK = range(26)
 
 
@@ -435,8 +438,31 @@ def soften(m, g, ox, oy, base):
 HOUSES = [(0, 0), (4, 0), (8, 0), (12, 0)]
 
 
+WALLMAT = {'moss': ['bonehollow', 'mirefen', 'brambletemple', 'ruins1'], 'brick': ['turtleback', 'olddepths', 'forge', 'arcadevault'],
+           'ice': ['frostmere', 'stormspire'], 'dark': ['thievesden', 'vault', 'keep'], 'sand': ['glassspire', 'quarry', 'barrow'], 'pale': ['mirrortemple', 'shrine', 'castle']}
+WALLMATS = [w[0] for w in BLEND.WALL_MATS]
+
+
+def dungeon_walls(m):
+    """Dungeon rooms get the generated pack-style walls (rounded, outlined, brick faces) and a matching floor."""
+    mat = next((k for k, ids in WALLMAT.items() if m.id in ids), None)
+    if mat is None:
+        return
+    p = WALLMATS.index(mat)
+    G, D, O = m.layers['ground'], m.layers['deco'], m.layers['over']
+    wall = lambda x, y: not m.ok(x, y) or (m.col[y * m.w + x] == SOLID and D[y * m.w + x] < 0 and O[y * m.w + x] < 0 and G[y * m.w + x] >= 0 and (G[y * m.w + x] >> 16) in (IN, CV))
+    walls = [(x, y) for y in range(m.h) for x in range(m.w) if wall(x, y)]
+    fl = BLEND.WALL_MATS[p][3]
+    for (x, y) in walls:
+        k = BLEND.mask(wall, x, y)
+        G[y * m.w + x] = ref(DW, k & 15, p * 16 + (k >> 4))
+    m.extra['floor'] = ('df', p)
+
+
 def naremap(m):
     """Swap the old art pack's ground, water, roads, flowers, bushes, houses and dungeon tiles for Ninja Adventure ones."""
+    if m.indoor and not (m.w == 16 and m.h == 14):
+        dungeon_walls(m)
     G, D, O = m.layers['ground'], m.layers['deco'], m.layers['over']
     sh = lambda r: r >> 16
     t = lambda r: (r & 255, (r >> 8) & 255)
@@ -471,7 +497,8 @@ def naremap(m):
                 elif 5 <= tt[0] <= 7 and 6 <= tt[1] <= 8 and not (W == 16 and H == 14):
                     G[i] = ref(NR, tt[0] - 1, tt[1] - 6)
             if g >= 0 and sh(g) == CV and t(g) == (0, 0) and m.extra.get('floor'):
-                G[i] = ref(NI, *m.extra['floor'])
+                fl = m.extra['floor']
+                G[i] = ref(DF, fl[1] + (6 if (x * 7 + y * 3) % 11 == 0 else 0), 0) if fl[0] == 'df' else ref(NI, *fl)
             d = D[i]
             if d >= 0 and sh(d) == OW:
                 tt = t(d)
