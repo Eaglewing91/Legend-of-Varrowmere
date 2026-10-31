@@ -37,6 +37,12 @@ if os.path.exists('art/private/ms_people.png'):
     ART['ms_people'] = 'private/ms_people.png'; MS = json.load(open('art/private/ms_people.json'))
 if MS and os.path.exists('art/private/ms_hero.png'):
     ART['ms_hero'] = 'private/ms_hero.png'; MS['hero'] = json.load(open('art/private/ms_hero.json'))
+for _n in ('soldier', 'archer', 'vex', 'queen'):
+    if MS and os.path.exists('art/private/ms_' + _n + '.png'):
+        ART['ms_' + _n] = 'private/ms_' + _n + '.png'; MS[_n] = json.load(open('art/private/ms_' + _n + '.json'))
+# with the Mana Seed people built in, their old Ninja Adventure sheets and faces aren't needed: leave them out
+if MS:
+    for _k in [k for k in ART if (k.startswith('c_') or k.startswith('cf_')) and k.split('_', 1)[1] in MS['names']]: del ART[_k]
 def lossless_png(path):
     """Re-save a PNG as small as possible without changing a single pixel (exact palette when there are 256
     colours or fewer, best zlib settings). Checked pixel-for-pixel; the original bytes are kept if anything differs."""

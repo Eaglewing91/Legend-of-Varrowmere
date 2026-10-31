@@ -15,7 +15,7 @@ LV.wrenOn = function () { return !!(LV.MS && LV.MS.hero && LV.IMG.ms_hero); };
     if (!t || !T || !T.main) return im;
     if (cache[t]) return cache[t];
     const want = hsl(T.main[0], T.main[1], T.main[2]), dark = want[1] < 0.15, map = {};
-    LV.MS.hero.tunic.forEach(function (c) {
+    LV.MS.hero.recol.forEach(function (c) {
       const h = hsl(c[0], c[1], c[2]);
       const o = dark ? rgb(0, 0, h[2] * 0.7) : rgb(want[0], Math.min(1, h[1] * (0.6 + want[1])), h[2] * (0.85 + want[2] * 0.3));
       map[(c[0] << 16) | (c[1] << 8) | c[2]] = o.map(Math.round);

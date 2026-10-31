@@ -173,50 +173,84 @@ HERO_ANIMS = {
     'throw': ('p2', lambda d: [(k, d) for k in range(4, 8)]),
     'bow': ('pBOW3', lambda d: [(k, 4 + d) for k in range(8)]),
 }
-def hero_cell(page, col, row, guides):
-    body = [('0bas', 'humn', WREN['skin']), ('1out',) + WREN['out'], ('4har',) + WREN['hair'], ('5hat',) + WREN['hat']]
+def look_layers(look):
+    """A look's body layers, bottom to top (back of a cloak first)."""
+    L = []
+    if look.get('cloak'): L.append(('0bot', 'lnpl', look['cloak']))
+    L.append(('0bas', 'humn', look['skin'])); L.append(('1out',) + look['out'])
+    if look.get('cloak'): L.append(('2clo', 'lnpl', look['cloak']))
+    if look.get('hair'): L.append(('4har',) + look['hair'])
+    if look.get('hat'): L.append(('5hat',) + look['hat'])
+    return L
+def actor_cell(page, col, row, guides, look, gear):
     back, front = [], []
-    for (L, code, v, gname) in GEAR.get(page, []):
+    for (L, code, v, gname) in gear.get(page, []):
         g = guides.get(gname) or {}; behind, plus = g.get((col, row), (True, True))
         (back if behind else front).append((plus, (L, code, v)))
     back.sort(key=lambda t: t[0]); front.sort(key=lambda t: t[0])
     cell = Image.new('RGBA', (64, 64))
-    for L in [t[1] for t in back] + body + [t[1] for t in front]:
+    for L in [t[1] for t in back] + look_layers(look) + [t[1] for t in front]:
         cell.alpha_composite(player(page, *L).crop((col * 64, row * 64, col * 64 + 64, row * 64 + 64)))
     return cell
-def hero_main():
+def build_actor(name, look, gear, anims, recolour=('1out', '5hat')):
+    """One atlas for one person: each animation 4 rows (down, up, right, left) x its frames, cropped to fit.
+    'recol' lists the colours only the clothes use, so the game can dye them (tunics, soldier ranks)."""
     guides = {}
-    for gl in GEAR.values():
+    for gl in gear.values():
         for (_, _, _, gname) in gl: guides[gname] = guide(gname)
     built, meta = [], {}
-    for name, (page, fr) in HERO_ANIMS.items():
-        cells = [[hero_cell(page, c, r, guides) for (c, r) in fr(d)] for d in range(4)]
+    for an, (page, fr) in anims.items():
+        cells = [[actor_cell(page, c, r, guides, look, gear) for (c, r) in fr(d)] for d in range(4)]
         box = None
         for row in cells:
             for c in row:
-                b = c.getbbox()
-                if b: box = b if not box else (min(box[0], b[0]), min(box[1], b[1]), max(box[2], b[2]), max(box[3], b[3]))
-        built.append((name, cells, box))
-    W = max(len(c[0]) * (b[2] - b[0]) for (_, c, b) in built); H = sum(4 * (b[3] - b[1]) for (_, _, b) in built)
+                bb = c.getbbox()
+                if bb: box = bb if not box else (min(box[0], bb[0]), min(box[1], bb[1]), max(box[2], bb[2]), max(box[3], bb[3]))
+        built.append((an, cells, box))
+    W = max(len(c[0]) * (bb[2] - bb[0]) for (_, c, bb) in built); H = sum(4 * (bb[3] - bb[1]) for (_, _, bb) in built)
     atlas = Image.new('RGBA', (W, H)); y = 0
-    for (name, cells, b) in built:
-        w, h = b[2] - b[0], b[3] - b[1]
+    for (an, cells, bb) in built:
+        w, h = bb[2] - bb[0], bb[3] - bb[1]
         for d, row in enumerate(cells):
-            for k, c in enumerate(row): atlas.alpha_composite(c.crop(b), (k * w, y + d * h))
-        meta[name] = {'y': y, 'w': w, 'h': h, 'n': len(cells[0]), 'fx': 32 - b[0], 'fy': 44 - b[1]}
+            for k, c in enumerate(row): atlas.alpha_composite(c.crop(bb), (k * w, y + d * h))
+        meta[an] = {'y': y, 'w': w, 'h': h, 'n': len(cells[0]), 'fx': 32 - bb[0], 'fy': 44 - bb[1]}
         y += 4 * h
-    save_indexed(atlas, OUT + '/ms_hero.png')
-    # tunic colours: those only the outfit and hat use (not skin, hair or gear), so other tunics can swap them
+    save_indexed(atlas, OUT + '/ms_' + name + '.png')
     tun, other = set(), set()
-    for page in {p for (p, _) in HERO_ANIMS.values()}:
-        for L in [('1out',) + WREN['out'], ('5hat',) + WREN['hat']]:
-            tun |= {p[:3] for p in player(page, *L).get_flattened_data() if p[3]}
-        for L in [('0bas', 'humn', WREN['skin']), ('4har',) + WREN['hair']] + [g[:3] for g in GEAR.get(page, [])]:
-            other |= {p[:3] for p in player(page, *L).get_flattened_data() if p[3]}
-    meta['tunic'] = sorted(tun - other)
-    json.dump(meta, open(OUT + '/ms_hero.json', 'w'))
-    print('manaseed: hero %dx%d, %d bytes, %d tunic colours' % (W, H, os.path.getsize(OUT + '/ms_hero.png'), len(meta['tunic'])))
+    for page in {p for (p, _) in anims.values()}:
+        for L in look_layers(look):
+            cols = {q[:3] for q in player(page, *L).get_flattened_data() if q[3]}
+            if L[0] in recolour: tun |= cols
+            else: other |= cols
+        for g in gear.get(page, []): other |= {q[:3] for q in player(page, *g[:3]).get_flattened_data() if q[3]}
+    meta['recol'] = sorted(tun - other)
+    json.dump(meta, open(OUT + '/ms_' + name + '.json', 'w'))
+    print('manaseed: %s %dx%d, %d bytes, %d dye colours' % (name, W, H, os.path.getsize(OUT + '/ms_' + name + '.png'), len(meta['recol'])))
+def hero_main():
+    build_actor('hero', dict(skin=WREN['skin'], out=WREN['out'], hair=WREN['hair'], hat=WREN['hat']), GEAR, HERO_ANIMS)
+
+# ---------------- Vex's people: the Gilded Hand soldiers, their archers, and the Chancellor himself ----------------
+SWORD_SHIELD = {pg: [('6tla', 'sw01', 1, pg.replace('pONE', 'ONE-hand ') + ' (sword)'), ('7tlb', 'sh02', 1, pg.replace('pONE', 'ONE-hand ') + ' (shield)')] for pg in ('pONE1', 'pONE2', 'pONE3')}
+BOW_QUIVER = {pg: [('6tla', 'bo01', 1, pg.replace('pBOW', 'BOW ') + ' (bow)'), ('7tlb', 'qv01', 1, pg.replace('pBOW', 'BOW ') + ' (quiver)')] for pg in ('pBOW2', 'pBOW3')}
+FOES = {
+    'soldier': (dict(skin=3, out=('fstr', 3), hair=('dap1', 11), hat=('pfht', 3)), SWORD_SHIELD, {
+        'walk': ('pONE2', lambda d: [(k, d) for k in range(4, 8)]),
+        'stance': ('pONE2', lambda d: [(0, d), (1, d)]),
+        'slash': ('pONE3', lambda d: [(k, d) for k in range(4)]),
+        'hurt': ('pONE1', lambda d: [(5, d)])}),
+    'archer': (dict(skin=6, out=('fstr', 3), hair=('bob1', 11), hat=('pfht', 3)), BOW_QUIVER, {
+        'walk': ('pBOW2', lambda d: [(k, d) for k in range(4, 8)]),
+        'shoot': ('pBOW3', lambda d: [(k, 4 + d) for k in range(4, 8)])}),
+    'vex': (dict(skin=0, out=('alch', 4), hair=('bob2', 13), cloak=10), {}, {
+        'idle': ('p1', lambda d: [(0, d)]),
+        'cast': ('p2', lambda d: [(6, d)])}),
+    'queen': (dict(skin=4, out=('fstr', 1), hair=('pon1', 5), cloak=8), {}, {
+        'idle': ('p1', lambda d: [(0, d)]),
+        'cast': ('p2', lambda d: [(6, d)])}),
+}
+def foes_main():
+    for n, (look, gear, anims) in FOES.items(): build_actor(n, look, gear, anims, recolour=('1out', '2clo', '0bot', '5hat'))
 
 if __name__ == '__main__':
     main()
-    if os.path.isdir(ROOT): hero_main()
+    if os.path.isdir(ROOT): hero_main(); foes_main()

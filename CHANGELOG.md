@@ -13,6 +13,7 @@ Dates are in TCT (Torn City Time).
 - **A proper opening.** A new adventure starts at night, in bed, in a storm. A voice calls from beneath the Meadow Ruins; Captain Brannoc hears it too, tells Wren to stay put, and heads out into the rain. Thistledown stays dark and wet until you reach the ruins. (Press Enter to skip the scene.)
 - Brannoc turns up again: hurt inside the Meadow Ruins, and back home once you have the first Pendant.
 - Spirits are pale, see-through figures that drift gently.
+- **Vex's people are redrawn**: the Gilded Hand soldiers (in gold, with sword and shield), their archers, and every rank's colours. Captain Brask, Lieutenant Garrow, Forgemaster Hald, the Drowned Knight, the Quarry Boss, the Hollow King, the Bandit Queen and Chancellor Vex himself are now people, drawn large. Monsters are unchanged.
 - The picture is drawn on a finer pixel grid, so the new people keep their detail.
 
 ## 1.0.5 — 2026-10-31
