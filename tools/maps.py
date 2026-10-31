@@ -2312,17 +2312,17 @@ def make_dungeon(mid, name, back, theme, item, crystal, mini, boss, gate):
 
 def shadow_dungeons():
     return [
-        make_dungeon('bonehollow', 'Bonehollow', ('s_whisperwood', 38, 5), 'forest', 'hammer', 'Crystal of Bone', 'garrow', 'hollowking', PEG),
-        make_dungeon('thievesden', "Thieves' Den", ('s_marrowgate', 46, 8), 'thieves', 'gloves', 'Crystal of Shadows', 'brask2', 'banditqueen', DARKROCK),
-        make_dungeon('frostmere', 'Frostmere Palace', ('s_icemere', 24, 13), 'ice', 'bluemail', 'Crystal of Frost', 'drowned', 'frostwyrm', PEG),
-        make_dungeon('mirefen', 'Mirefen Temple', ('s_willowfen', 5, 22), 'swamp', 'wand', 'Crystal of the Mire', 'hald', 'bogmaw', DARKROCK),
-        make_dungeon('turtleback', 'Turtleback', ('s_frostspire', 20, 6), 'turtle', 'redmail', 'Crystal of Embers', 'quarryboss', 'shellback', PEG),
+        make_dungeon('bonehollow', 'Bonehollow', ('s_whisperwood', 38, 5), 'forest', 'hammer', 'Crystal of Bone', 'gravekeeper', 'hollowking', PEG),
+        make_dungeon('thievesden', "Thieves' Den", ('s_marrowgate', 46, 8), 'thieves', 'gloves', 'Crystal of Shadows', 'ratfence', 'banditqueen', DARKROCK),
+        make_dungeon('frostmere', 'Frostmere Palace', ('s_icemere', 24, 13), 'ice', 'bluemail', 'Crystal of Frost', 'rimelizard', 'frostwyrm', PEG),
+        make_dungeon('mirefen', 'Mirefen Temple', ('s_willowfen', 5, 22), 'swamp', 'wand', 'Crystal of the Mire', 'mireoctopus', 'bogmaw', DARKROCK),
+        make_dungeon('turtleback', 'Turtleback', ('s_frostspire', 20, 6), 'turtle', 'redmail', 'Crystal of Embers', 'magmagecko', 'shellback', PEG),
     ]
 
 
 def arcade_vault():
     """The bonus dungeon: hard, optional, deep under Marrowgate's chest game. The Golden Blade waits at the end."""
-    m = make_dungeon('arcadevault', 'The Arcade Vault', ('marrowgate', 46, 8), 'turtle', 'golden', 'Arcade Token', 'brask2', 'pyrewyrm', DARKROCK)
+    m = make_dungeon('arcadevault', 'The Arcade Vault', ('marrowgate', 46, 8), 'turtle', 'golden', 'Arcade Token', 'bouncer', 'pitboss', DARKROCK)
     return m
 
 

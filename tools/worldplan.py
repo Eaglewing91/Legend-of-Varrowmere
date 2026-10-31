@@ -205,12 +205,12 @@ FOUNTAINS = [   # fairy fountains: (region, at, shadow?)
 
 # the six new dungeons: (id, name, region, at, theme, big-chest item, reward name, mini-boss, boss, gate)
 DUNGEONS_NEW = [
-    ('olddepths', 'Old Mine Depths', 'northreach', (4.2, 0.9), 'turtle', 'bombbag2', 'Pendant of Stone', 'quarryboss', 'colossus', 'DARKROCK'),
-    ('barrow', 'Standing Stones Barrow', 'stoneheath', (9.4, 3.3), 'forest', 'quiver2', 'Pendant of Ages', 'garrow', 'sentinels', 'PEG'),
-    ('brambletemple', 'Bramble Temple', 'bramble', (0.5, 13.4), 'swamp', 'charm', 'Pendant of Thorns', 'hald', 'kraken', 'DARKROCK'),
-    ('stormspire', 'Stormspire', 's_skyridge', (16.6, 1.0), 'ice', 'speedcharm', 'Crystal of Storms', 'drowned', 'frostwyrm', 'PEG'),
-    ('mirrortemple', 'Mirror Temple', 's_mirrorlake', (13.0, 18.0), 'swamp', 'guardring', 'Crystal of Reflections', 'brask2', 'bogmaw', 'DARKROCK'),
-    ('glassspire', 'Glass Spire', 's_desert', (17.6, 18.6), 'thieves', 'powerring', 'Crystal of Glass', 'hald', 'pyrewyrm', 'PEG'),
+    ('olddepths', 'Old Mine Depths', 'northreach', (4.2, 0.9), 'turtle', 'bombbag2', 'Pendant of Stone', 'tunnelspider', 'grindmaw', 'DARKROCK'),
+    ('barrow', 'Standing Stones Barrow', 'stoneheath', (9.4, 3.3), 'forest', 'quiver2', 'Pendant of Ages', 'barrowshroom', 'cairnskull', 'PEG'),
+    ('brambletemple', 'Bramble Temple', 'bramble', (0.5, 13.4), 'swamp', 'charm', 'Pendant of Thorns', 'thorngrub', 'thornelder', 'DARKROCK'),
+    ('stormspire', 'Stormspire', 's_skyridge', (16.6, 1.0), 'ice', 'speedcharm', 'Crystal of Storms', 'galebat', 'stormowl', 'PEG'),
+    ('mirrortemple', 'Mirror Temple', 's_mirrorlake', (13.0, 18.0), 'swamp', 'guardring', 'Crystal of Reflections', 'twinsnake', 'mirrorshade', 'DARKROCK'),
+    ('glassspire', 'Glass Spire', 's_desert', (17.6, 18.6), 'thieves', 'powerring', 'Crystal of Glass', 'glassslime', 'glasseye', 'PEG'),
 ]
 
 # landmarks: (kind, region, at). stones: a ring of standing stones; mill: a windmill; wreck: a shipwreck on the sand;

@@ -2041,6 +2041,15 @@ LIB_SECRET_KEY = T("""
 ..............
 ..............""")
 
+# the dungeon's regular foes, from the first rooms to the deepest (the pack's monsters and their tinted cousins)
+ROSTER = {
+    'forest':  ['skull', 'bluebat', 'mushroom', 'larva', 'owl', 'skullred', 'shroomspore', 'eyered', 'moledirt', 'cyclope', 'owlnight', 'batfire'],
+    'thieves': ['soldier', 'spiderred', 'mouse', 'archer', 'mousegray', 'snake', 'soldierBlue', 'spiderblue', 'beastgold', 'captain', 'eyered'],
+    'ice':     ['slime3', 'bluebat', 'skullblue', 'owl', 'lizardice', 'slimeblue', 'owlnight', 'octopusblue', 'cyclopeice', 'spiderblue'],
+    'swamp':   ['snake', 'slime', 'octopus', 'larva', 'larvatoxic', 'slimered', 'mole', 'snakefire', 'octopusblue', 'bamboowild', 'reptile2'],
+    'turtle':  ['beast', 'lizard', 'eye', 'reptile2', 'molefire', 'snakefire', 'eyered', 'batfire', 'beastgold', 'reptilegold', 'cyclopered'],
+}
+
 # floors in the order you go through them, the floor you come in on first; rooms; grid of one floor; Small Keys
 PLANS = {
     'barrow':        dict(floors=['1F', 'B1', 'B2'], rooms=26, grid=(5, 4), keys=3),
@@ -2511,9 +2520,15 @@ def build_full(M, mid, name, back, theme, item, crystal, mini, boss, gate, plan=
                     t = t2
                 return t
         raise RuntimeError('no room drawing fits %s room %d (%s, doors %s, stairs %s)' % (mid, i, role, ''.join(sorted(sd)), need))
-    foes = {'forest': ['skull', 'bluebat', 'mushroom'], 'thieves': ['soldier', 'archer', 'spiderred'], 'ice': ['slime3', 'skullblue', 'bluebat'],
-            'swamp': ['snake', 'octopus', 'slime'], 'turtle': ['beast', 'eye', 'lizard']}[theme]
-    nfoe = 0
+    roster = ROSTER[theme]
+    nzones = max(1, L['zones'])
+
+    def foe(i):
+        # deeper sections and lower (or higher) floors bring out the tougher kinds
+        r = rooms[i]
+        depth = min(1.0, 0.5 * r['zone'] / nzones + 0.5 * r['f'] / max(1, len(floors) - 1))
+        n = max(3, min(len(roster), int(round(3 + depth * (len(roster) - 3)))))
+        return R.choice(roster[:n]) if R.random() < 0.7 else roster[max(0, n - 3) + R.randrange(min(3, n))]
     plush = [mid == 'thievesden']
     marks = [dict() for _ in rooms]
     for i, r in enumerate(rooms):
@@ -2594,7 +2609,7 @@ def build_full(M, mid, name, back, theme, item, crystal, mini, boss, gate, plan=
                     m.extra.setdefault('reveal', {})['mini'] = [[x, y]]
                     mk['bigkey'] = (x, y)
                 elif ch == 'e':
-                    m.spawn(foes[nfoe % 3], x, y); nfoe += 1; enemies += 1
+                    m.spawn(foe(i), x, y); enemies += 1
                 elif ch == 'M':
                     m.spawn(mini, x, y)
                 elif ch == 'X':
@@ -2605,7 +2620,13 @@ def build_full(M, mid, name, back, theme, item, crystal, mini, boss, gate, plan=
         if r['role'] in (None, 'map', 'compass', 'hole', 'switch') and enemies < 2:
             spots = [(X + c, Y + rr) for rr in range(1, 9) for c in range(1, 13) if t[rr][c] == '.' and c not in (6, 7) and rr not in (4, 5)]
             for (x, y) in R.sample(spots, min(len(spots), R.choice((1, 2, 2, 3)))):
-                m.spawn(foes[nfoe % 3], x, y); nfoe += 1
+                m.spawn(foe(i), x, y)
+        # traps: blades in the corners that slide when you line up with them, fire-spitting statues
+        if r['role'] in (None, 'map', 'compass', 'crystal') and i not in L['stairs'] and R.random() < 0.16:
+            corners = [(c, rr) for (c, rr) in ((1, 1), (12, 1), (1, 8), (12, 8)) if t[rr][c] == '.']
+            kind = 'turret' if theme in ('turtle', 'thieves') and R.random() < 0.5 else 'blade'
+            for (c, rr) in (corners if kind == 'blade' else corners[:2]):
+                m.spawn(kind, X + c, Y + rr)
     # doors
     for (a, b, k) in edges:
         A, B = rooms[a], rooms[b]
@@ -2663,7 +2684,7 @@ def build_full(M, mid, name, back, theme, item, crystal, mini, boss, gate, plan=
             else:
                 if not any(s['x'] // 16 == r['x'] and s['y'] // 14 == r['y'] for s in m.spawns):
                     x, y = r['x'] * 16 + 4, r['y'] * 14 + 6
-                    m.spawn(foes[0], x, y)
+                    m.spawn(roster[0], x, y)
                 m.extra['triggers'].append({'type': 'clear', 'area': r['area'], 'open': g}); used.add('clear')
         if r['role'] == 'mini':
             m.extra['triggers'].append({'type': 'clear', 'area': r['area'], 'open': 'mini'})

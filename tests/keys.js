@@ -44,7 +44,7 @@ for (const [dg, ids] of Object.entries(groups)) {
       keys = 0; big = false; boss = false;
       for (const id of ids) { const m = maps[id];
         for (const [k, ch] of Object.entries(m.chests || {})) { const [x, y] = k.split(',').map(Number); if (!seen.has(id + ':' + x + ':' + (y + 1))) continue; if (ch.item === 'key') keys++; if (ch.item === 'bigkey') big = true; }
-        for (const s of m.spawns || []) if ((m.boss && (s.kind === 'vex' || /boss|wyrm|king|queen|maw|shell|colossus|sentinel|kraken|vex/.test(s.kind))) && seen.has(id + ':' + s.x + ':' + s.y)) boss = true;
+        for (const s of m.spawns || []) if ((m.boss && (s.kind === 'vex' || /boss|wyrm|king|queen|maw|shell|colossus|sentinel|kraken|vex|cairnskull|thornelder|stormowl|mirrorshade|glasseye|pitboss/.test(s.kind))) && seen.has(id + ':' + s.x + ':' + s.y)) boss = true;
       }
     }
     return { keys, big, boss, doors };

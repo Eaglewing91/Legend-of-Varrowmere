@@ -346,7 +346,7 @@ const { chromium } = require('playwright');
   check('side quests: plushie, race, fishing', Object.values(r).every(Boolean), r);
   // 70. New monsters: every kind spawns, moves, can be hit and killed (butterflies are just scenery)
   r = await p.evaluate(() => { const g = LV.game, bad = []; place('meadow', 20, 9, 1); g.actors = [];
-    Object.keys(LV.CRITTERS).forEach(k => { const e = LV.ENEMIES[k](22 * 16 + 8, 9 * 16 + 12); g.actors = [e]; step(30, []); if (k === 'butterfly') { if (!e.invuln) bad.push(k); return; } e.inv = 0; e.hp = 1; LV.applyHit(g, new LV.Hit({ team: 'hero', kind: 'blade', power: 2, from: { x: H().x, y: H().y }, box: { x: 0, y: 0, w: 1, h: 1 } }), e); if (!e.dead) bad.push(k); });
+    Object.keys(LV.CRITTERS).forEach(k => { const e = LV.ENEMIES[k](22 * 16 + 8, 9 * 16 + 12); g.actors = [e]; step(30, []); if (k === 'butterfly') { if (!e.invuln) bad.push(k); return; } e.inv = 0; e.hp = 1; e.under = false; LV.applyHit(g, new LV.Hit({ team: 'hero', kind: 'blade', power: 2, from: { x: H().x, y: H().y }, box: { x: 0, y: 0, w: 1, h: 1 } }), e); if (!e.dead) bad.push(k); });
     return bad; });
   check('new monsters move and can be killed', r.length === 0, r);
   // 71. Every dungeon's last corridor can be crossed with its tool: Hammer, Gloves, Brick Wand, bombs, Grapple
@@ -380,6 +380,20 @@ const { chromium } = require('playwright');
     talk('starchart', 'starsdone'); out.compass = !!S.items.starcompass;
     return out; });
   check('quest rewards: Sea Lantern, Biscuit\'s Collar, Star Compass', Object.values(r).every(Boolean), r);
+  // 73. Every new boss and mini-boss fights (runs 4 s in its own room without errors) and falls; bosses leave a Heart Container
+  r = await p.evaluate(() => { const g = LV.game, out = {};
+    Object.keys(LV.BIG).filter(k => k !== 'mirrorecho').forEach(k => {
+      const m = Object.values(LV.MAPS).find(d => d.spawns.some(s => s.kind === k)); if (!m) { out[k] = 'not placed'; return; }
+      const sp = m.spawns.find(s => s.kind === k); place(m.id, sp.x, sp.y + 4, 0); H().hp = 99; g.save.maxHp = 99;
+      g.area = g.world.areaAt(sp.x * 16, sp.y * 16); const b = g.actors.find(a => a.kind === 'bigfoe' && a.name === LV.BIG[k].name);
+      if (!b) { out[k] = 'missing'; return; }
+      for (let i = 0; i < 240; i++) { H().inv = 9; step(1, []); g.dialog = null; }
+      g.actors = g.actors.filter(a => a === b); g.shots = []; b.hp = 1; b.inv = 0; b.under = false; b.state = 'dazed'; b.st = 0;
+      LV.applyHit(g, new LV.Hit({ team: 'hero', kind: 'bomb', power: 4, from: { x: b.x, y: b.y + 20 }, box: b.hurtBox() }), b); step(2, []); g.dialog = null;
+      out[k] = b.dead && (!LV.BIG[k].boss || g.pickups.some(p => p.kind === 'container'));
+    });
+    return out; });
+  check('new bosses and mini-bosses fight and fall', Object.values(r).length === 19 && Object.values(r).every(v => v === true), r);
   console.log(results.join('\n')); console.log('errors', errs);
   await b.close();
   process.exit(results.some(x => x.startsWith('FAIL')) || errs.length ? 1 : 0);
