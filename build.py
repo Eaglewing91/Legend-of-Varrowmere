@@ -5,7 +5,7 @@ Art sheets are embedded as base64 PNG; maps come from tools/maps.py.
 """
 import base64, glob, json, os, subprocess
 
-VERSION = '0.36.0'
+VERSION = '0.36.1'
 os.makedirs('build', exist_ok=True)
 subprocess.run(['python3', 'tools/maps.py'], check=True)
 subprocess.run(['python3', 'tools/patch_sheets.py'], check=True)
@@ -118,7 +118,14 @@ header = f"""// ==UserScript==
 /* Art: "Zelda-like tilesets and sprites" by ArMM1998 (OpenGameArt, CC0); monsters, bosses, terrain and sound effects from "Ninja Adventure" by Pixel-boy and AAA (CC0). Everything else (c) Eaglewing [571041], all rights reserved. */
 """
 launcher = """
-if (typeof GM_registerMenuCommand === 'function') GM_registerMenuCommand('Play Legend of Varrowmere', function () { boot().then(function (LV) { if (LV.root) return LV.open({ title: true }); return LV.loadArt().then(function () { LV.open({ title: true }); }); }); });
+const play = function () { return boot().then(function (LV) { if (LV.root) return LV.open({ title: true }); return LV.loadArt().then(function () { LV.open({ title: true }); }); }); };
+if (typeof GM_registerMenuCommand === 'function') GM_registerMenuCommand('Play Legend of Varrowmere', play);
+// Torn Arcade link: the two scripts talk through page events (no requests, nothing shared but these three messages).
+//   Arcade sends 'varrowmere:ping'  -> this script answers 'varrowmere:here' { version }   (so the phone can show the app)
+//   Arcade sends 'varrowmere:open'  -> the game opens over the page; when it closes, 'varrowmere:closed' goes back
+document.addEventListener('varrowmere:ping', function () { document.dispatchEvent(new CustomEvent('varrowmere:here', { detail: JSON.stringify({ version: '""" + VERSION + """' }) })); });
+document.addEventListener('varrowmere:open', function () { play().then(function () { document.documentElement.dataset.varrowmereOpen = '1'; }); });
+document.documentElement.dataset.varrowmere = '""" + VERSION + """';
 """
 open('build/Legend-of-Varrowmere.user.js', 'w').write(header + '(function () {\n' + body + launcher + '\n})();\n')
 
