@@ -208,13 +208,6 @@ def paint(m, rows, ox=0, oy=0):
                 cy = 0 if not wet(x, y - 1) else 2 if not wet(x, y + 1) else 1
                 m.put('ground', OW, 2 + cx, 6 + cy, X, Y)
                 m.col[Y * m.w + X] = DEEP
-            elif c == 'F':
-                yb = y
-                while at(x, yb + 1) == 'F':
-                    yb += 1
-                j = 5 - ((yb - y) % 6)          # trunks along the bottom of each band of trees, canopy above
-                m.put('over' if j < 3 else 'deco', OW, 4 + X % 4, 9 + j, X, Y)
-                m.col[Y * m.w + X] = SOLID
             elif c == 'b':
                 bush(m, X, Y)
             elif c == 'r':
@@ -225,6 +218,7 @@ def paint(m, rows, ox=0, oy=0):
             elif c == 'p':
                 m.put('ground', CV, 1, 1, X, Y)
                 m.col[Y * m.w + X] = PIT
+    paint_forest(m, g, ox, oy)
     for y in range(H_):
         for x in range(W_):
             c, X, Y = g[y][x], ox + x, oy + y
@@ -245,6 +239,49 @@ def paint(m, rows, ox=0, oy=0):
                 fence(m, X, ox + x1, Y)
             elif c == '|':
                 m.stamp(OW, 0, 17, X, Y, col=LOW)
+
+
+def paint_forest(m, g, ox, oy):
+    """Forest walls drawn from whole trees: every 4x3 block of F that can hold a full trunk gets one (its leafy crown
+    hangs over the three rows above); whatever F is left over becomes a rounded hedge, so no tree is ever cut in half."""
+    H_, W_ = len(g), len(g[0])
+    F = lambda x, y: (g[y][x] == 'F') if 0 <= x < W_ and 0 <= y < H_ else True
+    used = set()
+    for yt in range(H_ - 3, -3, -3):
+        for x0 in range(0, W_, 4):
+            cells = [(x0 + i, yt + j) for j in range(3) for i in range(4)]
+            if all(0 <= cy < H_ and 0 <= cx < W_ and F(cx, cy) and (cx, cy) not in used for (cx, cy) in cells):
+                for (cx, cy) in cells:
+                    used.add((cx, cy))
+                    m.put('deco', OW, 4 + cx - x0, 12 + cy - yt, ox + cx, oy + cy)
+                    m.col[(oy + cy) * m.w + ox + cx] = SOLID
+                for j in range(3):
+                    for i in range(4):
+                        cx, cy = x0 + i, yt - 3 + j
+                        if 0 <= cy < H_:
+                            m.put('over', OW, 4 + i, 9 + j, ox + cx, oy + cy)
+    for y in range(H_):
+        for x in range(W_):
+            if g[y][x] != 'F' or (x, y) in used:
+                continue
+            X, Y = ox + x, oy + y
+            m.col[Y * m.w + X] = SOLID
+            u, d, l, r = F(x, y - 1), F(x, y + 1), F(x - 1, y), F(x + 1, y)
+            if u and d and l and r:
+                t = (2, 14)
+            elif not (u or d or l or r):
+                t = (2, 14)
+            elif not l and not r:
+                t = (0, 14) if not u else (0, 15)
+            elif not u and not d:
+                t = (0, 16) if not l else (1, 16)
+            elif not u:
+                t = (1, 13) if not l else (3, 13) if not r else (2, 13)
+            elif not d:
+                t = (1, 15) if not l else (3, 15) if not r else (2, 15)
+            else:
+                t = (1, 14) if not l else (3, 14)
+            m.put('deco', OW, t[0], t[1], X, Y)
 
 
 def interior(mid, name, back, kind='house', npcs=(), chests=(), signs=()):
