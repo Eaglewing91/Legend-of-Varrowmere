@@ -266,3 +266,6 @@ QUESTS = [
     ('stars_teller', 'heartfields', (6.2, 10.4), 'trader', 'Shaman', ['To see the future properly I need a star chart. The old observatory on Stone Heath has one. Fetch it?'], ['The stars say... you will find this cash useful. Take it.'], 'starchart', 'starsdone', 'cash100'),
     ('stars_chart', 'stoneheath', (12.9, 4.0), 'scholar', 'Inspector', ['The fortune teller wants my star chart? Fine. Tell her the stars are not a bus timetable.'], ['Mind the chart. It is the only one, mostly because nobody else could be bothered.'], None, 'starchart', None),
 ]
+
+# land round a hand-built area that shares its ground, so it doesn't sit in the world as a hard-edged block
+SETPIECE_HALO = {'highlands': (':', 16)}

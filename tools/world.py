@@ -7,7 +7,7 @@ New areas are generated from the plan. The Shadow world is the light world's mir
 """
 import math
 import random
-from worldplan import GW, GH, SW, SH, BIOME, SETPIECES, REGIONS, RIVERS, ROADS, TOWNS_BUILT, TOWN_HOUSES, HOMES, FOUNTAINS, DUNGEONS_NEW, LANDMARKS, CAVES, PEOPLE, QUESTS
+from worldplan import SETPIECE_HALO, GW, GH, SW, SH, BIOME, SETPIECES, REGIONS, RIVERS, ROADS, TOWNS_BUILT, TOWN_HOUSES, HOMES, FOUNTAINS, DUNGEONS_NEW, LANDMARKS, CAVES, PEOPLE, QUESTS
 
 W, H = GW * SW, GH * SH
 WALK = set('.:sw-=*bhX')          # chars the hero can walk on (bushes can be cut)
@@ -38,15 +38,18 @@ class Noise:
 
 def biome_at(x, y, n1, n2):
     """The plan's biome under tile (x, y), with wavy borders between biomes."""
-    jx, jy = (n1(x, y) - 0.5) * 30 + (n2(x * 3, y * 3) - 0.5) * 8, (n2(x, y) - 0.5) * 26 + (n1(x * 3 + 50, y * 3) - 0.5) * 8
+    jx, jy = (n1(x, y) - 0.5) * 40 + (n2(x * 3, y * 3) - 0.5) * 12, (n2(x, y) - 0.5) * 34 + (n1(x * 3 + 50, y * 3) - 0.5) * 12
     sx, sy = int(min(GW - 1, max(0, (x + jx) // SW))), int(min(GH - 1, max(0, (y + jy) // SH)))
     return BIOME[sy][sx]
 
 
-def generate(reserved, anchors, openings, wet=()):
+def generate(reserved, anchors, openings, wet=(), lakes=()):
+    global MEANDER
+    MEANDER = Noise(31, 14)
     """The whole land as a grid of map characters (see tools/maps.py paint for their meaning)."""
     R = random.Random(2026)
     n1, n2, nf, nr, nw, ns = Noise(1, 23), Noise(2, 19), Noise(3, 11), Noise(4, 9), Noise(5, 13), Noise(6, 5)
+    ng, nm, no = Noise(7, 6), Noise(8, 8), Noise(9, 5)
     g = [['.'] * W for _ in range(H)]
     for y in range(H):
         for x in range(W):
@@ -55,6 +58,11 @@ def generate(reserved, anchors, openings, wet=()):
                 continue
             b = biome_at(x, y, n1, n2)
             gr = GROUND.get(b, '.')
+            hg = halo_at(x, y) if HALOS else None
+            if hg:
+                gr = hg
+                if b in 'WMS':     # snow, forest and rock give way near the hand-built area
+                    b = 'H'
             c = gr
             f, r, s = nf(x, y), nr(x, y), ns(x, y)
             if b == 'W':
@@ -79,6 +87,23 @@ def generate(reserved, anchors, openings, wet=()):
                 c = '~'
             elif b == 'C':
                 c = '~' if y >= H - 7 + int((nw(x, 0) - 0.5) * 4) else gr
+            # clusters that break up open land: groves, flower meadows, rocky outcrops, frozen ponds, rock formations
+            if c == gr:
+                gv, mf, oc = ng(x, y), nm(x, y), no(x, y)
+                if b in 'FKTH' and gv > 0.8:
+                    c = 'F'
+                elif b in 'FKT' and mf > 0.74 and ns(x * 2, y * 2) > 0.55:
+                    c = '*'
+                elif b in 'FH' and oc > 0.86:
+                    c = 'Q'
+                elif b in 'SI' and mf > 0.82:
+                    c = '~'
+                elif b == 'S' and gv > 0.74:
+                    c = 'T' if s > 0.6 else gr
+                elif b == 'D' and oc > 0.8:
+                    c = 'Q'
+                elif b == 'D' and mf > 0.84 and s > 0.7:
+                    c = 'x'
             g[y][x] = c
     # single trees take a 2 x 2 spot of open ground, or don't grow at all
     for y in range(H):
@@ -131,6 +156,23 @@ def generate(reserved, anchors, openings, wet=()):
                 XX, YY = X + (s_ if dy else 0), Y + (s_ if dx else 0)
                 if 0 <= XX < W and 0 <= YY < H and g[YY][XX] != '#':
                     g[YY][XX] = '~'
+    # a lake meeting the edge of a hand-built area spills out as a rounded bay, not a straight strip
+    near_door = set()
+    for o in openings:
+        ox, oy = o[0], o[1]
+        for j in range(-2, 3):
+            for i in range(-2, 3):
+                near_door.add((ox + i, oy + j))
+    for (cx, cy, dx, dy, half) in lakes:
+        depth = max(4, half * 0.45)
+        for j in range(-int(half) - 4, int(half) + 5):
+            for k in range(0, int(depth) + 4):
+                X, Y = (cx + j, cy + dy * k) if dy else (cx + dx * k, cy + j)
+                if not (0 <= X < W and 0 <= Y < H) or g[Y][X] == '#' or (X, Y) in near_door:
+                    continue
+                e = (j / (half + 0.5)) ** 2 + (k / depth) ** 2
+                if e < 0.8 + (nw(X * 3, Y * 3) - 0.5) * 0.9 + (HALO_NOISE(X, Y) - 0.5) * 0.5:
+                    g[Y][X] = '~'
     # lakes in lake screens get islands; clear rock out of water
     for y in range(H):
         for x in range(W):
@@ -227,8 +269,26 @@ def lake_bowl(x, y):
     return max(0.0, 0.62 * (1 - d))
 
 
+HALOS = []          # (x0, y0, x1, y1, ground, reach): land round a hand-built area takes on its ground
+HALO_NOISE = None
+
+
+def halo_at(x, y):
+    for (x0, y0, x1, y1, gch, reach) in HALOS:
+        dx = max(x0 - x, 0, x - x1)
+        dy = max(y0 - y, 0, y - y1)
+        d = math.hypot(dx, dy)
+        if d <= reach and d < reach * (0.45 + HALO_NOISE(x, y) * 0.8):
+            return gch
+    return None
+
+
 def ground_here(x, y, n1, n2):
-    return GROUND.get(biome_at(x, y, n1, n2), '.')
+    h = halo_at(x, y) if HALOS else None
+    return h or GROUND.get(biome_at(x, y, n1, n2), '.')
+
+
+MEANDER = None
 
 
 def road(g, a, b, n1, n2, width=2):
@@ -247,21 +307,24 @@ def road(g, a, b, n1, n2, width=2):
             break
         if d > best.get((x, y), 1e18):
             continue
-        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1)):
             X, Y = x + dx, y + dy
             if not (0 <= X < W and 0 <= Y < H):
                 continue
-            c = cost(g[Y][X])
+            if dx and dy and (cost(g[y][X]) >= 1e9 or cost(g[Y][x]) >= 1e9):
+                continue
+            c = cost(g[Y][X]) * (1.41 if dx and dy else 1)
+            c += MEANDER(X, Y) * 1.6
             if c >= 1e9 and (X, Y) != b:
                 continue
             if c < 1e9 and any(0 <= X + i < W and 0 <= Y + j < H and g[Y + j][X + i] == '#' for i, j in ((1, 0), (-1, 0), (0, 1), (0, -1))):
                 c += 3
             c += ((X * 7919 + Y * 104729) % 7) * 0.08
-            nd = d + min(c, 50) + (0.4 if (prev.get((x, y)) and (x - prev[(x, y)][0], y - prev[(x, y)][1]) != (dx, dy)) else 0)
+            nd = d + min(c, 60) + (0.25 if (prev.get((x, y)) and (x - prev[(x, y)][0], y - prev[(x, y)][1]) != (dx, dy)) else 0)
             if nd < best.get((X, Y), 1e18):
                 best[(X, Y)] = nd
                 prev[(X, Y)] = (x, y)
-                heapq.heappush(pq, (nd + abs(X - tx) + abs(Y - ty), nd, (X, Y)))
+                heapq.heappush(pq, (nd + math.hypot(X - tx, Y - ty), nd, (X, Y)))
     if b not in prev and a != b:
         return
     p = b
@@ -269,8 +332,9 @@ def road(g, a, b, n1, n2, width=2):
     while p != a:
         p = prev[p]
         path.append(p)
+    brush = [(0, 0), (1, 0), (0, 1), (1, 1), (-1, 0), (0, -1)] if width == 2 else [(0, 0), (1, 0)]
     for (x, y) in path:
-        for (i, j) in ((0, 0), (1, 0), (0, 1), (1, 1))[: 4 if width == 2 else 1]:
+        for (i, j) in brush:
             X, Y = x + i, y + j
             if 0 <= X < W and 0 <= Y < H and g[Y][X] not in '#X':
                 if g[Y][X] == '~':
@@ -411,7 +475,7 @@ def rebuild(maps, M):
                     wet.append((ox + x + dx, oy + y, dx, 0))
     wet = [w for w in wet if 0 <= w[0] < W and 0 <= w[1] < H and (w[0], w[1]) not in reserved]
     # only rivers (narrow runs of edge water) flow on; a lake meeting the edge stays a lake
-    ws = set(wet); keep_w = []
+    ws = set(wet); keep_w = []; lakes = []; seen_l = set()
     for w in wet:
         dx, dy = w[2], w[3]
         run = 1
@@ -421,8 +485,25 @@ def rebuild(maps, M):
                 run += 1; k += 1
         if run <= 5:
             keep_w.append(w)
+        elif w not in seen_l:
+            run_cells = [w]
+            for sgn in (1, -1):
+                k = 1
+                while True:
+                    v = (w[0] + (sgn * k if dy else 0), w[1] + (sgn * k if dx else 0), dx, dy)
+                    if v not in ws:
+                        break
+                    run_cells.append(v); k += 1
+            seen_l.update(run_cells)
+            xs = [c[0] for c in run_cells]; ys = [c[1] for c in run_cells]
+            cx, cy = (min(xs) + max(xs)) // 2, (min(ys) + max(ys)) // 2
+            lakes.append((cx, cy, dx, dy, len(run_cells) / 2))
     wet = keep_w
-    g = generate(reserved, anchors, openings, wet)
+    global HALOS, HALO_NOISE
+    HALO_NOISE = Noise(41, 7)
+    HALOS = [((SETPIECES[k][0]) * SW, SETPIECES[k][1] * SH, (SETPIECES[k][0] + sizes[k][0]) * SW - 1,
+              (SETPIECES[k][1] + sizes[k][1]) * SH - 1, gch, reach) for k, (gch, reach) in SETPIECE_HALO.items()]
+    g = generate(reserved, anchors, openings, wet, lakes)
     n1, n2 = Noise(1, 23), Noise(2, 19)
     GG = [[('.' if (x, y) in reserved else ground_here(x, y, n1, n2)) for x in range(W)] for y in range(H)]
     # slice the land into the plan's regions
