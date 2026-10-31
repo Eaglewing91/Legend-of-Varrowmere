@@ -146,7 +146,7 @@ LV.ROD_COST = { rod: 1 / 16, frost: 1 / 16, wand: 1 / 10, quake: 1 / 2, flame: 1
     render.call(this);
     if (this.mode === 'title' || this.mode === 'ending') return;
     const ctx = this.ctx, ox = Math.round(this.cam.x), oy = Math.round(this.cam.y);
-    for (const a of this.actors) if (a.frozen > 0) { ctx.fillStyle = 'rgba(160,220,255,.55)'; ctx.fillRect(Math.round(a.x - ox) - 8, Math.round(a.y - oy) - 18, 16, 18); ctx.fillStyle = 'rgba(255,255,255,.8)'; ctx.fillRect(Math.round(a.x - ox) - 6, Math.round(a.y - oy) - 16, 3, 3); }
+    for (const a of this.actors) if (a.frozen > 0) { const im = LV.IMG.fx_ice, X = Math.round(a.x - ox), Y = Math.round(a.y - oy); if (im) { ctx.globalAlpha = 0.85; ctx.drawImage(im, 5 * 32, 0, 32, 32, X - 14, Y - 26, 28, 28); ctx.globalAlpha = 1; } }
     if (this.medalFx > 0) { ctx.fillStyle = this.medalFx > 0.3 ? 'rgba(255,255,255,.5)' : 'rgba(255,255,255,' + this.medalFx + ')'; ctx.fillRect(0, 0, LV.VIEW_W, LV.VIEW_H); }
   };
 })();

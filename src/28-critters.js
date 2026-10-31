@@ -49,7 +49,7 @@ LV.makeCritter = function (key) {
       const air = this.ai === 'flyer' || this.ai === 'ambient' ? 6 + Math.round(Math.sin(this.t * 6) * 2) : this.ai === 'hopper' && this.hop > 0.3 ? Math.round(Math.sin((0.6 - this.hop) / 0.3 * Math.PI) * 6) : 0;
       ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(X - 5, Y - 2, 10, 2);
       ctx.drawImage(img, col * 16, row * 16, 16, 16, X - 8, Y - 16 - air, 16, 16);
-      if (this.stun > 0) { ctx.fillStyle = '#f8d040'; const a = this.t * 8; ctx.fillRect(X + Math.cos(a) * 6, Y - 22, 2, 2); ctx.fillRect(X - Math.cos(a) * 6, Y - 22, 2, 2); }
+      if (this.stun > 0) LV.stunStars(ctx, X, Y, this.t);
     };
     return e;
   };

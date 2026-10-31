@@ -36,6 +36,15 @@ LV.text = function (ctx, s, x, y, col, size) {
     cx += (W[1] + 1) * k;
   }
 };
+// the pack's wooden-theme panels (dark, rounded) and frames, nine-sliced; null-safe so the old look stays until art loads
+LV.drawPanel = function (ctx, x, y, w, h, key) {
+  const im = LV.IMG['ui_' + (key || 'panelbg')]; if (!im) { ctx.fillStyle = '#f0f0f0'; ctx.fillRect(x, y, w, h); ctx.fillStyle = '#18183a'; ctx.fillRect(x + 2, y + 2, w - 4, h - 4); return; }
+  const s = Math.floor(im.width / 3), W = im.width, H = im.height;
+  const part = function (sx, sy, sw, sh, dx, dy, dw, dh) { if (dw > 0 && dh > 0) ctx.drawImage(im, sx, sy, sw, sh, dx, dy, dw, dh); };
+  part(0, 0, s, s, x, y, s, s); part(s, 0, W - 2 * s, s, x + s, y, w - 2 * s, s); part(W - s, 0, s, s, x + w - s, y, s, s);
+  part(0, s, s, H - 2 * s, x, y + s, s, h - 2 * s); part(s, s, W - 2 * s, H - 2 * s, x + s, y + s, w - 2 * s, h - 2 * s); part(W - s, s, s, H - 2 * s, x + w - s, y + s, s, h - 2 * s);
+  part(0, H - s, s, s, x, y + h - s, s, s); part(s, H - s, W - 2 * s, s, x + s, y + h - s, w - 2 * s, s); part(W - s, H - s, s, s, x + w - s, y + h - s, s, s);
+};
 // the pack's parchment box, nine-sliced to any size; dialog text is dark ink on it
 LV.INK = '#4a3428'; LV.INK_SEL = '#c8462a';
 LV.drawBox = function (ctx, x, y, w, h) {
@@ -51,10 +60,10 @@ LV.drawBox = function (ctx, x, y, w, h) {
 LV.drawHud = function (ctx, g) {
   const s = g.save, h = g.hero;
   // energy meter
-  ctx.fillStyle = '#10101a'; ctx.fillRect(7, 7, 9, 34); ctx.fillStyle = '#f0f0f0'; ctx.fillRect(8, 8, 7, 32); ctx.fillStyle = '#10101a'; ctx.fillRect(9, 9, 5, 30);
+  LV.drawPanel(ctx, 6, 6, 11, 36, 'panel'); ctx.fillStyle = '#2a1a14'; ctx.fillRect(9, 9, 5, 30);
   ctx.fillStyle = '#3cbe50'; ctx.fillRect(9, 9 + 30 - Math.round(30 * (s.energy === undefined ? 1 : s.energy)), 5, Math.round(30 * (s.energy === undefined ? 1 : s.energy)));
   // item box
-  ctx.fillStyle = '#10101a'; ctx.fillRect(19, 7, 22, 22); ctx.fillStyle = '#f0f0f0'; ctx.fillRect(20, 8, 20, 20); ctx.fillStyle = '#181828'; ctx.fillRect(21, 9, 18, 18);
+  LV.drawPanel(ctx, 19, 7, 22, 22, 'panel'); LV.drawPanel(ctx, 21, 9, 18, 18, 'cell');
   if (s.equip) LV.itemIcon(ctx, s.equip, 22, 10);
   // counters
   ctx.drawImage(LV.IMG.objects, 0, 64, 16, 16, 46, 5, 12, 12); LV.text(ctx, ('00' + s.cash).slice(-3), 46, 18);

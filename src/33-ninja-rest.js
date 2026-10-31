@@ -98,3 +98,32 @@
   const sw = LV.drawSword;
   LV.drawSword = function (ctx, x, y) { const im = LV.IMG.it_katana; if (!im) return sw(ctx, x, y); const s = 3; ctx.save(); ctx.translate(x, y + 18); ctx.rotate(Math.PI / 4 * (im.width > im.height ? -1 : 0)); ctx.drawImage(im, -im.width * s / 2, -im.height * s / 2, im.width * s, im.height * s); ctx.restore(); };
 })();
+// stun: little pack sparks circling the head
+LV.stunStars = function (ctx, X, Y, t) {
+  const im = LV.IMG.fx_spark; if (!im) return;
+  for (let k = 0; k < 2; k++) { const a = t * 8 + k * Math.PI; ctx.drawImage(im, (Math.floor(t * 10) + k) % 7 * 10, 0, 10, 8, Math.round(X + Math.cos(a) * 7) - 5, Math.round(Y - 22 + Math.sin(a) * 2) - 4, 10, 8); }
+};
+(function () {
+  const IM = function (k) { return LV.IMG[k]; };
+  // thrown dice: the pack's die, tumbling
+  const dice = LV.Dice.prototype.draw;
+  LV.Dice.prototype.draw = function (ctx, ox, oy) { const im = IM('it_dice'); if (!im) return dice.call(this, ctx, ox, oy);
+    ctx.save(); ctx.translate(Math.round(this.x - ox), Math.round(this.y - oy)); ctx.rotate(Math.floor(this.t * 16) * Math.PI / 4); ctx.drawImage(im, -6, -6, 12, 12); ctx.restore(); };
+  // the Dawnblade's beam: a bright pack energy bolt
+  const beam = LV.Beam.prototype.draw;
+  LV.Beam.prototype.draw = function (ctx, ox, oy) { if (this.t < 0.12) return; const im = IM('fx_energy'); if (!im) return beam.call(this, ctx, ox, oy);
+    ctx.save(); ctx.filter = 'hue-rotate(200deg) brightness(1.6)'; ctx.drawImage(im, Math.floor(this.t * 16) % 4 * 16, 0, 16, 16, Math.round(this.x - ox) - 10, Math.round(this.y - oy) - 10, 20, 20); ctx.restore(); };
+  // archers hold the pack's bow
+  const ms = LV.makeSoldier;
+  LV.makeSoldier = function (rank, archer) { const f = ms(rank, archer); return function (x, y) { const e = f(x, y), old = e.draw;
+    if (e.archer) e.draw = function (ctx, ox, oy) { old.call(this, ctx, ox, oy); const im = IM('it_bow'); if (!im || (this.inv > 0 && Math.floor(this.inv * 30) % 2)) return;
+      const d = LV.DIRS[this.dir], X = Math.round(this.x - ox) + d.x * 7, Y = Math.round(this.y - oy) - 8 + d.y * 4; ctx.save(); ctx.translate(X, Y); ctx.rotate(Math.atan2(d.y, d.x) - Math.PI / 2); ctx.drawImage(im, -im.width / 2, -im.height / 2); ctx.restore(); };
+    return e; }; };
+  // shutter doors: the pack's iron bars
+  const special = LV.drawSpecialTiles;
+  LV.drawSpecialTiles = function (ctx, g, ox, oy) {
+    special(ctx, g, ox, oy); const im = IM('nahouse'); if (!im) return;
+    const w = g.world, x0 = Math.max(0, Math.floor(ox / 16)), y0 = Math.max(0, Math.floor(oy / 16)), x1 = Math.min(w.w - 1, x0 + 17), y1 = Math.min(w.h - 1, y0 + 15);
+    for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) if (w.col[ty * w.w + tx] === LV.C.SHUTTER) { const X = tx * 16 - ox, Y = ty * 16 - oy; ctx.fillStyle = '#1a1418'; ctx.fillRect(X, Y, 16, 16); ctx.drawImage(im, 9 * 16, 10 * 16, 16, 16, X, Y, 16, 16); }
+  };
+})();

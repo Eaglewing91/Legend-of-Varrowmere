@@ -62,7 +62,7 @@ LV.Game.prototype.drawTitle = function () {
     return;
   }
   // file select
-  ctx.fillStyle = '#f0f0f0'; ctx.fillRect(22, 22, 212, 180); ctx.fillStyle = '#18183a'; ctx.fillRect(24, 24, 208, 176);
+  LV.drawPanel(ctx, 22, 22, 212, 180);
   LV.text(ctx, T.erase ? 'ERASE WHICH FILE?' : 'PLEASE SELECT A FILE', 40, 32, T.erase ? '#f85050' : '#f8d040');
   for (let i = 0; i < 3; i++) {
     const y = 54 + i * 34, s = T.stores[i].get();

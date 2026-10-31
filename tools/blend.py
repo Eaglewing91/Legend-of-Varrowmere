@@ -10,7 +10,7 @@ import math, os
 
 N, E, S, W, NE, SE, SW, NW = 1, 2, 4, 8, 16, 32, 64, 128
 ART = os.path.join(os.path.dirname(__file__), '..', 'art')
-SHEETS = {'ow': 'pack-armm1998/Overworld.png', 'nf': 'ninja-adventure/TilesetFloor.png', 'nw': 'ninja-adventure/TilesetWater.png'}
+SHEETS = {'ow': 'pack-armm1998/Overworld.png', 'nf': 'ninja-adventure/TilesetFloor.png', 'nw': 'ninja-adventure/TilesetWater.png', 'ni': 'ninja-adventure/TilesetInteriorFloor.png'}
 # (top sheet, tx, ty), (bottom sheet, tx, ty)
 PAIRS = [
     (('nf', 12, 8), ('nf', 11, 12)),  # 0: dirt on grass
@@ -20,6 +20,8 @@ PAIRS = [
     (('nw', 1, 7), ('nf', 11, 12)),   # 4: water in grass (white foam at the edge)
     (('nw', 1, 7), ('nf', 12, 8)),    # 5: water against dirt (beaches)
     (('nw', 1, 7), ('nf', 1, 1)),     # 6: water against sand
+    (('nw', 1, 7), ('ni', 12, 13)),   # 7: water in a dungeon
+    (('black', 0, 0), ('ni', 12, 13)),  # 8: a pit in a dungeon floor
 ]
 WAVE = [2, 2, 3, 3, 2, 1, 1, 2, 2, 3, 2, 2, 1, 1, 1, 2]   # fringe depth along an open side (period 16 so it runs on)
 
@@ -42,6 +44,8 @@ def inside(k, x, y):
 
 def tile(sheets, ref):
     s, tx, ty = ref
+    if s == 'black':
+        return Image.new('RGBA', (16, 16), (12, 8, 10, 255))
     return sheets[s].crop((tx * 16, ty * 16, tx * 16 + 16, ty * 16 + 16)).convert('RGBA')
 
 
@@ -60,8 +64,8 @@ def build():
                     c = T.getpixel((x, y))
                     edge = any(0 <= x + dx < 16 and 0 <= y + dy < 16 and not ins[y + dy][x + dx] for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))
                     if edge:
-                        c = (236, 250, 255, 255) if p >= 4 else (int(c[0] * 0.72), int(c[1] * 0.72), int(c[2] * 0.72), 255)
-                    elif p >= 4 and any(0 <= x + dx < 16 and 0 <= y + dy < 16 and not ins[y + dy][x + dx] for dx, dy in ((2, 0), (-2, 0), (0, 2), (0, -2))):
+                        c = (236, 250, 255, 255) if 4 <= p <= 7 else (int(c[0] * 0.72), int(c[1] * 0.72), int(c[2] * 0.72), 255)
+                    elif 4 <= p <= 7 and any(0 <= x + dx < 16 and 0 <= y + dy < 16 and not ins[y + dy][x + dx] for dx, dy in ((2, 0), (-2, 0), (0, 2), (0, -2))):
                         c = (int(c[0] * 0.8), int(c[1] * 0.85), int(c[2] * 0.95), 255)
                     t.putpixel((x, y), c)
             out.paste(t, ((k & 15) * 16, p * 256 + (k >> 4) * 16))

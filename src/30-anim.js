@@ -38,7 +38,7 @@ LV.Hero.prototype.draw = function (ctx, ox, oy) {
     LV.heroCell(ctx, 'idle', c, Math.floor((this.t || 0) * 2) % 4 === 3 ? 1 : 0, X, Y);
   } finally {
     ctx.globalAlpha = 1;
-    if (g && g.riot) for (let k = 0; k < 3; k++) { const a = g.riot.t * 5 + k * 2.09; ctx.drawImage(LV.ball(4, ['#171717', '#3a5ab8', '#7aa0f0', '#ffffff']), Math.round(this.x - ox + Math.cos(a) * 18) - 5, Math.round(this.y - oy - 10 + Math.sin(a) * 18) - 5); }
+    if (g && g.riot) for (let k = 0; k < 3; k++) { const a = g.riot.t * 5 + k * 2.09, im = LV.IMG.fx_energy, px = Math.round(this.x - ox + Math.cos(a) * 18), py = Math.round(this.y - oy - 10 + Math.sin(a) * 18); if (im) ctx.drawImage(im, (Math.floor(g.riot.t * 12) + k) % 4 * 16, 0, 16, 16, px - 6, py - 6, 12, 12); }
   }
 };
 

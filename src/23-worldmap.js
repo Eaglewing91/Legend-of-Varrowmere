@@ -18,7 +18,7 @@ LV.Game.prototype.drawMap = (function (orig) {
       LV.worldMaps[key] = c;
     }
     const c = LV.worldMaps[key], X = 8, Y = 24, sc = 240 / c.width;
-    ctx.fillStyle = '#0c0c1c'; ctx.fillRect(0, 0, LV.VIEW_W, LV.VIEW_H);
+    ctx.fillStyle = '#0c0c1c'; ctx.fillRect(0, 0, LV.VIEW_W, LV.VIEW_H); LV.drawPanel(ctx, 4, 20, 248, 200);
     ctx.imageSmoothingEnabled = true; ctx.drawImage(c, X, Y, c.width * sc, c.height * sc); ctx.imageSmoothingEnabled = false;
     LV.text(ctx, (shadow ? 'SHADOW ' : '') + 'VARROWMERE', 8, 6, '#f8d040');
     const ai = w.areas.indexOf(this.area), names = def.names || [];

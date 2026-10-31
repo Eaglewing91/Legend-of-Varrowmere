@@ -61,7 +61,7 @@ LV.makeSoldier = function (rank, archer) {
       const col = Math.floor(this.anim) % 4;
       ctx.drawImage(img, col * 16, LV.HERO_ROW[this.dir] * 32, 16, 32, X - 8, Y - 28, 16, 32);
       if (this.archer) { ctx.fillStyle = '#8a5a30'; ctx.fillRect(X + (this.dir === 3 ? -9 : 6), Y - 18, 2, 10); }
-      if (this.stun > 0) { ctx.fillStyle = '#f8d040'; const a = this.t * 8; ctx.fillRect(X + Math.cos(a) * 6, Y - 32, 2, 2); ctx.fillRect(X - Math.cos(a) * 6, Y - 32, 2, 2); }
+      if (this.stun > 0) LV.stunStars(ctx, X, Y, this.t);
     };
     return e;
   };

@@ -66,7 +66,7 @@ LV.Game.prototype.render = (function (orig) {
 LV.Game.prototype.drawMap = function () {
   const ctx = this.ctx, w = this.world, def = w.def, blink = Math.floor(this.t * 4) % 2;
   ctx.fillStyle = '#0c0c1c'; ctx.fillRect(0, 0, LV.VIEW_W, LV.VIEW_H);
-  ctx.fillStyle = '#f0f0f0'; ctx.fillRect(6, 6, 244, 212); ctx.fillStyle = '#18183a'; ctx.fillRect(8, 8, 240, 208);
+  LV.drawPanel(ctx, 6, 6, 244, 212);
   LV.text(ctx, (def.name || w.id).toUpperCase(), 16, 14, '#f8d040');
   if (def.dungeon) {
     // room grid

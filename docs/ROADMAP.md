@@ -89,4 +89,7 @@ Fastest completion, fewest deaths, most secrets.
   house furniture (beds, tables, stools, shelves, ovens, plants, rugs), dungeon rock, HUD hearts, pickups (hearts, silver and gold
   coins, heart containers), bombs, arrows, kunai, energy orbs, fireballs, fire bars, the grapple, wisps, statues for the Sentinels
   and the Colossus, lizard snapjaws, Kraken bubbles, crystal gallery targets, and pack icons for every item.
+- [x] Last pieces: dungeon water and pits with soft pack edges, plank bridges, house back walls and hearths, stone pillars, skulls,
+  pack wood-theme panels for the item menu, file select, maps and HUD boxes, tumbling pack dice, the Dawnblade bolt, archers' bows,
+  spark stun stars, energy-ball Riot Shield ring, pack ice on frozen enemies, iron-bar shutters.
 - [ ] Balance, a full human playtest, then release through Torn Arcade.

@@ -36,14 +36,13 @@ LV.Game.prototype.menuUpdate = function () {
 };
 LV.drawMenu = function (ctx, g) {
   const list = g.ownedItems(), m = g.menu || { i: 0 };
-  ctx.fillStyle = 'rgba(8,8,20,.92)'; ctx.fillRect(16, 40, 224, 150);
-  ctx.strokeStyle = '#f0f0f0'; ctx.lineWidth = 2; ctx.strokeRect(17, 41, 222, 148);
+  LV.drawPanel(ctx, 16, 40, 224, 150);
   LV.text(ctx, 'ITEMS', 24, 46, '#f8d040');
   list.forEach(function (it, k) {
     const x = 28 + (k % 4) * 30, y = 62 + Math.floor(k / 4) * 30;
-    ctx.fillStyle = '#20203a'; ctx.fillRect(x, y, 22, 22);
+    LV.drawPanel(ctx, x, y, 22, 22, 'cell');
     LV.itemIcon(ctx, it.id, x + 3, y + 3);
-    if (k === m.i) { ctx.strokeStyle = '#f8d040'; ctx.strokeRect(x - 1, y - 1, 24, 24); }
+    if (k === m.i) LV.drawPanel(ctx, x - 2, y - 2, 26, 26, 'focus');
   });
   const sel = list[m.i];
   if (sel) LV.text(ctx, sel.name, 28, 130, '#fff');

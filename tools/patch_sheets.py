@@ -100,6 +100,19 @@ def build():
     for j in range(3):
         for i in range(3):
             put(cv, 1 + i, 3 + j, tile(rel, 4 + i, 5 + j))
+    # dungeon water and pits: soft pack edges against the cobbled floor (blend pairs 7 and 8)
+    bp = lambda pr, k: blend.crop(((k & 15) * 16, pr * 256 + (k >> 4) * 16, (k & 15) * 16 + 16, pr * 256 + (k >> 4) * 16 + 16))
+    for j in range(3):
+        for i in range(3):
+            put(cv, i, 7 + j, bp(7, masks[j][i]))
+            put(cv, 1 + i, j, bp(8, masks[j][i]))
+    put(cv, 6, 0, tile(rel, 5, 0)); put(cv, 6, 1, tile(rel, 5, 1)); put(cv, 6, 2, tile(rel, 5, 2))   # stone pillar
+    # the plank bridge by the river, the skull, the inside back wall, the hearth
+    put(ow, 6, 6, tile(L('ninja-adventure/TilesetWater.png'), 0, 12, 2, 3), 2, 3)
+    put(ow, 28, 2, tile(L('ninja-adventure/TilesetFloorDetail.png'), 13, 0))
+    put(inn, 0, 1, tile(rel, 5, 6))
+    put(inn, 10, 12, tile(house, 29, 12, 2, 1), 2, 1)
+    inn.save(os.path.join(ART, 'generated', 'Inner.png'))
     # bushes (also what the hero carries) and the small liftable rocks
     put(ow, 0, 16, tile(nat, 0, 10))
     put(cv, 5, 4, tile(nat, 17, 17))
