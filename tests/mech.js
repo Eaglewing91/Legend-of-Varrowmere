@@ -405,6 +405,18 @@ const { chromium } = require('playwright');
     out.names = LV.ITEMS.find(i => i.id === 'flame').name === 'Molotov Cocktail' && LV.ITEMS.find(i => i.id === 'storm').name === 'Flash Grenade';
     return out; });
   check('ALttP items: Ember Shield, Pepper Spray, Ninja Stars; Molotov Cocktail, Flash Grenade', Object.values(r).every(Boolean), r);
+  // 75. Inside places: a shop's own stock, a cellar under a house, a Great Fairy's gift, a secret cave's way in and out
+  r = await p.evaluate(() => { const g = LV.game, S = g.save, out = {};
+    S.cash = 500; S.items.bow = 1; S.arrows = 0; S.arrowUp = 0;
+    const sm = LV.MAPS.bh_smith.spawns.find(s => s.shop); place('bh_smith', sm.x, sm.y + 2, 0); const k = g.actors.find(a => a.npc && Math.abs(a.x - (sm.x * 16 + 8)) < 4);
+    k.onTalk(g); out.stock = g.dialog.choices[0].indexOf('30 Arrows') === 0; const cb = g.dialog.cb; g.dialog = null; cb(0); g.dialog = null; out.bought = S.arrows === 30 && S.cash === 425;
+    const house = Object.values(LV.MAPS).find(m => m.warps.some(w => /_cellar$/.test(w.to))); const w = house.warps.find(w => /_cellar$/.test(w.to));
+    place(house.id, w.x, w.y + 1, 0); g.actors = []; g.stairLock = 0; step(30, ['up']); step(30, []); out.cellar = /_cellar$/.test(g.world.id) && Object.keys(LV.MAPS[g.world.id].chests).length >= 1;
+    const gf = Object.values(LV.MAPS).find(m => m.spawns.some(s => s.greatfairy === 'valour')); const sp = gf.spawns.find(s => s.greatfairy);
+    delete S.items.valour; place(gf.id, sp.x, sp.y + 3, 0); const f = g.actors.find(a => a.npc && Math.abs(a.x - (sp.x * 16 + 8)) < 4); f.onTalk(g); const cb2 = g.dialog.cb; g.dialog = null; cb2(0); g.dialog = null; out.fairy = !!S.items.valour && S.cash === 125;
+    const cave = LV.MAPS.grotto3; out.caveRooms = cave.areas.length >= 2 && cave.warps.some(w => w.y === cave.h - 1);
+    return out; });
+  check('inside places: shop stock, cellars, Great Fairy gifts, multi-room secret caves', Object.values(r).every(Boolean), r);
   console.log(results.join('\n')); console.log('errors', errs);
   await b.close();
   process.exit(results.some(x => x.startsWith('FAIL')) || errs.length ? 1 : 0);

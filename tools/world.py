@@ -592,24 +592,37 @@ def build_house(M, m, x, y, hid, name, kind, look, lines, extra=None):
 
 
 def fountain_cave(M, m, x, y, fid):
+    """A fairy fountain: a pool to rest by. Three looks (forest spring, crystal grotto, old shrine); three of them are
+    Great Fairy fountains (see tools/interiors.py GREAT)."""
+    import interiors as INT
+    n = int(fid[5:])
+    look = INT.FOUNTAIN_LOOK[n % 3]
+    great = INT.GREAT.get(n)
     m.stamp(M.OW, 10, 31, x, y, 4, 3, col=M.SOLID)
     m.warp(x + 1, y + 2, fid, 7, 12, 0)
     m.warp(x + 2, y + 2, fid, 8, 12, 0)
-    f = M.Map(fid, 16, 14, 'Fairy Fountain', indoor=True, music='home')
-    f.fill(M.NI, 12, 13, 0, 0, 15, 13)
+    f = M.Map(fid, 16, 14, 'Great Fairy Fountain' if great else 'Fairy Fountain', indoor=True, music='home')
+    floor_t = {'spring': (M.NI, 12, 13), 'crystal': (M.NI, 16, 7), 'shrine': (M.NI, 19, 2)}[look]
+    for yy in range(14):
+        for xx in range(16):
+            f.put('ground', floor_t[0], floor_t[1] + (xx % 2), floor_t[2] + (yy % 2), xx, yy) if look != 'spring' else f.put('ground', M.NI, 12, 13, xx, yy)
     f.solid(0, 0, 16, 2); f.solid(0, 0, 1, 14); f.solid(15, 0, 1, 14); f.solid(0, 13, 16, 1)
+    wall = (4, 0)
     for xx in range(16):
         for yy in (0, 1):
-            f.put('ground', M.NR, 4 + (xx % 3), yy, xx, yy)
+            f.put('ground', M.NR, wall[0] + (xx % 3), wall[1] + yy, xx, yy)
     for yy in range(14):
         for xx in (0, 15):
-            f.put('ground', M.NR, 4, 1, xx, yy)
+            f.put('ground', M.NR, wall[0], wall[1] + 1, xx, yy)
     for xx in range(16):
-        f.put('ground', M.NR, 5, 2, xx, 13)
-    for xx in range(4, 12):                 # the pool, with soft foamy banks
-        for yy in range(4, 9):
-            nb = lambda a, b: 4 <= a < 12 and 4 <= b < 9
-            import blend as B
+        f.put('ground', M.NR, wall[0] + 1, wall[1] + 2, xx, 13)
+    px0, px1, py0, py1 = (3, 12, 3, 8) if great else (4, 11, 4, 8)
+    import blend as B
+    for xx in range(px0, px1 + 1):                 # the pool, with soft foamy banks
+        for yy in range(py0, py1 + 1):
+            nb = lambda a, b: px0 <= a <= px1 and py0 <= b <= py1 and not (look == 'crystal' and (a, b) in ((px0, py0), (px1, py0), (px0, py1), (px1, py1)))
+            if not nb(xx, yy):
+                continue
             k = B.mask(nb, xx, yy)
             f.put('ground', M.BL, k & 15, 7 * 16 + (k >> 4), xx, yy) if k != 255 else f.put('ground', M.NW, 1, 7, xx, yy)
             f.col[yy * 16 + xx] = M.DEEP
@@ -617,10 +630,31 @@ def fountain_cave(M, m, x, y, fid):
         f.warp(xx, 13, m.id, x + xx - 6, y + 3, 2)
         f.col[13 * 16 + xx] = M.OPEN
         f.put('ground', M.NI, 12, 13, xx, 13)
-    for (a, b) in ((5, 3), (10, 3), (4, 9), (11, 9)):
+    # each look's furnishings
+    if look == 'shrine':
+        for (a, b) in ((2, 3), (13, 3), (2, 9), (13, 9)):
+            for j in range(3):
+                f.put('deco', M.NH, 0, 15 + j, a, b + j)
+            f.solid(a, b, 1, 3)
+        for (a, b) in ((2, 7), (12, 7)):
+            if not great:
+                f.stamp(M.NH, 3, 15, a, b, 2, 2, col=M.SOLID)
+    elif look == 'crystal':
+        for (a, b) in ((2, 3), (13, 4), (2, 10), (13, 10), (3, 6)):
+            f.put('deco', M.NE, 18, 6, a, b); f.solid(a, b, 1, 1)
+    else:
+        for (a, b) in ((2, 4), (13, 4), (2, 10), (13, 10)):
+            f.put('deco', M.NN, 12, 6, a, b); f.solid(a, b, 1, 1)
+    for (a, b) in (((5, 2), (10, 2), (3, 10), (12, 10)) if not great else ((4, 2), (11, 2), (2, 9), (13, 9))):
         f.spawn('fairy', a, b)
-    f.spawn('villager', 8, 10, look='baker', who='Princess', roam=0, dir=2, heal=True,
-            talk=[[None, ['Welcome to my spring. Rest, and be whole again.', 'Catch a fairy in a bottle and it will save you when you fall. Fairies hate this. Do it anyway.']]])
+    if great:
+        lines = {'plenty': ['I am the Great Fairy of Plenty. Throw in 100 cash and I will fill your bombs, arrows, energy and every empty bottle.'],
+                 'valour': ['I am the Great Fairy of Valour. Throw in 300 cash, once, and your spin attack will gather in half the time.'],
+                 'fortune': ['I am the Great Fairy of Fortune. Throw in 200 cash, once, and your foes will drop cash far more often.']}[great]
+        f.spawn('villager', 8, 6, look='baker', who='GreatFairy', roam=0, dir=2, heal=True, greatfairy=great, talk=[[None, lines]])
+    else:
+        f.spawn('villager', 8, 10, look='baker', who='Princess', roam=0, dir=2, heal=True,
+                talk=[[None, ['Welcome to my spring. Rest, and be whole again.', 'Catch a fairy in a bottle and it will save you when you fall. Fairies hate this. Do it anyway.']]])
     f.entry = [7, 12]
     return f
 

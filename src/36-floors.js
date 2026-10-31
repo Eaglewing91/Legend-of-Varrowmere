@@ -38,8 +38,9 @@
   const warp = LV.Game.prototype.checkWarp;
   LV.Game.prototype.checkWarp = function () {
     const st = this.world.def.stairs, h = this.hero, tx = Math.floor(h.x / 16), ty = Math.floor((h.y - 3) / 16);
-    const onStairs = st && st.some(function (s) { return s[0] === tx && s[1] === ty; });
-    if (onStairs && this.stairLock > 0) return;
+    const w = this.world, onStairs = (st && st.some(function (s) { return s[0] === tx && s[1] === ty; })) || (w.def.indoor && ty < w.h - 1 && !!w.warpAt(tx, ty));   // stairs, and stairs-like doors inside (cellars)
+    const key = tx + ',' + ty, fresh = this.lastTile !== key || this.lastWorld !== w; this.lastTile = key; this.lastWorld = w;
+    if (onStairs && (this.stairLock > 0 || !fresh)) return;      // only stepping onto stairs takes them, not standing there
     if (onStairs && h.state === 'walk' && !this.fadeTo) { this.stairLock = 0.9; this.floorBanner = 1.6; }
     warp.call(this);
   };

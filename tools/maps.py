@@ -445,7 +445,7 @@ WALLMATS = [w[0] for w in BLEND.WALL_MATS]
 
 def dungeon_walls(m):
     """Dungeon rooms get the generated pack-style walls (rounded, outlined, brick faces) and a matching floor."""
-    mat = next((k for k, ids in WALLMAT.items() if m.extra.get('dungeon', m.id) in ids), None)
+    mat = m.extra.get('wallmat') or next((k for k, ids in WALLMAT.items() if m.extra.get('dungeon', m.id) in ids), None)
     if mat is None:
         return
     p = WALLMATS.index(mat)
@@ -461,7 +461,7 @@ def dungeon_walls(m):
 
 def naremap(m):
     """Swap the old art pack's ground, water, roads, flowers, bushes, houses and dungeon tiles for Ninja Adventure ones."""
-    if m.indoor and not (m.w == 16 and m.h == 14):
+    if m.indoor and (not (m.w == 16 and m.h == 14) or m.extra.get('wallmat')):
         dungeon_walls(m)
     G, D, O = m.layers['ground'], m.layers['deco'], m.layers['over']
     sh = lambda r: r >> 16
@@ -652,25 +652,40 @@ def interior(mid, name, back, kind='house', npcs=(), chests=(), signs=()):
         m.put('ground', IN, 0, 4, x, 13)
         m.solid(x, 13, 1, 1, OPEN)
         m.warp(x, 13, back[0], back[1], back[2], 2)
-    if kind in ('house', 'inn'):
-        m.stamp(IN, 16, 1, 2, 3, 2, 3, col=SOLID)
-        m.stamp(IN, 10, 1, 9, 6, 3, 3, col=SOLID)
-        m.stamp(IN, 12, 10, 11, 2, 2, 3, col=SOLID)
     if kind in ('shop', 'smith', 'tavern', 'game'):
         for x in range(3, 13):
             m.put('deco', IN, 10 if x == 3 else 12 if x == 12 else 11, 3, x, 6)
             m.col[6 * m.w + x] = LOW if kind == 'game' else SOLID
-    if kind == 'library':
-        for x0 in (2, 6, 10):
-            m.stamp(IN, 3, 12, x0, 3, 3, 2, col=SOLID)
-    if kind == 'tavern':
-        m.stamp(IN, 6, 9, 2, 8, 3, 3, col=SOLID)
-        m.stamp(IN, 10, 1, 10, 9, 3, 3, col=SOLID)
-    if kind == 'smith':
-        m.stamp(IN, 12, 10, 11, 2, 2, 3, col=SOLID)
-    m.put('deco', IN, 8, 12, 13, 11)
-    for n in npcs:
-        m.spawn('villager', n[0], n[1], **n[2])
+    if kind == 'game':
+        pass
+    else:
+        import interiors as INT
+        res = set()
+        for n in npcs:
+            res |= {(n[0] + a, n[1] + b) for a in (-1, 0, 1) for b in (-1, 0, 1)}
+        for c in chests:
+            res |= {(c[0], c[1]), (c[0], c[1] + 1)}
+        for sg in signs:
+            res |= {(sg[0], sg[1] + 1)}
+        if kind in ('shop', 'smith', 'tavern'):
+            # goods on the counter, behind it the keeper's stock
+            for k, x in enumerate((4, 5, 10, 11)):
+                sh, tx, ty = [(NH, 21, 12), (NH, 19, 14), (NH, 21, 14), (NH, 20, 14)][(k + INT.seed_of(mid)) % 4] if kind == 'shop' else \
+                    [(NH, 16, 15), (NH, 17, 15), (NH, 14, 15), (NH, 16, 13)][k] if kind == 'tavern' else [(NH, 15, 15), (NH, 14, 14), (NH, 15, 16), (NH, 14, 15)][k]
+                m.put('over', sh, tx, ty, x, 6)
+            res |= {(x, y) for x in range(2, 14) for y in (6, 7)}
+        stairs = INT.furnish(sys.modules[__name__], m, mid, 'house' if kind not in INT.LAYOUTS else kind, res)
+        if stairs:
+            c = INT.cellar(sys.modules[__name__], mid, name, (mid, stairs[0], stairs[1] + 1), INT.CELLARS[mid])
+            m.warp(stairs[0], stairs[1] - 1, c.id, c.entry[0], c.entry[1], 2); m.warp(stairs[0] + 1, stairs[1] - 1, c.id, c.entry[0], c.entry[1], 2)
+            m.col[(stairs[1] - 1) * m.w + stairs[0]] = OPEN; m.col[(stairs[1] - 1) * m.w + stairs[0] + 1] = OPEN
+            m.floors = [c]
+    import interiors as INT
+    for i, n in enumerate(npcs):
+        kw = dict(n[2])
+        if i == 0 and mid in INT.SHOP_STOCK:
+            kw['shop'] = INT.SHOP_STOCK[mid]
+        m.spawn('villager', n[0], n[1], **kw)
     for c in chests:
         m.chest(*c)
     for sg in signs:
@@ -1101,18 +1116,9 @@ def secret_cave(m, x, y, gid, items, text):
     boulder(m, x, y)
     m.warp(x, y + 1, gid, 7, 11, 0)
     m.solid(x, y + 1, 1, 1, CRACK)
-    g = Map(gid, 16, 14, 'Hidden Grotto', indoor=True, music='cave')
-    room(g, 0, 0)
-    door(g, 0, 0, 's')
-    g.warp(7, 13, m.id, x, y + 2, 2)
-    g.warp(8, 13, m.id, x, y + 2, 2)
-    for k, it in enumerate(items):
-        g.chest(6 + k * 3 - (len(items) - 1), 5, it)
-    g.sign(11, 8, text)
-    if m.extra.get('shadow'):
-        g.extra['shadow'] = True
-    g.entry = [7, 11]
-    GROTTOS.append(g)
+    import interiors as INT
+    for g in INT.grotto(sys.modules[__name__], gid, items, text, (m.id, x, y + 2), len([q for q in GROTTOS if not q.id.endswith('_up')]), bool(m.extra.get('shadow'))):
+        GROTTOS.append(g)
 
 
 ROCKS2 = [(15, 10), (15, 12), (13, 8), (15, 10), (13, 8)]
@@ -2332,7 +2338,7 @@ if __name__ == '__main__':
     built = WORLD.rebuild(built, sys.modules[__name__])      # lay the overworld out to tools/worldplan.py
     for m in list(built):                                    # a dungeon's other floors
         for f in getattr(m, 'floors', []):
-            f.extra['shadow'] = m.extra.get('shadow', True)
+            f.extra.setdefault('shadow', m.extra.get('shadow', False))
             built.append(f)
     import balance as BAL
     import dungeons as DG                                    # the story dungeons grow new floors in front of their old halls
