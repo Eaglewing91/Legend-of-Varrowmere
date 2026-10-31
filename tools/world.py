@@ -6,6 +6,7 @@ across to the same relative place, with the ground it stood on, and the land rou
 New areas are generated from the plan. The Shadow world is the light world's mirror, with its own extras carried across.
 """
 import math
+import os
 import random
 from worldplan import SETPIECE_HALO, GW, GH, SW, SH, BIOME, SETPIECES, REGIONS, RIVERS, ROADS, TOWNS_BUILT, TOWN_HOUSES, HOMES, FOUNTAINS, DUNGEONS_NEW, LANDMARKS, CAVES, PEOPLE, QUESTS, SHADOW_QUESTS
 
@@ -254,12 +255,32 @@ def generate(reserved, anchors, openings, wet=(), lakes=()):
                 if y >= 0 and g[y][x] != '#': g[y][x] = '.'
     # everything must be reachable: carve from any cut-off carried place to the land that is reached
     reach_all(g, anchors, openings, n1, n2)
+    if os.environ.get('ROADSTAT'):
+        r = edge_runs(g, anchors); print('roads along edges: runs>=6: %d  runs>=8: %d  longest %d' % (sum(1 for t in r if t[2] >= 6), sum(1 for t in r if t[2] >= 8), max([t[2] for t in r] or [0])), [t for t in r if t[2] >= 6])
     # nothing walks off the edge of the world
     for y in range(H):
         for x in range(W):
             if (x in (0, W - 1) or y in (0, H - 1)) and g[y][x] in WALK:
                 g[y][x] = '~' if y == H - 1 else 'Q'
     return g
+
+
+def edge_runs(g, anchors=()):
+    """Stretches of road that run along a screen's edge (the first or last row or column) for 4 tiles or more."""
+    out = []
+    for horiz in (True, False):
+        lines = [y for y in range(H) if y % SH in (0, SH - 1)] if horiz else [x for x in range(W) if x % SW in (0, SW - 1)]
+        for L in lines:
+            run = []
+            for k in range((W if horiz else H) + 1):
+                x, y = (k, L) if horiz else (L, k)
+                if k < (W if horiz else H) and g[y][x] in '-h':
+                    run.append((x, y)); continue
+                if len(run) >= 4:
+                    inside = any(a[0] <= run[0][0] <= a[2] and a[1] <= run[0][1] <= a[3] for a in anchors)
+                    out.append((run[0][0] // SW, run[0][1] // SH, len(run), 'carried' if inside else 'new'))
+                run = []
+    return out
 
 
 def lake_bowl(x, y):
@@ -315,6 +336,9 @@ def road(g, a, b, n1, n2, width=2):
                 continue
             c = cost(g[Y][X]) * (1.41 if dx and dy else 1)
             c += MEANDER(X, Y) * 1.6
+            # keep roads off the screen edges: crossing one is fine, running along one is not
+            if min(X % SW, SW - 1 - X % SW) <= 1 or min(Y % SH, SH - 1 - Y % SH) <= 1:
+                c += 8
             if c >= 1e9 and (X, Y) != b:
                 continue
             if c < 1e9 and any(0 <= X + i < W and 0 <= Y + j < H and g[Y + j][X + i] == '#' for i, j in ((1, 0), (-1, 0), (0, 1), (0, -1))):

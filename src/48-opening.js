@@ -165,17 +165,18 @@ LV.Game.prototype.enter = (function (orig) {
   };
 })(LV.Game.prototype.enter);
 
-// never start stuck inside something solid (a file saved while Wren was still in bed, say): step to the nearest free spot
-LV.Game.prototype.enter = (function (orig) {
-  return function (mapId, x, y, dir, first) {
-    const r = orig.call(this, mapId, x, y, dir, first), h = this.hero, w = this.world;
-    if (!h || !w || this.scene || !w.boxBlocked(h.bodyBox(), 'hero')) return r;
-    const x0 = h.x, y0 = h.y;
-    for (let rad = 1; rad <= 6; rad++) for (let dy = -rad; dy <= rad; dy++) for (let dx = -rad; dx <= rad; dx++) {
-      if (Math.max(Math.abs(dx), Math.abs(dy)) !== rad) continue;
-      h.x = (Math.floor(x0 / 16) + dx) * 16 + 8; h.y = (Math.floor(y0 / 16) + dy) * 16 + 12;
-      if (!w.boxBlocked(h.bodyBox(), 'hero') && !w.warpAt(Math.floor(h.x / 16), Math.floor((h.y - 3) / 16))) { h.safe = { x: h.x, y: h.y }; return r; }
-    }
-    h.x = x0; h.y = y0; return r;
-  };
-})(LV.Game.prototype.enter);
+// never start a file stuck inside something solid (one saved while Wren was still in bed, say): step to the nearest free spot
+LV.Game.prototype.unstick = function () {
+  const h = this.hero, w = this.world;
+  if (!h || !w || this.scene || !w.boxBlocked(h.bodyBox(), 'hero')) return;
+  const x0 = h.x, y0 = h.y;
+  for (let rad = 1; rad <= 6; rad++) for (let dy = -rad; dy <= rad; dy++) for (let dx = -rad; dx <= rad; dx++) {
+    if (Math.max(Math.abs(dx), Math.abs(dy)) !== rad) continue;
+    h.x = (Math.floor(x0 / 16) + dx) * 16 + 8; h.y = (Math.floor(y0 / 16) + dy) * 16 + 12;
+    if (!w.boxBlocked(h.bodyBox(), 'hero') && !w.warpAt(Math.floor(h.x / 16), Math.floor((h.y - 3) / 16))) { h.safe = { x: h.x, y: h.y }; return; }
+  }
+  h.x = x0; h.y = y0;
+};
+LV.Game.prototype.startFile = (function (orig) {
+  return function (i) { const r = orig.call(this, i); if (this.mode === 'play') this.unstick(); return r; };
+})(LV.Game.prototype.startFile);

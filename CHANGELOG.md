@@ -6,6 +6,11 @@ Dates are in TCT (Torn City Time).
 
 ---
 
+## 1.0.9 — 2026-10-31
+### Fixed
+- Roads across the countryside no longer run along the edge of the screen: they cross from one screen to the next and keep to the middle ground (the longest edge-hugging stretch went from 24 tiles to none).
+- A file that would load with Wren inside something solid moves her to the nearest free spot.
+
 ## 1.0.8 — 2026-10-31
 ### Fixed
 - Closing the game during the opening scene no longer leaves Wren stuck in bed: the scene plays again from the start.
