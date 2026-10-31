@@ -42,5 +42,5 @@ class Scene:
             d.point((hx+k,hy+j),fill=(232,40,56) if filled else (80,26,36))
   def save(s,path,scale=3): s.img.resize((s.img.width*scale,s.img.height*scale),Image.NEAREST).save(path)
 def hero(sc,x,y,frame=(0,0)):  # frame=(col,row) in 16x32 cells
-  sc.shadow(x+8,y+29,12); sc.px(CH,(frame[0]*16,frame[1]*32,frame[0]*16+16,frame[1]*32+32),x,y)
-def logmon(sc,x,y,f=0,row=0): sc.shadow(x+16,y+28,16); sc.px(LOG,(f*32,row*32,f*32+32,row*32+32),x,y)
+  sc.px(CH,(frame[0]*16,frame[1]*32,frame[0]*16+16,frame[1]*32+32),x,y)
+def logmon(sc,x,y,f=0,row=0): sc.px(LOG,(f*32,row*32,f*32+32,row*32+32),x,y)
