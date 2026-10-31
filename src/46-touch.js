@@ -106,3 +106,24 @@ LV.setMuted = function (m) {
   const open = LV.open;
   LV.open = function (opts) { opts = opts || {}; const g = open.call(this, opts); if (opts.muted !== undefined && opts.muted !== null) LV.setMuted(opts.muted); return g; };
 })();
+
+/* ---------- volume: Torn Arcade's volume slider (0-100) ----------
+   Every sound and tune goes through one master gain per audio context: each new AudioContext the game makes gets
+   it slotted in front of its real speakers, so nothing else in the game needs to know. */
+LV.volume = 100;
+LV.volGain = function () { return Math.pow(Math.max(0, Math.min(100, LV.volume)) / 100, 2); };   // as Torn Arcade: 50% sounds about half as loud
+LV.setVolume = function (v) {
+  LV.volume = Math.max(0, Math.min(100, Math.round(Number(v) || 0)));
+  const ac = LV.game && LV.game.audio, gn = ac && ac.__lvVol;
+  if (gn) { try { gn.gain.setTargetAtTime(LV.volGain(), ac.currentTime, 0.03); } catch (e) { gn.gain.value = LV.volGain(); } }
+};
+Object.defineProperty(LV.Game.prototype, 'audio', {
+  configurable: true,
+  get: function () { return this._audio; },
+  set: function (ac) {
+    if (ac && !ac.__lvVol) {
+      try { const real = ac.destination, gn = ac.createGain(); gn.gain.value = LV.volGain(); gn.connect(real); Object.defineProperty(ac, 'destination', { value: gn }); ac.__lvVol = gn; } catch (e) {}
+    }
+    this._audio = ac;
+  }
+});

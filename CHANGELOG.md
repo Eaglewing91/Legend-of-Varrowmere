@@ -6,6 +6,10 @@ Dates are in TCT (Torn City Time).
 
 ---
 
+## 1.0.7 — 2026-10-31
+### Fixed
+- Torn Arcade's volume slider now sets Legend of Varrowmere's volume too (music and sound effects).
+
 ## 1.0.6 — 2026-10-31
 ### New
 - **New townsfolk.** Every villager, trader, guard, scholar and fisher is now drawn from the Mana Seed character art by Seliel the Shaper: 35 different people with full walking animation, and their own face beside what they say.

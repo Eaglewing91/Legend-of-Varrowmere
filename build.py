@@ -5,7 +5,7 @@ Art sheets are embedded as base64 PNG; maps come from tools/maps.py.
 """
 import base64, glob, json, os, subprocess
 
-VERSION = '1.0.6'
+VERSION = '1.0.7'
 os.makedirs('build', exist_ok=True)
 subprocess.run(['python3', 'tools/maps.py'], check=True)
 subprocess.run(['python3', 'tools/patch_sheets.py'], check=True)
@@ -187,11 +187,14 @@ document.addEventListener('varrowmere:preload', function () { const go = functio
 //   (with detail { host: id } the game opens inside that element on the page, i.e. inside the phone, instead of over the page)
 //   Arcade sends 'varrowmere:close' -> the game closes (and saves), as when you leave it on the phone
 document.addEventListener('varrowmere:open', function (e) {
-  let host = null, pad, muted; try { const d = JSON.parse(e.detail || 'null'); if (d && typeof d.host === 'string') host = document.getElementById(d.host); if (d && typeof d.pad === 'boolean') pad = d.pad; if (d && typeof d.muted === 'boolean') muted = d.muted; } catch (x) {}
+  let host = null, pad, muted, volume; try { const d = JSON.parse(e.detail || 'null'); if (d && typeof d.host === 'string') host = document.getElementById(d.host); if (d && typeof d.pad === 'boolean') pad = d.pad; if (d && typeof d.muted === 'boolean') muted = d.muted; if (d && typeof d.volume === 'number' && isFinite(d.volume)) volume = d.volume; } catch (x) {}
+  if (volume !== undefined) ready().then(function (LV) { if (LV.setVolume) LV.setVolume(volume); });
   play(host, pad, muted).then(function () { document.documentElement.dataset.varrowmereOpen = '1'; });
 });
 //   Arcade sends 'varrowmere:mute' { muted } -> sound and music off or on (the phone's speaker button)
 document.addEventListener('varrowmere:mute', function (e) { let m = false; try { m = !!JSON.parse(e.detail).muted; } catch (x) {} if (readying) readying.then(function (LV) { if (LV.setMuted) LV.setMuted(m); }); });
+//   Arcade sends 'varrowmere:volume' { volume: 0-100 } -> the game's sound and music follow the phone's volume slider
+document.addEventListener('varrowmere:volume', function (e) { let v = 100; try { v = Number(JSON.parse(e.detail).volume); } catch (x) {} if (!isFinite(v)) return; if (readying) readying.then(function (LV) { if (LV.setVolume) LV.setVolume(v); }); });
 //   Arcade sends 'varrowmere:pad' { on } -> the touch pad turns on or off (the phone's 🎮 button)
 document.addEventListener('varrowmere:pad', function (e) { let on = false; try { on = !!JSON.parse(e.detail).on; } catch (x) {} if (readying) readying.then(function (LV) { if (LV.setPad) LV.setPad(on); }); });
 document.addEventListener('varrowmere:close', function () { if (readying) readying.then(function (LV) { if (LV.root && LV.root.style.display !== 'none') LV.close(); }); });
