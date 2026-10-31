@@ -37,3 +37,15 @@ LV.sceneTime = function () { return (typeof performance !== 'undefined' ? perfor
     ctx.globalAlpha = 1;
   };
 })();
+
+/* ================= Item icons from the pack (centred in the 16 x 16 item box) ================= */
+LV.itemIcon = (function (orig) {
+  return function (ctx, id, x, y) {
+    let key = 'it_' + id;
+    if (id === 'bottle') { const b = (LV.game && LV.game.save.bottles || [])[0]; if (b && b !== 'empty') key = 'it_bottle_' + b; }
+    const im = LV.IMG[key]; if (!im) return orig(ctx, id, x, y);
+    const s = Math.min(1, 14 / Math.max(im.width, im.height));
+    if (id === 'bow') { ctx.save(); ctx.translate(x + 8, y + 8); ctx.rotate(-Math.PI / 4); ctx.drawImage(im, -im.width / 2, -im.height / 2); ctx.restore(); return; }
+    ctx.drawImage(im, Math.round(x + 8 - im.width * s / 2), Math.round(y + 8 - im.height * s / 2), im.width * s, im.height * s);
+  };
+})(LV.itemIcon);

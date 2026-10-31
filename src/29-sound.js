@@ -44,3 +44,32 @@ LV.now = function () { return (typeof performance !== 'undefined' ? performance 
   const ah = LV.applyHit;
   LV.applyHit = function (game, hit, t) { const r = ah(game, hit, t); if (r === 'hit') t.flashT = LV.now(); return r; };
 })();
+
+/* ================= Music: Ninja Adventure tracks (CC0), looped. The old chiptune tunes play if a track can't be decoded. ================= */
+(function () {
+  const synthPlay = LV.Music.prototype.play, synthStop = LV.Music.prototype.stop, decoded = {}, pending = {};
+  const ALIAS = { overworld: 'village' };
+  LV.Music.prototype.play = function (name) {
+    if (this.track === name) return;
+    const key = ALIAS[name] || name, g = this.g;
+    if (!LV.MUSIC || !LV.MUSIC[key] || g.muted || !this.on || typeof AudioContext === 'undefined') { this.stop(); return synthPlay.call(this, name === 'ending' ? 'home' : name); }
+    this.stop(); this.track = name;
+    try { if (!g.audio) g.audio = new AudioContext(); } catch (e) { return; }
+    const ac = g.audio, self = this;
+    const start = function (buf) {
+      if (self.track !== name || !self.on) return;
+      const src = ac.createBufferSource(), gn = ac.createGain(); src.buffer = buf; src.loop = true; gn.gain.value = 0.32;
+      src.connect(gn); gn.connect(ac.destination); src.start(); self.src = src;
+    };
+    if (decoded[key]) return start(decoded[key]);
+    if (pending[key]) { pending[key].push(start); return; }
+    pending[key] = [start];
+    try {
+      const bin = atob(LV.MUSIC[key]), a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i);
+      const done = function (b) { decoded[key] = b; const q = pending[key]; pending[key] = null; q.forEach(function (f) { f(b); }); };
+      const fail = function () { const q = pending[key]; pending[key] = null; LV.MUSIC[key] = null; if (self.track === name) { self.track = null; self.play(name); } void q; };
+      const pr = ac.decodeAudioData(a.buffer, done, fail); if (pr && pr.catch) pr.catch(function () {});
+    } catch (e) {}
+  };
+  LV.Music.prototype.stop = function () { if (this.src) { try { this.src.stop(); } catch (e) {} this.src = null; } synthStop.call(this); };
+})();

@@ -58,7 +58,7 @@ LV.Music.prototype.toggle = function () { this.on = !this.on; const t = this.tra
     if (!this.music) this.music = new LV.Music(this);
     if (this.input.pressed.music) this.music.toggle();
     let want = 'title';
-    if (this.mode === 'ending') want = 'home';
+    if (this.mode === 'ending') want = 'ending';
     else if (this.mode !== 'title' && this.world) {
       const self = this, bossNear = this.actors.some(function (a) { return a.boss && !a.dead && self.world.areaAt(a.x, a.y - 8) === self.area; });
       want = bossNear ? 'boss' : (this.world.def.music || 'overworld');
