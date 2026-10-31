@@ -5,12 +5,14 @@ import random
 
 THEMES = {
     # wall char on the border, ground char, scatter list [(char, weight)], feature counts
-    'fields':    {'wall': 'F', 'ground': '.', 'scatter': [('b', 6), ('*', 4)], 'clumps': ('F', 5), 'ponds': 2, 'mud': 1, 'boulders': 1},
-    'foothills': {'wall': 'O', 'ground': '.', 'scatter': [('b', 3), ('r', 3)], 'clumps': ('F', 2), 'ponds': 0, 'mud': 3, 'boulders': 10},
+    'fields':    {'wall': 'F', 'ground': '.', 'scatter': [('b', 6), ('*', 4)], 'clumps': ('F', 3), 'trees': 10, 'ponds': 2, 'mud': 1, 'boulders': 1},
+    'foothills': {'wall': 'O', 'ground': '.', 'scatter': [('b', 3), ('r', 3)], 'clumps': ('F', 1), 'trees': 8, 'ponds': 0, 'mud': 3, 'boulders': 10},
     'mountain':  {'wall': 'O', 'ground': ':', 'scatter': [('r', 6), ('b', 1)], 'clumps': None, 'ponds': 0, 'mud': 0, 'boulders': 18},
-    'lake':      {'wall': 'F', 'ground': '.', 'scatter': [('b', 3), ('*', 2)], 'clumps': ('F', 2), 'ponds': 0, 'mud': 0, 'boulders': 2, 'bigwater': True},
-    'desert':    {'wall': 'O', 'ground': ':', 'scatter': [('r', 3), ('x', 2)], 'clumps': None, 'ponds': 0, 'mud': 0, 'boulders': 10, 'oasis': True},
-    'coast':     {'wall': 'F', 'ground': '.', 'scatter': [('b', 4), ('*', 2)], 'clumps': ('F', 2), 'ponds': 0, 'mud': 2, 'boulders': 2, 'sea': True},
+    'lake':      {'wall': 'F', 'ground': '.', 'scatter': [('b', 3), ('*', 2)], 'clumps': ('F', 1), 'trees': 6, 'ponds': 0, 'mud': 0, 'boulders': 2, 'bigwater': True},
+    'snow':      {'wall': 'O', 'ground': 'w', 'scatter': [('r', 4)], 'clumps': None, 'trees': 14, 'ponds': 0, 'mud': 0, 'boulders': 12},
+    'icelake':   {'wall': 'F', 'ground': 'w', 'scatter': [('r', 2)], 'clumps': None, 'trees': 10, 'ponds': 0, 'mud': 0, 'boulders': 2, 'bigwater': True},
+    'desert':    {'wall': 'O', 'ground': 's', 'scatter': [('r', 3), ('x', 2)], 'clumps': None, 'ponds': 0, 'mud': 0, 'boulders': 10, 'oasis': True},
+    'coast':     {'wall': 'F', 'ground': '.', 'scatter': [('b', 4), ('*', 2)], 'clumps': ('F', 1), 'trees': 6, 'ponds': 0, 'mud': 2, 'boulders': 2, 'sea': True},
 }
 
 
@@ -66,6 +68,11 @@ def make(W, H, theme, openings, seed, hub=None, sea_side=None, keep=()):
         if g[by][bx] in '.:' and g[by][bx + 1] in '.:' and g[by + 1][bx] in '.:' and g[by + 1][bx + 1] in '.:':
             put(bx, by, 'O')
             put(bx + 1, by, '_'); put(bx, by + 1, '_'); put(bx + 1, by + 1, '_')
+    # single round trees from the pack
+    for k in range(T.get('trees', 0) * max(1, (W * H) // 900)):
+        tx, ty = R.randrange(3, W - 5), R.randrange(3, H - 5)
+        if all(g[ty + j][tx + i] == T['ground'] for j in range(-1, 3) for i in range(-1, 3)):
+            put(tx, ty, 'T'); put(tx + 1, ty, '_'); put(tx, ty + 1, '_'); put(tx + 1, ty + 1, '_')
     # scatter
     total = sum(w for _, w in T['scatter'])
     for k in range((W * H) // 28):
@@ -87,16 +94,16 @@ def make(W, H, theme, openings, seed, hub=None, sea_side=None, keep=()):
         for x in (0, 1, W - 2, W - 1):
             put(x, y, wall if wall != 'O' else ('O' if (y % 2 == 0 and x in (0, W - 2)) else '_'))
     # openings: clear the wall and run a 2-wide path to the hub
-    path = '-' if theme in ('fields', 'coast', 'lake') else ':'
+    path = '-' if theme in ('fields', 'coast', 'lake') else T['ground']
 
     def clear(x, y):
         c = g[y][x] if 0 <= x < W and 0 <= y < H else None
         if c is None:
             return
-        if c in 'O_':
-            # remove the whole boulder this tile belongs to
+        if c in 'O_T':
+            # remove the whole boulder (or tree) this tile belongs to
             for (ax, ay) in [(x, y), (x - 1, y), (x, y - 1), (x - 1, y - 1)]:
-                if 0 <= ax < W and 0 <= ay < H and g[ay][ax] == 'O':
+                if 0 <= ax < W and 0 <= ay < H and g[ay][ax] in 'OT':
                     for (bx, by) in [(ax, ay), (ax + 1, ay), (ax, ay + 1), (ax + 1, ay + 1)]:
                         put(bx, by, T['ground'])
             if g[y][x] == '_':
@@ -126,14 +133,14 @@ def make(W, H, theme, openings, seed, hub=None, sea_side=None, keep=()):
     for (x0, y0, x1, y1) in keep:          # areas features need clear (houses, caves...)
         for y in range(y0, y1 + 1):
             for x in range(x0, x1 + 1):
-                if g[y][x] in 'O_':
+                if g[y][x] in 'O_T':
                     clear(x, y)
                 put(x, y, T['ground'])
         walk(x0, y1 + 1, hub[0], hub[1])
-    if T['ground'] == ':':        # stray grass in dry lands only survives right next to water (oasis banks)
+    if T['ground'] in (':', 's', 'w'):        # stray grass in dry or snowy lands only survives right next to water (banks)
         for y in range(H):
             for x in range(W):
-                if g[y][x] == '.' and not any(0 <= y + j < H and 0 <= x + i < W and g[y + j][x + i] == '~' for j in (-1, 0, 1) for i in (-1, 0, 1)):
-                    g[y][x] = ':'
+                if g[y][x] == '.' and (T['ground'] == 'w' or not any(0 <= y + j < H and 0 <= x + i < W and g[y + j][x + i] == '~' for j in (-1, 0, 1) for i in (-1, 0, 1))):
+                    g[y][x] = T['ground']
     rows = [''.join(r).replace('_', T['ground']) for r in g]
     return rows

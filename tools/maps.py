@@ -12,6 +12,7 @@ Collision codes: 0 open, 1 solid, 2 deep water, 3 pit, 4 ledge (jump south), 5 l
 import json, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 OW, IN, CV, OB = 0, 1, 2, 3
+NF, NN = 4, 5          # Ninja Adventure floor and nature sheets
 OPEN, SOLID, DEEP, PIT, LEDGE, LOW, BUSH, ROCK, SHALLOW, CRACK, TORCH, TORCH_LIT, LOCKED, BIGLOCK, BLOCK, PLATE, SHUTTER, BIGCHEST, LEVER, SWITCH, POST, _21, PEDESTAL, BARRIER, PEG, DARKROCK = range(26)
 
 
@@ -193,11 +194,19 @@ def paint(m, rows, ox=0, oy=0, base='.'):
     g = [r.ljust(W_, '.') for r in rows]
     at = lambda x, y: g[y][x] if 0 <= y < H_ and 0 <= x < W_ else None
     grass(m, ox, oy, ox + W_ - 1, oy + H_ - 1)
-    if base == ':':          # dry lands: everything that isn't grass, water or road sits on earth
+    if base in (':', 's', 'w'):          # dry, sandy and snowy lands: everything that isn't grass, water or road sits on the land's own ground
         for y in range(H_):
             for x in range(W_):
                 if g[y][x] not in '.*b~-=':
-                    m.put('ground', OW, 12, 13, ox + x, oy + y)
+                    X, Y = ox + x, oy + y
+                    if base == ':':
+                        m.put('ground', OW, 12, 13, X, Y)
+                    else:
+                        r = (X * 7 + Y * 13) % 23
+                        if base == 's':
+                            m.put('ground', NF, *((0, 4) if r == 0 else (1, 4) if r == 1 else (1, 1)), X, Y)
+                        else:
+                            m.put('ground', NF, *((0, 18) if r in (0, 5) else (1, 18) if r in (1, 9, 14) else (1, 15)), X, Y)
     for y in range(H_):
         for x in range(W_):
             c, X, Y = g[y][x], ox + x, oy + y
@@ -233,7 +242,19 @@ def paint(m, rows, ox=0, oy=0, base='.'):
         for x in range(W_):
             c, X, Y = g[y][x], ox + x, oy + y
             if c == 'O':
-                boulder(m, X, Y)
+                if base == 's':
+                    m.stamp(NN, 12, 6, X, Y, 2, 2, col=SOLID)
+                elif base in (':', 'w'):
+                    m.stamp(NN, 16, 6, X, Y, 2, 2, col=SOLID)
+                else:
+                    boulder(m, X, Y)
+            elif c == 'T':          # a round tree from the pack (2x2): crown over the top row
+                k = (X + Y) % 3
+                tx, ty = ((8, 0) if k else (10, 0)) if base == 'w' else ((0, 0), (16, 0), (18, 0))[k]
+                for i in range(2):
+                    m.put('over', NN, tx + i, ty, X + i, Y)
+                    m.put('deco', NN, tx + i, ty + 1, X + i, Y + 1)
+                    m.col[(Y + 1) * m.w + X + i] = SOLID
             elif c == 'H':
                 m.stamp(OW, 6, 0, X, Y, 5, 5, col=SOLID)
             elif c == 'S':
@@ -1560,7 +1581,7 @@ def outer_regions():
         # wildlife by theme: two creatures and a butterfly or so per screen
         import random as _r
         rr = _r.Random(seed * 7)
-        pool = {'fields': ['slime', 'mushroom', 'snake'], 'foothills': ['lizard', 'mole', 'owl'], 'mountain': ['skull', 'owl', 'cyclope'],
+        pool = {'snow': ['skullblue', 'owl', 'slime3'], 'icelake': ['octopus', 'slime3', 'bluebat'], 'fields': ['slime', 'mushroom', 'snake'], 'foothills': ['lizard', 'mole', 'owl'], 'mountain': ['skull', 'owl', 'cyclope'],
                 'lake': ['octopus', 'slime3', 'bluebat'], 'desert': ['snake', 'spiderred', 'skull', 'lizard'], 'coast': ['octopus', 'larva', 'mouse']}[theme]
         for a in m.areas:
             spots = [(x, y) for y in range(a[1] + 3, a[1] + a[3] - 3) for x in range(a[0] + 3, a[0] + a[2] - 3) if m.col[y * m.w + x] == OPEN]
@@ -1585,7 +1606,7 @@ def outer_regions():
     out.append(interior('nr_shepherd', "Shepherd's Hut", ('northreach', 8, 21), 'house', npcs=[
         (7, 7, dict(look='elder', roam=4, talk=[[None, ['Up on Frostspire there is a great bird. Old Hollis the hermit says it answers to music.', 'He has a kazoo. Says it is the only instrument the bird respects.']]]))]))
     # Frostspire Peaks (5-9, 0-1)
-    m = R('frostspire', 'Frostspire Peaks', 5, 0, 5, 2, 'mountain', [('w', 8, 9), ('e', 6, 7), ('s', 20, 21)], 23,
+    m = R('frostspire', 'Frostspire Peaks', 5, 0, 5, 2, 'snow', [('w', 8, 9), ('e', 6, 7), ('s', 20, 21)], 23,
           ['West Slope', 'Hermit Ledge', 'The Saddle', 'Eagle Crag', 'East Slope', 'Scree Fields', 'Old Mine', 'Frost Gate', 'Lower Crags', 'Ridge Road'],
           hub=(40, 14), keep=[(18, 3, 22, 6), (54, 3, 58, 6), (37, 3, 43, 8)])
     m.stamp(OW, 10, 31, 18, 3, 4, 3, col=SOLID)
@@ -1612,7 +1633,7 @@ def outer_regions():
     mine.music = 'cave'
     out.append(mine)
     # Skyridge (10-11, 0)
-    m = R('skyridge', 'Skyridge', 10, 0, 2, 1, 'mountain', [('w', 6, 7), ('s', 8, 9)], 31, ['Skyridge West', 'Skyridge East'], hub=(16, 7))
+    m = R('skyridge', 'Skyridge', 10, 0, 2, 1, 'snow', [('w', 6, 7), ('s', 8, 9)], 31, ['Skyridge West', 'Skyridge East'], hub=(16, 7))
     m.chest(28, 3, 'riot')
     for x in (27, 28, 29):
         m.solid(x, 4, 1, 1, PEG)
@@ -1621,7 +1642,7 @@ def outer_regions():
     m.spawn('archer', 20, 4)
     m.spawn('soldierBlue', 10, 9)
     # Icemere (10-11, 1-3): a cold lake with islands
-    m = R('icemere', 'Icemere', 10, 1, 2, 3, 'lake', [('n', 8, 9), ('w', 18, 19), ('w', 32, 33)], 41,
+    m = R('icemere', 'Icemere', 10, 1, 2, 3, 'icelake', [('n', 8, 9), ('w', 18, 19), ('w', 32, 33)], 41,
           ['North Shore', 'Frost Bay', 'Mid Isles', 'East Isles', 'South Shore', 'Thaw Point'], hub=(4, 20))
     cave = interior('im_cave', 'Frost Cave', ('icemere', 24, 13), 'house', chests=[(7, 4, 'frost')], npcs=[
         (11, 9, dict(look='scholar', roam=0, dir=3, ghost=True, gives='halfEnergy', got=['A frost spirit breathes on you. You feel lighter.', 'Your energy use is halved!'], talk=[[None, ['The cold is mine. Take the rod. And take this blessing: you will tire half as fast.']]]))])

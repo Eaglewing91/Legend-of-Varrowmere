@@ -5,11 +5,11 @@ Art sheets are embedded as base64 PNG; maps come from tools/maps.py.
 """
 import base64, glob, json, os, subprocess
 
-VERSION = '0.15.0'
+VERSION = '0.16.0'
 os.makedirs('build', exist_ok=True)
 subprocess.run(['python3', 'tools/maps.py'], check=True)
 
-ART = {'overworld': 'pack-armm1998/Overworld.png', 'inner': 'pack-armm1998/Inner.png', 'cave': 'pack-armm1998/cave.png', 'objects': 'pack-armm1998/objects.png', 'hero': 'pack-armm1998/character.png', 'log': 'pack-armm1998/log.png', 'na': 'ninja-adventure/monsters.png'}
+ART = {'overworld': 'pack-armm1998/Overworld.png', 'inner': 'pack-armm1998/Inner.png', 'cave': 'pack-armm1998/cave.png', 'objects': 'pack-armm1998/objects.png', 'hero': 'pack-armm1998/character.png', 'log': 'pack-armm1998/log.png', 'na': 'ninja-adventure/monsters.png', 'nafloor': 'ninja-adventure/TilesetFloor.png', 'nanature': 'ninja-adventure/TilesetNature.png'}
 for f in sorted(glob.glob('art/ninja-adventure/monsters/*.png')):
     ART['m_' + os.path.basename(f)[:-4].lower()] = f[4:]
 for f in sorted(glob.glob('art/ninja-adventure/bosses/*.png')):
