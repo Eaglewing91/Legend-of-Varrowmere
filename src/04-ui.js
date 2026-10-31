@@ -62,15 +62,15 @@ LV.drawHud = function (ctx, g) {
   // energy meter
   LV.drawPanel(ctx, 6, 6, 11, 36, 'panel'); ctx.fillStyle = '#2a1a14'; ctx.fillRect(9, 9, 5, 30);
   ctx.fillStyle = '#3cbe50'; ctx.fillRect(9, 9 + 30 - Math.round(30 * (s.energy === undefined ? 1 : s.energy)), 5, Math.round(30 * (s.energy === undefined ? 1 : s.energy)));
-  // item box
-  LV.drawPanel(ctx, 19, 7, 22, 22, 'panel'); LV.drawPanel(ctx, 21, 9, 18, 18, 'cell');
-  if (s.equip) LV.itemIcon(ctx, s.equip, 22, 10);
+  // item box (the equipped item's 24 x 24 icon)
+  LV.drawPanel(ctx, 19, 5, 30, 30, 'panel'); LV.drawPanel(ctx, 21, 7, 26, 26, 'cell');
+  if (s.equip) LV.itemIcon(ctx, s.equip, 22, 8);
   // counters
-  ctx.drawImage(LV.IMG.objects, 0, 64, 16, 16, 46, 5, 12, 12); LV.text(ctx, ('00' + s.cash).slice(-3), 46, 18);
-  ctx.fillStyle = '#28408c'; ctx.fillRect(79, 9, 7, 7); ctx.fillStyle = '#a08060'; ctx.fillRect(82, 7, 1, 2); LV.text(ctx, ('0' + s.bombs).slice(-2), 77, 18);
-  ctx.fillStyle = '#c8a064'; ctx.fillRect(98, 12, 10, 1); ctx.fillStyle = '#e0e0e0'; ctx.fillRect(108, 11, 2, 3); LV.text(ctx, ('0' + s.arrows).slice(-2), 98, 18);
+  ctx.drawImage(LV.IMG.objects, 0, 64, 16, 16, 54, 5, 12, 12); LV.text(ctx, ('00' + s.cash).slice(-3), 54, 18);
+  ctx.fillStyle = '#28408c'; ctx.fillRect(87, 9, 7, 7); ctx.fillStyle = '#a08060'; ctx.fillRect(90, 7, 1, 2); LV.text(ctx, ('0' + s.bombs).slice(-2), 85, 18);
+  ctx.fillStyle = '#c8a064'; ctx.fillRect(106, 12, 10, 1); ctx.fillStyle = '#e0e0e0'; ctx.fillRect(116, 11, 2, 3); LV.text(ctx, ('0' + s.arrows).slice(-2), 106, 18);
   const keys = s.keys[g.world.id] || 0;
-  if (g.world.indoor) { ctx.fillStyle = '#e8c040'; ctx.fillRect(122, 8, 4, 4); ctx.fillRect(123, 12, 2, 5); LV.text(ctx, String(keys), 121, 18); }
+  if (g.world.indoor) { ctx.fillStyle = '#e8c040'; ctx.fillRect(130, 8, 4, 4); ctx.fillRect(131, 12, 2, 5); LV.text(ctx, String(keys), 129, 18); }
   // LIFE
   LV.text(ctx, '- LIFE -', 170, 3, '#f85050');
   const n = h.maxHp / 4;

@@ -115,19 +115,19 @@ LV.Game.prototype.createFile = function () {
     // items
     LV.text(ctx, 'ITEMS', 14, 40, LV.UI.head);
     list.forEach(function (it, k) {
-      const x = 12 + (k % COLS) * 23, y = 51 + Math.floor(k / COLS) * 23;
-      LV.uiSlot(ctx, x, y, 21, 21, k === m.i); LV.itemIcon(ctx, it.id, x + 2, y + 2);
+      const x = 11 + (k % COLS) * 27, y = 50 + Math.floor(k / COLS) * 27;
+      LV.uiSlot(ctx, x, y, 26, 26, k === m.i); LV.itemIcon(ctx, it.id, x + 1, y + 1);
     });
     if (!list.length) LV.text(ctx, 'No items yet.', 14, 56, '#aaa');
     // the selected item and what it does
     const sel = list[m.i];
-    LV.uiPanel(ctx, 9, 166, 125, 52, { fill: '#0a1024', border: '#2c3860' });
+    LV.uiPanel(ctx, 9, 186, 136, 32, { fill: '#0a1024', border: '#2c3860' });
     if (sel) {
-      LV.text(ctx, sel.name, 15, 170, LV.UI.head);
-      wrap(about(sel.id, s), 113).slice(0, 4).forEach(function (l, j) { LV.text(ctx, l, 15, 180 + j * 9, LV.UI.soft); });
+      LV.text(ctx, sel.name, 14, 189, LV.UI.head);
+      wrap(about(sel.id, s), 126).slice(0, 2).forEach(function (l, j) { LV.text(ctx, l, 14, 198 + j * 9, LV.UI.soft); });
     }
     // equipment
-    const R = 138;
+    const R = 150;
     LV.text(ctx, 'EQUIPMENT', R, 40, LV.UI.head);
     const sword = s.items.golden ? 'Golden Blade' : s.items.tempered ? 'Tempered Blade' : s.items.dawnblade ? 'Dawnblade' : 'Sword';
     const shield = s.items.shield2 ? 'Mirror Shield' : s.items.fireshield ? 'Ember Shield' : 'Shield';
@@ -135,21 +135,21 @@ LV.Game.prototype.createFile = function () {
     [[sword, '#e8eef8'], [shield, '#9ab8e8'], [mail, s.items.redmail ? '#f07070' : s.items.bluemail ? '#7aa0f0' : '#a0d090']].forEach(function (e, j) {
       ctx.fillStyle = e[1]; ctx.fillRect(R, 53 + j * 10, 3, 6); LV.text(ctx, e[0], R + 6, 51 + j * 10, LV.UI.text);
     });
-    const extra = [s.items.shoes && 'Shoes', s.items.fins && 'Flippers', s.items.gloves ? 'Gloves' : s.items.glove && 'Glove'].filter(Boolean).join(' ');
-    if (extra) LV.text(ctx, extra, R, 82, LV.UI.dim);
+    const extra = [s.items.shoes && 'Shoes', s.items.fins && 'Flippers', s.items.gloves ? 'Gloves' : s.items.glove && 'Glove'].filter(Boolean).join(', ');
+    wrap(extra, 96).slice(0, 2).forEach(function (l, j) { LV.text(ctx, l, R, 81 + j * 9, LV.UI.dim); });
     // Pendants and Crystals
-    LV.text(ctx, 'PENDANTS', R, 94, LV.UI.head);
-    PEND.forEach(function (d, j) { gem(ctx, R + j * 11, 105, GEM[d], !!s.items['pendant_' + d], false); });
-    LV.text(ctx, 'CRYSTALS', R, 117, LV.UI.violet);
-    CRYS.forEach(function (d, j) { gem(ctx, R + (j % 5) * 11 + (j >= 5 ? 5 : 0), 128 + Math.floor(j / 5) * 11, '#b890ff', !!s.items['crystal_' + d], true); });
+    LV.text(ctx, 'PENDANTS', R, 101, LV.UI.head);
+    PEND.forEach(function (d, j) { gem(ctx, R + j * 11, 111, GEM[d], !!s.items['pendant_' + d], false); });
+    LV.text(ctx, 'CRYSTALS', R, 122, LV.UI.violet);
+    CRYS.forEach(function (d, j) { gem(ctx, R + (j % 5) * 11 + (j >= 5 ? 5 : 0), 132 + Math.floor(j / 5) * 11, '#b890ff', !!s.items['crystal_' + d], true); });
     // bottles, shards, side quests
-    LV.text(ctx, 'BOTTLES', R, 152, LV.UI.head);
-    const bl = s.bottles || []; if (!bl.length) LV.text(ctx, '-', R + 52, 152, '#7a7a98');
-    bl.slice(0, 5).forEach(function (b, j) { bottle(ctx, R + 52 + j * 11, 150, b); });
-    LV.text(ctx, 'Heart Shards ' + ((s.shards || 0) % 4) + '/4', R, 168, LV.UI.heart);
-    if (LV.SIDEQUESTS) LV.text(ctx, 'Side quests ' + LV.sideDone(s) + '/' + LV.SIDEQUESTS.length, R, 180, LV.UI.blue);
-    LV.text(ctx, '$' + s.cash + '   ' + Math.floor((s.time || 0) / 3600) + 'h ' + ('0' + Math.floor((s.time || 0) / 60) % 60).slice(-2) + 'm', R, 192, LV.UI.soft);
-    LV.text(ctx, 'Enter: back', R, 206, LV.UI.dim);
+    LV.text(ctx, 'BOTTLES', R, 155, LV.UI.head);
+    const bl = s.bottles || []; if (!bl.length) LV.text(ctx, '-', R + 46, 155, '#7a7a98');
+    bl.slice(0, 5).forEach(function (b, j) { bottle(ctx, R + 46 + j * 9, 153, b); });
+    LV.text(ctx, 'Heart Shards ' + ((s.shards || 0) % 4) + '/4', R, 169, LV.UI.heart);
+    if (LV.SIDEQUESTS) LV.text(ctx, 'Side quests ' + LV.sideDone(s) + '/' + LV.SIDEQUESTS.length, R, 179, LV.UI.blue);
+    LV.text(ctx, '$' + s.cash + '   ' + Math.floor((s.time || 0) / 3600) + 'h ' + ('0' + Math.floor((s.time || 0) / 60) % 60).slice(-2) + 'm', R, 189, LV.UI.soft);
+    LV.text(ctx, 'Enter: back', R, 207, LV.UI.dim);
     void h;
   };
 })();

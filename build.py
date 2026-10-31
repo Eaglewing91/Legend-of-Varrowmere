@@ -5,12 +5,14 @@ Art sheets are embedded as base64 PNG; maps come from tools/maps.py.
 """
 import base64, glob, json, os, subprocess
 
-VERSION = '0.40.0'
+VERSION = '0.41.0'
 os.makedirs('build', exist_ok=True)
 subprocess.run(['python3', 'tools/maps.py'], check=True)
 subprocess.run(['python3', 'tools/patch_sheets.py'], check=True)
 
 ART = {'overworld': 'generated/Overworld.png', 'inner': 'generated/Inner.png', 'cave': 'generated/cave.png', 'objects': 'generated/objects.png', 'hero': 'pack-armm1998/character.png', 'log': 'pack-armm1998/log.png', 'na': 'ninja-adventure/monsters.png', 'nafloor': 'ninja-adventure/TilesetFloor.png', 'nanature': 'ninja-adventure/TilesetNature.png', 'blend': 'generated/blend.png', 'nawater': 'ninja-adventure/TilesetWater.png', 'nahouse': 'ninja-adventure/TilesetHouse.png', 'narelief': 'ninja-adventure/TilesetRelief.png', 'naelem': 'ninja-adventure/TilesetElement.png', 'nadetail': 'ninja-adventure/TilesetFloorDetail.png', 'nainfloor': 'ninja-adventure/TilesetInteriorFloor.png', 'nadungeon': 'ninja-adventure/TilesetDungeon.png', 'lava': 'generated/lava.png', 'landmarks': 'generated/landmarks.png', 'dwall': 'generated/dwall.png', 'dfloor': 'generated/dfloor.png'}
+for f in sorted(glob.glob('art/ninja-adventure/skill/*.png')):
+    ART['sk_' + os.path.basename(f)[:-4]] = f[4:]
 for f in sorted(glob.glob('art/ninja-adventure/items/*.png')):
     ART['it_' + os.path.basename(f)[:-4]] = f[4:]
 for f in sorted(glob.glob('art/ninja-adventure/ui/*.png')):
