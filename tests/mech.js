@@ -110,7 +110,7 @@ const { chromium } = require('playwright');
   check('villager talks, blocks and is unharmed', /Wren/.test(r.said) && !r.hurt && r.blocked, r);
   // 29. Villager lines change once the first Pendant is won
   r = await p.evaluate(() => { const g = LV.game; g.save.items.pendant_ruins1 = 1; const v = g.actors.find(a => a.npc && a.look === 'elder'); const l = v.lines(g)[0]; delete g.save.items.pendant_ruins1; return l; });
-  check('villager lines follow the story', /Pendant of Courage/.test(r), r);
+  check('villager lines follow the story', /Pendant of Valor/.test(r), r);
   // 30. Title: pick an empty file, the intro plays, the file is saved; erase needs two presses
   r = await p.evaluate(() => { const g = LV.game; const st = [0, 1, 2].map(() => LV.memoryStore()); st[1].set(Object.assign(LV.newSave(), { maxHp: 20 })); g.showTitle(st);
     step(30, []); step(1, [], ['menu']); const files = g.title.stage; step(1, [], ['down']); step(1, [], ['down']); step(1, [], ['menu']);
@@ -145,6 +145,32 @@ const { chromium } = require('playwright');
     place('riverhead', 9, 6, 3); step(1, [], ['action']); const pulled = !!g.save.flags.sluice; g.dialog = null;
     place('meadow', 43, 9, 0); const dry = g.world.c(43, 9); step(30, ['up']); step(30, []); return { there, wetBefore, pulled, dry, shrine: g.world.id }; });
   check('sluice lever drains the pool, shrine opens', r.there === 'riverhead' && r.wetBefore === 2 && r.pulled && r.dry === 0 && r.shrine === 'shrine', r);
+  // 35. Water switch: the blade toggles the level; flood tiles dry out and spill tiles fill (and back)
+  r = await p.evaluate(() => { const g = LV.game; delete g.save.flags['shrine:drained']; place('shrine', 43, 17, 1); g.actors = [];
+    const wet = g.world.c(20, 20), spillDry = g.world.c(18, 5); step(16, [], ['attack']); const dry = g.world.c(20, 20), spillWet = g.world.c(18, 5), flag = g.drained();
+    step(40, []); step(16, [], ['attack']); return { wet, spillDry, dry, spillWet, flag, back: g.world.c(20, 20) }; });
+  check('water switch drains and refills', r.wet === 2 && r.spillDry === 0 && r.dry === 0 && r.spillWet === 2 && r.flag && r.back === 2, r);
+  // 36. Grapple: latch onto the island chest across the pool, open it, then grapple the post back to shore
+  r = await p.evaluate(() => { const g = LV.game; g.save.items.grapple = 1; g.save.equip = 'grapple'; delete g.save.opened['shrine:8,20']; place('shrine', 8, 24, 0); g.actors = [];
+    step(1, [], ['item']); step(60, []); const onIsland = Math.floor(H().y / 16) === 21 && H().state === 'walk';
+    step(1, [], ['action']); const got = !!g.save.opened['shrine:8,20']; g.dialog = null;
+    H().dir = 2; step(1, [], ['item']); step(60, []); return { onIsland, got, back: Math.floor(H().y / 16), state: H().state }; });
+  check('grapple across water to chest and post', r.onIsland && r.got && r.back === 24 && r.state === 'walk', r);
+  // 37. Snapjaw: hides underwater (can't be hit), surfaces and spits; stranded when the water drains
+  r = await p.evaluate(() => { const g = LV.game; delete g.save.flags['shrine:drained']; place('shrine', 24, 23, 0); g.actors = []; const e = LV.ENEMIES.snapjaw(21 * 16 + 8, 20 * 16 + 12); g.actors.push(e);
+    const hidden = e.hurtBox().x < -900; let n = 0; while (e.state !== 'up' && n++ < 400) step(1, []); const up = e.state === 'up'; n = 0; while (!g.shots.some(s => s.kind === 'spit') && n++ < 200) step(1, []);
+    const spat = g.shots.some(s => s.kind === 'spit'); g.save.flags['shrine:drained'] = 1; g.applyWater(); step(2, []); const beached = e.state === 'beached'; delete g.save.flags['shrine:drained']; g.applyWater(); return { hidden, up, spat, beached }; });
+  check('snapjaw dives, surfaces, spits, beaches', r.hidden && r.up && r.spat && r.beached, r);
+  // 38. Mire Kraken: shielded by bubbles; grapple plucks one, the blade pops it; bare Kraken can be cut down
+  r = await p.evaluate(() => { const g = LV.game; delete g.save.flags['shrine:boss']; delete g.save.items.pendant_shrine; place('shrine', 40, 11, 0); g.actors = g.actors.filter(a => a.kind === 'kraken'); const k = g.actors[0];
+    step(1, []); const nb = k.bubbles.length; k.x = 40 * 16 + 8; k.y = 7 * 16; k.inv = 0; const hp0 = k.hp;
+    LV.applyHit(g, new LV.Hit({ team: 'hero', kind: 'blade', power: 2, from: { x: H().x, y: H().y }, box: { x: 0, y: 0, w: 1, h: 1 } }), k); const shielded = k.hp === hp0;
+    const b = k.bubbles[0]; const plucked = b.onGrapple(g, {}); b.pull = null; b.x = H().x; b.y = H().y - 14; b.inv = 0; step(16, [], ['attack']); const popped = b.dead;
+    k.bubbles.forEach(x => { x.dead = true; }); g.actors = g.actors.filter(a => !a.dead); step(2, []); const phase = k.phase;
+    k.hp = 1; k.inv = 0; LV.applyHit(g, new LV.Hit({ team: 'hero', kind: 'blade', power: 2, from: { x: H().x, y: H().y }, box: { x: 0, y: 0, w: 1, h: 1 } }), k); step(2, []);
+    const cont = g.pickups.find(p => p.kind === 'container'); if (cont) g.collect(cont); const line = g.dialog && g.dialog.lines[1]; g.dialog = null;
+    return { nb, shielded, plucked, popped, phase, pendant: !!g.save.items.pendant_shrine, line }; });
+  check('kraken: bubbles, grapple, pop, defeat, Pendant of Tides', r.nb === 6 && r.shielded && r.plucked && r.popped && r.phase === 'bound' && r.pendant && /Tides/.test(r.line), r);
   console.log(results.join('\n')); console.log('errors', errs);
   await b.close();
   process.exit(results.some(x => x.startsWith('FAIL')) || errs.length ? 1 : 0);

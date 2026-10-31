@@ -197,7 +197,7 @@ LV.ENEMIES.sentinel2 = function (x, y) { return LV.makeSentinel(x, y, 2); };
     if (p.kind === 'container') {
       p.dead = true; const s = this.save, dg = this.dungeon(); s.maxHp += 4; this.hero.maxHp = s.maxHp; this.hero.hp = s.maxHp; s.items['pendant_' + dg] = 1; this.sfx('chest');
       const self = this;
-      this.say(['You got a Life Container! Your life grows by one heart.', 'And the Pendant of Valor shines on the dais!', 'One of three Pendants. The legend of the Dawnblade stirs...'], function () { self.fadeTo = function () { const ex = self.world.def.exit; self.enter(ex[0], ex[1] * 16 + 8, ex[2] * 16 + 12, 2); self.fade = 1; }; });
+      this.say(['You got a Life Container! Your life grows by one heart.', 'And the ' + (this.world.def.pendant || 'Pendant of Valor') + ' shines on the dais!', 'One of three Pendants. The legend of the Dawnblade stirs...'], function () { self.fadeTo = function () { const ex = self.world.def.exit; self.enter(ex[0], ex[1] * 16 + 8, ex[2] * 16 + 12, 2); self.fade = 1; }; });
       return;
     }
     collect.call(this, p);

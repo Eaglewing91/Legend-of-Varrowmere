@@ -21,7 +21,7 @@ LV.Game.prototype.startFile = function (i) {
   if (!this.save.flags.intro) { this.save.flags.intro = 1; st.set(this.save); this.say(LV.INTRO); }
 };
 LV.INTRO = [
-  'Long ago the five Pendants kept the land of Varrowmere at peace.',
+  'Long ago the three Pendants kept the land of Varrowmere at peace.',
   'Now Chancellor Vex rules from Ashford Castle, and his Gilded Hand patrol every road.',
   'The Pendants have been hidden in the old ruins... and Vex wants them.',
   'You are Wren of Thistledown. Last night you dreamt of a voice calling from the Meadow Ruins.'

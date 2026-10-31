@@ -11,7 +11,7 @@ Collision codes: 0 open, 1 solid, 2 deep water, 3 pit, 4 ledge (jump south), 5 l
 """
 import json, os
 OW, IN, CV, OB = 0, 1, 2, 3
-OPEN, SOLID, DEEP, PIT, LEDGE, LOW, BUSH, ROCK, SHALLOW, CRACK, TORCH, TORCH_LIT, LOCKED, BIGLOCK, BLOCK, PLATE, SHUTTER, BIGCHEST, LEVER = range(19)
+OPEN, SOLID, DEEP, PIT, LEDGE, LOW, BUSH, ROCK, SHALLOW, CRACK, TORCH, TORCH_LIT, LOCKED, BIGLOCK, BLOCK, PLATE, SHUTTER, BIGCHEST, LEVER, SWITCH, POST = range(21)
 
 
 def ref(sheet, tx, ty):
@@ -226,7 +226,7 @@ def thistledown():
         bush(m, x, y)
     # villagers
     m.spawn('villager', 14, 10, look='elder', roam=10, talk=[
-        ['pendant_ruins1', ['You found the Pendant of Courage! I knew you had it in you.', 'Four more Pendants are hidden across Varrowmere. The lake, the hills, the marsh, the peaks...', 'Find them before Vex does.']],
+        ['pendant_ruins1', ['You found the Pendant of Valor! I knew you had it in you.', 'Two more Pendants are hidden across Varrowmere. One, they say, lies beneath Reedwater.', 'Find them before Vex does.']],
         [None, ['Wren! You look like you slept in a hedge.', 'East of here, past the cave, the old Meadow Ruins sit behind the gate.', 'Vex has soldiers guarding it. Cut the bushes for hearts, and mind the logs.']]])
     m.spawn('villager', 12, 6, look='trader', roam=0, dir=2, shop=True, talk=[
         [None, ['Fresh goods! Prices go up every time you look at them. That is just how markets work.', 'Energy drinks? Sold out. Some fellow bought forty and ran off to train in the woods.']]])
@@ -401,7 +401,7 @@ def meadow_ruins():
     for ry in range(2):
         for rx in range(3):
             room(m, rx, ry)
-    m.extra.update({'dungeon': 'ruins1', 'exit': ['meadow', 19, 6], 'boss': True})
+    m.extra.update({'dungeon': 'ruins1', 'exit': ['meadow', 19, 6], 'boss': True, 'pendant': 'Pendant of Valor'})
     # entrance (1,1): way out south; west open; east locked; north shutter opens when the room is clear
     door(m, 1, 1, 's')
     m.warp(23, 27, 'meadow', 19, 6, 2)
@@ -495,16 +495,74 @@ def riverhead():
 
 
 def sunken_shrine():
-    """Dungeon 2 (being built): entrance hall."""
+    """Dungeon 2: the Sunken Shrine. Water switches raise and lower the water through the whole dungeon.
+       (0,0) Big Key (clear the room)   (1,0) switch, Big Chest (Grapple), spill channel   (2,0) BOSS: the Mire Kraken
+       (0,1) Small Key, compass, island heart   (1,1) entrance, flooded channel   (2,1) Lt. Garrow, switch, map"""
     m = Map('shrine', 48, 28, 'Sunken Shrine', indoor=True, music='dungeon')
     for ry in range(2):
         for rx in range(3):
             room(m, rx, ry)
-    m.extra.update({'dungeon': 'shrine', 'exit': ['meadow', 43, 8]})
+    m.extra.update({'dungeon': 'shrine', 'exit': ['meadow', 43, 8], 'boss': True, 'pendant': 'Pendant of Tides', 'flood': [], 'spill': []})
+    def water(kind, x0, y0, x1, y1):
+        for y in range(y0, y1 + 1):
+            for x in range(x0, x1 + 1):
+                i = y * m.w + x
+                if kind == 'pool':
+                    m.col[i] = DEEP
+                else:
+                    m.extra[kind].append(i)
+    # entrance (1,1): a flooded channel cuts the room in two; the way north is across it
     door(m, 1, 1, 's')
     m.warp(23, 27, 'meadow', 43, 8, 2)
     m.warp(24, 27, 'meadow', 43, 8, 2)
-    m.sign(23, 16, 'Water stains climb the walls to the ceiling. This place was flooded for a long time.')
+    water('flood', 17, 20, 30, 21)
+    door(m, 1, 1, 'n')
+    door(m, 1, 0, 's')
+    door(m, 1, 1, 'w')
+    door(m, 0, 1, 'e')
+    door(m, 1, 1, 'e', LOCKED)
+    door(m, 2, 1, 'w', LOCKED)
+    m.spawn('snapjaw', 21, 20)
+    m.spawn('soldierBlue', 27, 24)
+    m.sign(20, 24, 'Water stains climb to the ceiling.|Somewhere in here, the old priests could raise and lower the water at will.')
+    # west room (0,1): the Small Key; a pool with an island chest you'll need the Grapple for
+    m.chest(3, 17, 'key')
+    m.chest(13, 24, 'compass')
+    water('pool', 5, 18, 11, 23)
+    for (x, y) in [(7, 20), (8, 20), (9, 20), (7, 21), (8, 21), (9, 21)]:
+        m.col[y * m.w + x] = OPEN
+    m.chest(8, 20, 'heart_shard')
+    m.solid(8, 25, 1, 1, POST)
+    m.spawn('soldier', 3, 22)
+    m.spawn('snapjaw', 6, 22)
+    # east room (2,1): Lieutenant Garrow guards a water switch; the map chest appears once he falls
+    m.spawn('garrow', 40, 21)
+    m.solid(44, 17, 1, 1, SWITCH)
+    m.chests['36,17'] = {'item': 'map', 'big': False}
+    m.extra.setdefault('reveal', {})['garrow'] = [[36, 17]]
+    m.extra.setdefault('triggers', []).append({'type': 'clear', 'area': 5, 'open': 'garrow'})
+    # north room (1,0): a channel that fills when the rest drains blocks the west door; a second switch;
+    # the Big Chest with the Grapple; the boss door east
+    water('spill', 18, 3, 19, 12)
+    m.solid(28, 4, 1, 1, SWITCH)
+    bigchest(m, 23, 6, 'grapple')
+    door(m, 1, 0, 'w')
+    door(m, 0, 0, 'e')
+    door(m, 1, 0, 'e', BIGLOCK)
+    door(m, 2, 0, 'w', BIGLOCK)
+    m.spawn('soldierBlue', 26, 10)
+    m.spawn('archer', 22, 9)
+    # north-west room (0,0): clear it (eels and all) and the Big Key appears
+    water('flood', 4, 6, 11, 9)
+    m.chests['7,4'] = {'item': 'bigkey', 'big': False}
+    m.extra['reveal']['nwclear'] = [[7, 4]]
+    m.extra['triggers'].append({'type': 'clear', 'area': 0, 'open': 'nwclear'})
+    m.spawn('snapjaw', 5, 7)
+    m.spawn('snapjaw', 10, 8)
+    m.spawn('soldier', 12, 11)
+    # boss room (2,0): the Mire Kraken, with a moat round the edge
+    water('pool', 33, 3, 46, 3)
+    m.spawn('kraken', 40, 8)
     m.entry = [23, 25]
     return m
 

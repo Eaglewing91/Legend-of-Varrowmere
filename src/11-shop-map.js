@@ -81,7 +81,7 @@ LV.Game.prototype.drawMap = function () {
       ctx.fillStyle = known ? '#5a6ab0' : '#2e3460'; ctx.fillRect(x + 2, y + 2, rw - 4, rh - 4);
       ctx.fillStyle = '#9aa8e8'; ctx.fillRect(x + 2, y + 2, rw - 4, 1);
       if (hasComp) {
-        const boss = (def.spawns || []).some(function (s) { return /^sentinel|boss/.test(s.kind) && s.x >= a[0] && s.x < a[0] + a[2] && s.y >= a[1] && s.y < a[1] + a[3]; });
+        const boss = (def.spawns || []).some(function (s) { return /^sentinel|boss|kraken/.test(s.kind) && s.x >= a[0] && s.x < a[0] + a[2] && s.y >= a[1] && s.y < a[1] + a[3]; });
         if (boss && !self.dflag('boss') && blink) { ctx.fillStyle = '#f85050'; ctx.fillRect(x + rw / 2 - 3, y + rh / 2 - 3, 6, 6); }
         Object.keys(w.chests).forEach(function (k) { const p = k.split(',').map(Number); if (p[0] >= a[0] && p[0] < a[0] + a[2] && p[1] >= a[1] && p[1] < a[1] + a[3] && !self.save.opened[w.id + ':' + k]) { ctx.fillStyle = '#e8b030'; ctx.fillRect(x + 4 + (p[0] - a[0]) / a[2] * (rw - 10), y + 4 + (p[1] - a[1]) / a[3] * (rh - 10), 3, 3); } });
       }
