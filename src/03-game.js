@@ -184,7 +184,7 @@ LV.Game.prototype.render = function () {
   // actors sorted by their feet so nearer things overlap farther ones
   const all = [this.hero].concat(this.actors, this.pickups, this.shots);
   all.sort(function (a, b) { return a.y - b.y; });
-  for (const a of all) a.draw(ctx, ox, oy);
+  for (const a of all) LV.drawActor(ctx, a, ox, oy);
   for (const e of this.effects) e.draw(ctx, ox, oy);
   if (this.hero.carry) ctx.drawImage(LV.IMG.overworld, 0, 16 * 16, 16, 16, Math.round(this.hero.x - ox - 8), Math.round(this.hero.y - oy - 36), 16, 16);
   LV.drawLayer(ctx, this.world, 'over', ox, oy);

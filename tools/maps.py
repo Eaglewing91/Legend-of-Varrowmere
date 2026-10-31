@@ -10,9 +10,13 @@ Collision codes: 0 open, 1 solid, 2 deep water, 3 pit, 4 ledge (jump south), 5 l
                  6 bush (solid, cuttable, liftable), 7 rock (solid, liftable), 8 shallow water.
 """
 import json, os, sys
+sys.path.insert(0, os.path.dirname(__file__))
+import blend as BLEND
+BLEND.build()
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 OW, IN, CV, OB = 0, 1, 2, 3
 NF, NN = 4, 5          # Ninja Adventure floor and nature sheets
+BL = 6                 # generated soft-edge ground transitions (tools/blend.py)
 OPEN, SOLID, DEEP, PIT, LEDGE, LOW, BUSH, ROCK, SHALLOW, CRACK, TORCH, TORCH_LIT, LOCKED, BIGLOCK, BLOCK, PLATE, SHUTTER, BIGCHEST, LEVER, SWITCH, POST, _21, PEDESTAL, BARRIER, PEG, DARKROCK = range(26)
 
 
@@ -102,7 +106,28 @@ class Map:
         self.layers, self.col, self.warps = layers, col, warps
         self.extra.setdefault('variants', []).append(ch)
 
+    def unpoke(self):
+        """Border rocks and trees that poke into the land are taken back out wherever they would crowd a chest,
+        sign, door, dig spot or person: the border behind them is filled with small rocks instead."""
+        spots = [tuple(map(int, k.split(','))) for d in (self.chests, self.signs, self.extra.get('digs', {})) for k in d]
+        spots += [(w['x'], w['y']) for w in self.warps] + [(d['x'], d['y']) for d in self.spawns if 'x' in d]
+        for pk in getattr(self, 'pokes', []):
+            if not any(abs(px - sx) <= 2 and abs(py - sy) <= 2 for (px, py) in pk['poke'] for (sx, sy) in spots):
+                continue
+            for (x, y) in pk['cells']:
+                if not self.ok(x, y):
+                    continue
+                i = y * self.w + x
+                self.layers['deco'][i] = self.layers['over'][i] = -1
+                if (x, y) in pk['poke']:
+                    self.col[i] = OPEN
+                else:
+                    tx, ty = pk['small'][(x + y) % len(pk['small'])]
+                    self.put('deco', NN, tx, ty, x, y)
+        self.pokes = []
+
     def json(self):
+        self.unpoke()
         return {'id': self.id, 'name': self.name, 'w': self.w, 'h': self.h, 'layers': self.layers, 'col': self.col,
                 'areas': self.areas or [[0, 0, self.w, self.h]], 'warps': self.warps, 'signs': self.signs,
                 'chests': self.chests, 'spawns': self.spawns, 'indoor': self.indoor, 'dark': self.dark,
@@ -127,11 +152,16 @@ def stone_pad(m, x0, y, x1):
         m.put('ground', OW, 8, 23, x, y)
 
 
-def forest(m, x, y):                 # 4 wide tree block: canopy above actors, trunks solid
-    for j in range(6):
-        for i in range(4):
-            layer = 'over' if j < 3 else 'deco'
-            m.put(layer, OW, 4 + i, 9 + j, x + i, y + j)
+FOREST_CLUMPS = [(0, 2), (4, 2), (16, 2), (20, 2), (4, 2), (16, 2)]
+
+
+def forest(m, x, y):                 # 4 wide tree block (two clumps of the pack's trees, one behind the other): solid below the top row
+    for k, (oy, layer0) in enumerate(((0, 'over'), (3, None))):
+        tx, ty = FOREST_CLUMPS[(x * 7 + y * 3 + k * 5) % len(FOREST_CLUMPS)]
+        for j in range(3):
+            for i in range(4):
+                layer = layer0 or ('over' if j == 0 else 'deco')
+                m.put(layer, NN, tx + i, ty + j, x + i, y + oy + j)
     m.solid(x, y + 3, 4, 3)
     m.solid(x, y + 1, 4, 2)
 
@@ -192,6 +222,7 @@ def paint(m, rows, ox=0, oy=0, base='.'):
     H_ = len(rows)
     W_ = max(len(r) for r in rows)
     g = [r.ljust(W_, '.') for r in rows]
+    g = round_corners(g)
     at = lambda x, y: g[y][x] if 0 <= y < H_ and 0 <= x < W_ else None
     grass(m, ox, oy, ox + W_ - 1, oy + H_ - 1)
     if base in (':', 's', 'w'):          # dry, sandy and snowy lands: everything that isn't grass, water or road sits on the land's own ground
@@ -222,6 +253,13 @@ def paint(m, rows, ox=0, oy=0, base='.'):
                 m.put('ground', OW, 8, 23, X, Y)
             elif c == ':':
                 m.put('ground', OW, 12, 13, X, Y)
+            elif c == '~' and all(at(x + i, y + j) in ('~', None) or at(x + i, y + j) in '.*bFTO' for i in (-1, 0, 1) for j in (-1, 0, 1)):
+                k = BLEND.mask(lambda a, b: at(a, b) in ('~', None), x, y)      # a pond in grass: soft round banks
+                if k == 255:
+                    m.put('ground', OW, 3, 7, X, Y)
+                else:
+                    m.put('ground', BL, k & 15, 4 * 16 + (k >> 4), X, Y)
+                m.col[Y * m.w + X] = DEEP
             elif c == '~':
                 wet = lambda a, b: at(a, b) in ('~', None)
                 cx = 0 if not wet(x - 1, y) else 2 if not wet(x + 1, y) else 1
@@ -242,7 +280,8 @@ def paint(m, rows, ox=0, oy=0, base='.'):
                 m.put('deco', OW, 28, 2, X, Y)
             elif c == 'g':
                 m.stamp(OW, 35, 5, X, Y, 2, 2, col=SOLID)
-    paint_forest(m, g, ox, oy)
+    soften(m, g, ox, oy, base)
+    paint_forest(m, g, ox, oy, base)
     if band:
         dress_border(m, g, ox, oy, base, band)
     for y in range(H_):
@@ -281,6 +320,54 @@ def paint(m, rows, ox=0, oy=0, base='.'):
                 m.stamp(OW, 0, 17, X, Y, col=LOW)
 
 
+def round_corners(g):
+    """Square ponds and dirt patches lose their outermost corner tiles (when grass lies on both open sides),
+    so with the soft blend tiles they read as rounded shapes rather than boxes."""
+    H_, W_ = len(g), len(g[0])
+    rows = [list(r) for r in g]
+    at = lambda x, y: rows[y][x] if 0 <= y < H_ and 0 <= x < W_ else None
+    for y in range(H_):            # first fill the notches of cross-shaped mud patches (mud is walkable, so this is safe)
+        for x in range(W_):
+            if rows[y][x] == '.' and sum(at(x + i, y + j) == ':' for i, j in ((1, 0), (-1, 0), (0, 1), (0, -1))) >= 2 and \
+               any(at(x + i, y) == ':' and at(x, y + j) == ':' and at(x + i, y + j) == ':' for i in (-1, 1) for j in (-1, 1)):
+                rows[y][x] = ':'
+    g = [''.join(r) for r in rows]
+    rows = [list(r) for r in g]
+    at = lambda x, y: g[y][x] if 0 <= y < H_ and 0 <= x < W_ else None
+    for y in range(H_):
+        for x in range(W_):
+            c = g[y][x]
+            if c not in '~:':
+                continue
+            for dx, dy in ((-1, -1), (1, -1), (-1, 1), (1, 1)):
+                # a corner: open (grass) on both outward sides and diagonally, its own kind on both inward sides and beyond
+                if at(x + dx, y) == '.' and at(x, y + dy) == '.' and at(x + dx, y + dy) == '.' and \
+                   at(x - dx, y) == c and at(x, y - dy) == c and at(x - dx, y - dy) == c and at(x - 2 * dx, y) == c and at(x, y - 2 * dy) == c and at(x - 3 * dx, y) == c and at(x, y - 3 * dy) == c and \
+                   not any(at(x + i, y + j) in ('f', '|') for i in (-2, -1, 0, 1, 2) for j in (-2, -1, 0, 1, 2)):
+                    rows[y][x] = '.'
+                    break
+    return [''.join(r) for r in rows]
+
+
+def soften(m, g, ox, oy, base):
+    """Round off patches of one ground lying on another (dirt on grass, grass on sand or snow) with blend tiles."""
+    H_, W_ = len(g), len(g[0])
+    if base == '.':
+        pair, top, alike = 0, ':', ':-='
+    elif base in ('s', 'w', ':'):
+        pair, top, alike = {'s': 1, 'w': 2, ':': 3}[base], '.', '.*b~'
+    else:
+        return
+    isB = lambda x, y: not (0 <= x < W_ and 0 <= y < H_) or g[y][x] in alike
+    for y in range(H_):
+        for x in range(W_):
+            if g[y][x] != top:
+                continue
+            k = BLEND.mask(isB, x, y)
+            if k != 255:
+                m.put('ground', BL, k & 15, pair * 16 + (k >> 4), ox + x, oy + y)
+
+
 # Pack sprites for dressing a rocky border: (tx, ty, w, h, is_tree). Rocks sit on the ground; a tree's top row is its crown.
 _ROCKS_B = [(17, 10, 4, 3, 0), (21, 10, 2, 3, 0), (15, 10, 2, 2, 0), (15, 12, 2, 2, 0), (12, 5, 4, 3, 0), (13, 8, 2, 2, 0)]
 _ROCKS_G = [(17, 14, 4, 3, 0), (21, 14, 2, 3, 0), (15, 14, 2, 2, 0), (15, 16, 2, 2, 0), (16, 5, 4, 3, 0), (16, 8, 2, 2, 0)]
@@ -294,12 +381,21 @@ BORDER_KITS = {
 }
 
 
-def dress_border(m, g, ox, oy, base, band):
+TREE_KITS = {
+    '.': ([(0, 0, 2, 2, 1), (2, 0, 2, 2, 1), (6, 0, 2, 2, 1), (16, 0, 2, 2, 1), (18, 0, 2, 2, 1), (0, 2, 4, 3, 1), (4, 2, 4, 3, 1),
+           (16, 2, 4, 3, 1), (20, 2, 4, 3, 1), (3, 18, 3, 3, 1)], [(0, 10), (1, 10), (2, 10), (0, 10)]),
+    'w': ([(8, 0, 2, 2, 1), (10, 0, 2, 2, 1), (12, 0, 2, 2, 1), (8, 2, 4, 3, 1), (4, 5, 4, 3, 1), (8, 5, 4, 3, 1), (6, 18, 3, 3, 1)],
+          [(4, 12), (5, 12), (10, 12)]),
+}
+TREE_KITS['s'] = TREE_KITS[':'] = TREE_KITS['.']
+
+
+def dress_border(m, g, ox, oy, base, band, kit=None):
     """Fill a rocky border with a random mix of the pack's rocks and trees instead of a row of identical boulders.
     Sprites may poke one row into the land where it is plain ground, so the edge is not a straight line."""
     import random
     rng = random.Random(sum(ord(c) for c in m.id) * 7 + 3)
-    big, small = BORDER_KITS.get(base, BORDER_KITS['.'])
+    big, small = kit or BORDER_KITS.get(base, BORDER_KITS['.'])
     H_, W_ = len(g), len(g[0])
     occ = set()
 
@@ -309,6 +405,8 @@ def dress_border(m, g, ox, oy, base, band):
         if (X, Y) in band:
             return True
         x, y = X - ox, Y - oy
+        if not (0 <= X < m.w and 0 <= Y < m.h):
+            return True                       # hangs off the edge of the map: cut by the screen edge, never seen whole
         if not (0 <= x < W_ and 0 <= y < H_) or g[y][x] != base:
             return False
         if not (x == 2 or y == 2 or x == W_ - 3 or y == H_ - 3):
@@ -330,8 +428,14 @@ def dress_border(m, g, ox, oy, base, band):
                 ax, ay = X - i, Y - j
                 cells = [(ax + a, ay + b) for b in range(h) for a in range(w)]
                 if all(ok(cx, cy) for cx, cy in cells):
+                    poke = {c for c in cells if c not in band}
+                    if poke:
+                        m.pokes = getattr(m, 'pokes', []) + [{'cells': cells, 'poke': poke, 'small': small}]
                     for b in range(h):
                         for a in range(w):
+                            if not m.ok(ax + a, ay + b):
+                                occ.add((ax + a, ay + b))
+                                continue
                             layer = 'over' if tree and b == 0 else 'deco'
                             m.put(layer, NN, tx + a, ty + b, ax + a, ay + b)
                             m.layers['deco' if layer == 'over' else 'over'][(ay + b) * m.w + ax + a] = -1
@@ -348,47 +452,15 @@ def dress_border(m, g, ox, oy, base, band):
             occ.add((X, Y))
 
 
-def paint_forest(m, g, ox, oy):
-    """Forest walls drawn from whole trees: every 4x3 block of F that can hold a full trunk gets one (its leafy crown
-    hangs over the three rows above); whatever F is left over becomes a rounded hedge, so no tree is ever cut in half."""
+def paint_forest(m, g, ox, oy, base='.'):
+    """Forest (F) drawn as a loose mix of the pack's trees and bushes, packed to fill the forest's shape, so there are
+    no straight walls of identical trunks and no tree cut in half (trees at the map's edge simply hang off it)."""
     H_, W_ = len(g), len(g[0])
-    F = lambda x, y: (g[y][x] == 'F') if 0 <= x < W_ and 0 <= y < H_ else True
     used = set()
-    for yt in range(H_ - 3, -3, -3):
-        for x0 in range(0, W_, 4):
-            cells = [(x0 + i, yt + j) for j in range(3) for i in range(4)]
-            if all(0 <= cy < H_ and 0 <= cx < W_ and F(cx, cy) and (cx, cy) not in used for (cx, cy) in cells):
-                for (cx, cy) in cells:
-                    used.add((cx, cy))
-                    m.put('deco', OW, 4 + cx - x0, 12 + cy - yt, ox + cx, oy + cy)
-                    m.col[(oy + cy) * m.w + ox + cx] = SOLID
-                for j in range(3):
-                    for i in range(4):
-                        cx, cy = x0 + i, yt - 3 + j
-                        if 0 <= cy < H_:
-                            m.put('over', OW, 4 + i, 9 + j, ox + cx, oy + cy)
-    for y in range(H_):
-        for x in range(W_):
-            if g[y][x] != 'F' or (x, y) in used:
-                continue
-            X, Y = ox + x, oy + y
-            m.col[Y * m.w + X] = SOLID
-            u, d, l, r = F(x, y - 1), F(x, y + 1), F(x - 1, y), F(x + 1, y)
-            if u and d and l and r:
-                t = (2, 14)
-            elif not (u or d or l or r):
-                t = (2, 14)
-            elif not l and not r:
-                t = (0, 14) if not u else (0, 15)
-            elif not u and not d:
-                t = (0, 16) if not l else (1, 16)
-            elif not u:
-                t = (1, 13) if not l else (3, 13) if not r else (2, 13)
-            elif not d:
-                t = (1, 15) if not l else (3, 15) if not r else (2, 15)
-            else:
-                t = (1, 14) if not l else (3, 14)
-            m.put('deco', OW, t[0], t[1], X, Y)
+    # whatever is left becomes a loose mix of the pack's trees and bushes (not a straight hedge)
+    left = {(ox + x, oy + y) for y in range(H_) for x in range(W_) if g[y][x] == 'F' and (x, y) not in used}
+    if left:
+        dress_border(m, g, ox, oy, base, left, TREE_KITS.get(base, TREE_KITS['.']))
 
 
 def interior(mid, name, back, kind='house', npcs=(), chests=(), signs=()):
@@ -870,12 +942,17 @@ def secret_cave(m, x, y, gid, items, text):
     GROTTOS.append(g)
 
 
-def boulder(m, x, y):                 # a big 2x2 mountain boulder
-    m.stamp(OW, 9, 11, x, y, 2, 2, col=SOLID)
+ROCKS2 = [(15, 10), (15, 12), (13, 8), (15, 10), (13, 8)]
+
+
+def boulder(m, x, y):                 # a big 2x2 boulder (one of the pack's rocks, varied by place)
+    tx, ty = ROCKS2[(x * 5 + y * 3) % len(ROCKS2)]
+    m.stamp(NN, tx, ty, x, y, 2, 2, col=SOLID)
 
 
 def rockpile(m, x, y):
-    m.stamp(OW, 11, 11, x, y, 2, 2, col=SOLID)
+    tx, ty = ROCKS2[(x * 3 + y * 7 + 1) % len(ROCKS2)]
+    m.stamp(NN, tx, ty, x, y, 2, 2, col=SOLID)
 
 
 def highlands():
@@ -927,8 +1004,8 @@ def highlands():
     m.solid(1, 9, 1, 1, CRACK)
     m.chest(1, 8, 'heart_shard')
     m.solid(2, 8, 1, 2, SOLID)
-    m.put('deco', OW, 9, 11, 2, 8)
-    m.put('deco', OW, 9, 12, 2, 9)
+    m.put('deco', NN, 17, 13, 2, 8)
+    m.put('deco', NN, 19, 13, 2, 9)
     m.spawn('soldier', 6, 7)
     m.spawn('archer', 12, 5)
     m.spawn('log', 4, 12)

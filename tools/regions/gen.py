@@ -31,12 +31,21 @@ def make(W, H, theme, openings, seed, hub=None, sea_side=None, keep=()):
             for x in range(x0, x1 + 1):
                 put(x, y, c)
 
+    def blob(x0, y0, x1, y1, c):
+        """A rounded, slightly ragged patch filling roughly the box (x0, y0)-(x1, y1)."""
+        cx, cy, rx, ry = (x0 + x1) / 2, (y0 + y1) / 2, (x1 - x0) / 2 + 0.9, (y1 - y0) / 2 + 0.9
+        for y in range(y0, y1 + 1):
+            for x in range(x0, x1 + 1):
+                d = ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2
+                if d <= 1.0:
+                    put(x, y, c)
+
     # big water bodies first
     if T.get('bigwater'):
-        rect(W // 5, H // 5, W - W // 5, H - H // 5, '~')
+        blob(W // 6, H // 6, W - W // 6, H - H // 6, '~')
         for k in range(3):        # islands
             ix, iy = R.randrange(W // 5 + 3, W - W // 5 - 6), R.randrange(H // 5 + 3, H - H // 5 - 5)
-            rect(ix, iy, ix + 3, iy + 2, '.')
+            blob(ix, iy, ix + 4, iy + 3, '.')
     if T.get('sea'):
         side = sea_side or 'e'
         if side == 'e':
@@ -49,15 +58,15 @@ def make(W, H, theme, openings, seed, hub=None, sea_side=None, keep=()):
     if T.get('oasis'):
         for k in range(max(1, (W * H) // 900)):
             ox, oy = R.randrange(4, W - 10), R.randrange(4, H - 8)
-            rect(ox - 1, oy - 1, ox + 6, oy + 4, '.')
-            rect(ox, oy, ox + 5, oy + 3, '~')
+            blob(ox - 2, oy - 2, ox + 7, oy + 5, '.')
+            blob(ox, oy, ox + 5, oy + 3, '~')
     # ponds and mud
     for k in range(T['ponds'] * max(1, (W * H) // 900)):
         px, py = R.randrange(3, W - 9), R.randrange(3, H - 7)
-        rect(px, py, px + R.randrange(3, 6), py + R.randrange(2, 4), '~')
+        blob(px, py, px + R.randrange(4, 7), py + R.randrange(3, 5), '~')
     for k in range(T['mud'] * max(1, (W * H) // 900)):
         px, py = R.randrange(3, W - 8), R.randrange(3, H - 6)
-        rect(px, py, px + R.randrange(2, 6), py + R.randrange(2, 4), ':' if T['ground'] == '.' else '.')
+        blob(px, py, px + R.randrange(3, 7), py + R.randrange(2, 5), ':' if T['ground'] == '.' else '.')
     # clumps of trees (whole 4x3 trunks fit) and boulders
     if T['clumps']:
         for k in range(T['clumps'][1] * max(1, (W * H) // 900)):
@@ -137,10 +146,13 @@ def make(W, H, theme, openings, seed, hub=None, sea_side=None, keep=()):
                     clear(x, y)
                 put(x, y, T['ground'])
         walk(x0, y1 + 1, hub[0], hub[1])
-    if T['ground'] in (':', 's', 'w'):        # stray grass in dry or snowy lands only survives right next to water (banks)
+    if T['ground'] in (':', 's', 'w'):        # grass in dry or snowy lands only as a bank round water (a tile or two wide)
+        near = lambda x, y, d: any(0 <= y + j < H and 0 <= x + i < W and g[y + j][x + i] == '~' and i * i + j * j <= d * d + 0.5 for j in range(-d, d + 1) for i in range(-d, d + 1))
         for y in range(H):
             for x in range(W):
-                if g[y][x] == '.' and (T['ground'] == 'w' or not any(0 <= y + j < H and 0 <= x + i < W and g[y + j][x + i] == '~' for j in (-1, 0, 1) for i in (-1, 0, 1))):
+                if g[y][x] == '.' and not near(x, y, 4):
                     g[y][x] = T['ground']
+                elif g[y][x] == T['ground'] and near(x, y, 2):
+                    g[y][x] = '.'
     rows = [''.join(r).replace('_', T['ground']) for r in g]
     return rows

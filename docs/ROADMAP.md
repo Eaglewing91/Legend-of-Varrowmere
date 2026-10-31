@@ -77,4 +77,7 @@ Fastest completion, fewest deaths, most secrets.
 
 ## Finish
 
-Art pass, sound pass, balance, a full human playtest, then release through Torn Arcade.
+- [x] Art pass: Ninja Adventure bosses, monsters, trees and rocks; soft rounded edges on dirt, grass banks and ponds;
+  borders and forests packed from mixed trees and rocks (no straight hedges or rows of one boulder); hit flash.
+- [x] Sound pass: Ninja Adventure sound effects (the old generated beeps remain as a fallback).
+- [ ] Balance, a full human playtest, then release through Torn Arcade.

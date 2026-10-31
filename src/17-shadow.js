@@ -21,14 +21,14 @@ LV.shadowSheet = function (img) {
 };
 (function () {
   const prep = LV.prepareEnemyArt;
-  LV.prepareEnemyArt = function () { prep(); LV.IMG.overworld_s = LV.shadowSheet(LV.IMG.overworld); LV.IMG.cave_s = LV.shadowSheet(LV.IMG.cave); LV.IMG.inner_s = LV.shadowSheet(LV.IMG.inner); if (LV.IMG.nafloor) LV.IMG.nafloor_s = LV.shadowSheet(LV.IMG.nafloor); if (LV.IMG.nanature) LV.IMG.nanature_s = LV.shadowSheet(LV.IMG.nanature); };
+  LV.prepareEnemyArt = function () { prep(); LV.IMG.overworld_s = LV.shadowSheet(LV.IMG.overworld); LV.IMG.cave_s = LV.shadowSheet(LV.IMG.cave); LV.IMG.inner_s = LV.shadowSheet(LV.IMG.inner); if (LV.IMG.nafloor) LV.IMG.nafloor_s = LV.shadowSheet(LV.IMG.nafloor); if (LV.IMG.nanature) LV.IMG.nanature_s = LV.shadowSheet(LV.IMG.nanature); if (LV.IMG.blend) LV.IMG.blend_s = LV.shadowSheet(LV.IMG.blend); };
   // shadow maps draw from the shadowed sheets
   const dl = LV.drawLayer;
   LV.drawLayer = function (ctx, world, name, ox, oy) {
     if (!world.def.shadow) return dl(ctx, world, name, ox, oy);
-    const keep = [LV.IMG.overworld, LV.IMG.cave, LV.IMG.inner, LV.IMG.nafloor, LV.IMG.nanature];
-    LV.IMG.overworld = LV.IMG.overworld_s || keep[0]; LV.IMG.cave = LV.IMG.cave_s || keep[1]; LV.IMG.inner = LV.IMG.inner_s || keep[2]; LV.IMG.nafloor = LV.IMG.nafloor_s || keep[3]; LV.IMG.nanature = LV.IMG.nanature_s || keep[4];
-    try { dl(ctx, world, name, ox, oy); } finally { LV.IMG.overworld = keep[0]; LV.IMG.cave = keep[1]; LV.IMG.inner = keep[2]; LV.IMG.nafloor = keep[3]; LV.IMG.nanature = keep[4]; }
+    const keep = [LV.IMG.overworld, LV.IMG.cave, LV.IMG.inner, LV.IMG.nafloor, LV.IMG.nanature, LV.IMG.blend];
+    LV.IMG.overworld = LV.IMG.overworld_s || keep[0]; LV.IMG.cave = LV.IMG.cave_s || keep[1]; LV.IMG.inner = LV.IMG.inner_s || keep[2]; LV.IMG.nafloor = LV.IMG.nafloor_s || keep[3]; LV.IMG.nanature = LV.IMG.nanature_s || keep[4]; LV.IMG.blend = LV.IMG.blend_s || keep[5];
+    try { dl(ctx, world, name, ox, oy); } finally { LV.IMG.overworld = keep[0]; LV.IMG.cave = keep[1]; LV.IMG.inner = keep[2]; LV.IMG.nafloor = keep[3]; LV.IMG.nanature = keep[4]; LV.IMG.blend = keep[5]; }
   };
 })();
 

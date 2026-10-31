@@ -5,20 +5,21 @@ Art sheets are embedded as base64 PNG; maps come from tools/maps.py.
 """
 import base64, glob, json, os, subprocess
 
-VERSION = '0.16.1'
+VERSION = '0.17.0'
 os.makedirs('build', exist_ok=True)
 subprocess.run(['python3', 'tools/maps.py'], check=True)
 
-ART = {'overworld': 'pack-armm1998/Overworld.png', 'inner': 'pack-armm1998/Inner.png', 'cave': 'pack-armm1998/cave.png', 'objects': 'pack-armm1998/objects.png', 'hero': 'pack-armm1998/character.png', 'log': 'pack-armm1998/log.png', 'na': 'ninja-adventure/monsters.png', 'nafloor': 'ninja-adventure/TilesetFloor.png', 'nanature': 'ninja-adventure/TilesetNature.png'}
+ART = {'overworld': 'pack-armm1998/Overworld.png', 'inner': 'pack-armm1998/Inner.png', 'cave': 'pack-armm1998/cave.png', 'objects': 'pack-armm1998/objects.png', 'hero': 'pack-armm1998/character.png', 'log': 'pack-armm1998/log.png', 'na': 'ninja-adventure/monsters.png', 'nafloor': 'ninja-adventure/TilesetFloor.png', 'nanature': 'ninja-adventure/TilesetNature.png', 'blend': 'generated/blend.png'}
 for f in sorted(glob.glob('art/ninja-adventure/monsters/*.png')):
     ART['m_' + os.path.basename(f)[:-4].lower()] = f[4:]
 for f in sorted(glob.glob('art/ninja-adventure/bosses/*.png')):
     ART['b_' + os.path.basename(f)[:-4]] = f[4:]
 art = {k: base64.b64encode(open('art/' + f, 'rb').read()).decode() for k, f in ART.items()}
 
+snd = {os.path.basename(f)[:-4]: base64.b64encode(open(f, 'rb').read()).decode() for f in sorted(glob.glob('art/ninja-adventure/sfx/*.mp3'))}
 src = '\n'.join(open(f).read() for f in sorted(glob.glob('src/*.js')))
 maps = open('src/data/maps.json').read()
-body = src + '\nLV.MAPS = ' + maps + ';\nLV.ART = ' + json.dumps(art) + ';\n'
+body = src + '\nLV.MAPS = ' + maps + ';\nLV.ART = ' + json.dumps(art) + ';\nLV.SOUNDS = ' + json.dumps(snd) + ';\n'
 
 header = f"""// ==UserScript==
 // @name         Legend of Varrowmere
@@ -32,7 +33,7 @@ header = f"""// ==UserScript==
 // @grant        GM_registerMenuCommand
 // @run-at       document-idle
 // ==/UserScript==
-/* Art: "Zelda-like tilesets and sprites" by ArMM1998 (OpenGameArt, CC0); squid and spirit monsters from "Ninja Adventure" by Pixel-boy and AAA (CC0). Everything else (c) Eaglewing [571041], all rights reserved. */
+/* Art: "Zelda-like tilesets and sprites" by ArMM1998 (OpenGameArt, CC0); monsters, bosses, terrain and sound effects from "Ninja Adventure" by Pixel-boy and AAA (CC0). Everything else (c) Eaglewing [571041], all rights reserved. */
 """
 launcher = """
 (function () {
