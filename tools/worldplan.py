@@ -154,3 +154,51 @@ if __name__ == '__main__':
     import sys
     render(sys.argv[1] if len(sys.argv) > 1 else 'worldplan.png',
            {'whisperwood': (3, 3), 'highlands': (2, 2), 'riverhead': (1, 1), 'grove': (2, 1), 'meadow': (3, 1), 'marrowgate': (4, 2), 'willowfen': (3, 2), 'willowfen_s': (2, 2)})
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# Places added on top of the land (stage 2): towns, homes and shops, fairy fountains. Positions are screen units.
+# Each house gets an interior; 'who' picks the person inside (look), 'lines' what they say; 'kind' the room's furniture.
+TOWN_HOUSES = [(2, 2), (9, 2), (16, 2), (25, 2), (32, 2), (2, 15), (9, 15), (25, 15), (32, 15)]   # 5 x 5 plots in a 40 x 24 town
+TOWNS_BUILT = {
+    'Brookhaven': dict(region='brookhaven', at=(10.4, 5.4), ground='.', houses=[
+        ('bh_inn', 'The Leaky Bucket', 'tavern', 'trader', ['Welcome to the Leaky Bucket. The bucket is decorative. The leak is not.', 'Rooms are free if you can find one that is dry.']),
+        ('bh_miller', "Miller's House", 'house', 'farmer', ['The river turns the wheel, the wheel turns the stones, the stones turn my hair grey.']),
+        ('bh_fish', 'Fishmonger', 'shop', 'fisher', ['Fresh fish! Well. Fish.'], 'bottles'),
+        ('bh_elder', "Elder Rowan's House", 'library', 'elder', ['Brookhaven was founded by a man who fell in the river and decided to stay.', 'The castle moat is fed from our brook. Vex has never once thanked us.']),
+        ('bh_house1', 'The Pell House', 'house', 'baker', ['My husband trades plushies at the bazaar. We are drowning in bears.']),
+        ('bh_house2', 'Quiet Cottage', 'house', 'scholar', ['I moved here for peace and quiet. Then the frogs found out.'], 'bottle'),
+        ('bh_smith', 'Brook Forge', 'smith', 'guard', ['I sharpen blades, mend shields and occasionally forge a signature. Kidding. Mostly.']),
+        ('bh_guard', 'Watch House', 'house', 'guard', ['Nothing to report. Except the goose. Do not go near the goose.']),
+    ]),
+    'Dunmere': dict(region='desert', at=(16.0, 16.2), ground='s', houses=[
+        ('dm_inn', 'The Dry Well', 'tavern', 'trader', ['The well is dry, the drinks are drier, and the jokes are the driest of all.']),
+        ('dm_water', 'Water Seller', 'shop', 'fisher', ['Water, potions, bottles. In the desert you pay for wet.'], 'bottles'),
+        ('dm_house1', 'Sandstone House', 'house', 'farmer', ['Sand in the bread, sand in the bed. You get used to it. You never get used to it.']),
+        ('dm_sage', "Sage Amaru's House", 'library', 'elder', ['The ruins to the north were a sun temple. The old script tells you where to dig, if you can read it.']),
+        ('dm_house2', 'Nomad Lodge', 'house', 'scholar', ['We nomads settle down here for the hot months. Then we complain about it.'], 'bottle'),
+        ('dm_trader', 'Spice Trader', 'house', 'trader', ['Spices from far abroad. I fly out with a suitcase of flowers and come back with this. Do not ask.']),
+    ]),
+}
+HOMES = [   # (id, name, region, at, kind, look, lines)
+    ('wf_witch', "Witch Morna's Hut", 'bramble', (0.9, 12.6), 'shop', 'scholar', ['Potions, bottles, the odd curse. Curses are extra.']),
+    ('fortune', "Fortune Teller's Tent", 'heartfields', (5.6, 9.6), 'library', 'trader', ['I see... a long journey. Many hearts. A suspicious amount of bush cutting.', 'That will be ten cash. The future is not free.']),
+    ('lumber', "Lumberjacks' Lodge", 'deepwood', (1.4, 5.4), 'house', 'farmer', ['We cut trees. The trees grow back. It is the most stable job in Varrowmere.']),
+    ('stable', 'Westfold Stables', 'westfold', (5.6, 6.0), 'house', 'farmer', ['The horses are out. All of them. Somebody left the gate open and blamed the dog.']),
+    ('observatory', 'Old Observatory', 'stoneheath', (12.4, 3.6), 'library', 'scholar', ['The stars over Stone Heath line up with the standing stones once a year. Nobody remembers why that mattered.']),
+    ('lighthouse', 'Lighthouse', 'southshore', (17.4, 20.2), 'house', 'fisher', ['I keep the light. Ships keep away. Everyone is happy, except the ships.']),
+    ('fisher_lake', "Heron's Rest", 'mirrorlake', (12.2, 17.2), 'house', 'fisher', ['The lake shows you your own face. Then it shows you a fish. Then it shows you nothing for six hours.']),
+    ('oak_house', 'Hollow Oak Cottage', 'oakshire', (3.6, 18.2), 'house', 'baker', ['My grandmother lived in the hollow oak. We moved her into a house. She still sleeps in a tree.']),
+    ('greenmarch_inn', 'Twin Oaks Inn', 'greenmarch', (8.4, 15.4), 'tavern', 'trader', ['Halfway between the city and the castle. Halfway decent beer.']),
+    ('heath_hermit', "Hermit Doyle's Hut", 'brackendowns', (6.2, 13.4), 'house', 'elder', ['I left the city to get away from people. Now people visit to ask why I left the city.']),
+    ('eastgate_house', 'Gatekeeper\'s House', 'eastgate', (12.4, 9.2), 'house', 'guard', ['I keep the east gate. It has no wall. It is mostly a hobby.']),
+]
+FOUNTAINS = [   # fairy fountains: (region, at, shadow?)
+    ('deepwood', (1.0, 3.6), False), ('northreach', (3.6, 1.8), False), ('frostspire', (12.2, 1.6), False), ('icemere', (18.4, 6.6), False),
+    ('stoneheath', (9.0, 4.2), False), ('westfold', (3.4, 7.8), False), ('eastvale', (18.6, 9.4), False), ('riverlands', (14.0, 13.6), False),
+    ('brackendowns', (2.6, 13.6), False), ('oakshire', (1.6, 18.6), False), ('desert', (18.6, 12.2), False), ('saltmarsh', (11.2, 18.8), False),
+    ('southshore', (8.6, 20.2), False),
+    ('s_skyridge', (18.2, 1.4), True), ('s_cinderpass', (6.4, 3.4), True), ('s_brookhaven', (13.2, 6.6), True), ('s_heartfields', (7.2, 10.6), True),
+    ('s_greenmarch', (12.6, 15.6), True), ('s_desert', (17.0, 19.0), True), ('s_oakshire', (6.6, 18.6), True), ('s_eastgate', (13.2, 8.4), True),
+    ('s_westfold', (7.0, 5.6), True),
+]

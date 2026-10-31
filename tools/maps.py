@@ -1919,7 +1919,7 @@ def outer_regions():
         m.solid(x, 6, 1, 1, PEG)
     m.sign(37, 8, 'EAGLE CRAG|A great nest sits on the peak. The bird is away. A note: BACK SOON, GONE FISHING.')
     m.extra['digs'] = {'70,20': 'cash50', '12,22': 'bombs'}
-    secret_cave(m, 64, 20, 'grotto7', ['heart_shard'], 'Frost-cold air. Someone left a heart shard and a very sad snowman.')
+    secret_cave(m, 64, 20, 'grotto7', ['cash50'], 'Frost-cold air. Someone left fifty cash and a very sad snowman.')
     for (k, x, y) in [('soldierBlue', 30, 12), ('archer', 50, 8), ('captain', 60, 16), ('log', 14, 18), ('wisp', 44, 20), ('soldier', 70, 10), ('archer', 25, 22)]:
         m.spawn(k, x, y)
     out.append(interior('fs_hermit', "Hollis's Cave", ('frostspire', 20, 6), 'house', npcs=[
@@ -1991,7 +1991,7 @@ def outer_regions():
     crypt = interior('sm_crypt', "The Duke's Crypt", ('saltmarsh', 11, 38), 'house', chests=[(7, 4, 'cloak')])
     crypt.music = 'cave'
     out.append(crypt)
-    secret_cave(m, 22, 14, 'grotto8', ['heart_shard', 'arrows'], 'A smugglers\' nook, smelling of salt and bad decisions.')
+    secret_cave(m, 22, 14, 'grotto8', ['cash20', 'arrows'], 'A smugglers\' nook, smelling of salt and bad decisions.')
     for (k, x, y) in [('log', 20, 10), ('soldier', 24, 22), ('wisp', 10, 28), ('archer', 26, 34), ('snapjaw', 15, 51)]:
         m.spawn(k, x, y)
     # Sunscar Desert (8-11, 4-7)

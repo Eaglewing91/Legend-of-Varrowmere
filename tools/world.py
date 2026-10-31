@@ -7,7 +7,7 @@ New areas are generated from the plan. The Shadow world is the light world's mir
 """
 import math
 import random
-from worldplan import GW, GH, SW, SH, BIOME, SETPIECES, REGIONS, RIVERS, ROADS
+from worldplan import GW, GH, SW, SH, BIOME, SETPIECES, REGIONS, RIVERS, ROADS, TOWNS_BUILT, TOWN_HOUSES, HOMES, FOUNTAINS
 
 W, H = GW * SW, GH * SH
 WALK = set('.:sw-=*bhX')          # chars the hero can walk on (bushes can be cut)
@@ -350,6 +350,16 @@ def rebuild(maps, M):
         if 'race_goal' in m.extra:
             x, y = m.extra['race_goal']
             win(mid, x, y, 0, 0, 0, 0)
+    # room for the new places: towns (40 x 24), homes (5 x 5), fairy fountain caves (4 x 3)
+    def spot(at, w, h):
+        x, y = int(at[0] * SW), int(at[1] * SH)
+        return (x, y, x + w - 1, y + h - 1)
+    for t in TOWNS_BUILT.values():
+        anchors.append(spot(t['at'], 40, 24))
+    for h in HOMES:
+        anchors.append(spot(h[3], 5, 5))
+    for f in FOUNTAINS:
+        anchors.append(spot(f[1], 4, 3))
     wet = []
     for k, (sx, sy) in SETPIECES.items():
         m = idx[k]
@@ -407,6 +417,7 @@ def rebuild(maps, M):
         else:
             wildlife(sm, 'shadow', M, hash(sm.id) & 0xffff)
         shadows.append(sm)
+    extra = place_features(new, shadows, M)
     # move the hand-built areas (and their shadows)
     for k, (sx, sy) in SETPIECES.items():
         for mid in (k, 's_' + k):
@@ -435,7 +446,90 @@ def rebuild(maps, M):
         for w in m.warps:
             if w['to'] in T:
                 w['tx'], w['ty'] = fix(w['to'], w['tx'], w['ty'])
-    return keep + new + shadows
+    return keep + new + shadows + extra
+
+
+def local(maps, mid, at):
+    m = next(x for x in maps if x.id == mid)
+    rx, ry = m.extra['world']
+    return m, int(at[0] * SW) - rx * SW, int(at[1] * SH) - ry * SH
+
+
+def build_house(M, m, x, y, hid, name, kind, look, lines, extra=None):
+    M.house(m, x, y, (hid, 7, 12, 0))
+    npc = dict(look=look, roam=0, dir=2, talk=[[None, lines]])
+    if extra == 'bottles':
+        npc['bottles'] = True
+    return M.interior(hid, name, (m.id, x + 2, y + 5), kind, npcs=[(7, 6, npc)], chests=[(5, 4, 'bottle')] if extra == 'bottle' else ())
+
+
+def fountain_cave(M, m, x, y, fid):
+    m.stamp(M.OW, 10, 31, x, y, 4, 3, col=M.SOLID)
+    m.warp(x + 1, y + 2, fid, 7, 12, 0)
+    m.warp(x + 2, y + 2, fid, 8, 12, 0)
+    f = M.Map(fid, 16, 14, 'Fairy Fountain', indoor=True, music='home')
+    f.fill(M.NI, 12, 13, 0, 0, 15, 13)
+    f.solid(0, 0, 16, 2); f.solid(0, 0, 1, 14); f.solid(15, 0, 1, 14); f.solid(0, 13, 16, 1)
+    for xx in range(16):
+        for yy in (0, 1):
+            f.put('ground', M.NR, 4 + (xx % 3), yy, xx, yy)
+    for yy in range(14):
+        for xx in (0, 15):
+            f.put('ground', M.NR, 4, 1, xx, yy)
+    for xx in range(16):
+        f.put('ground', M.NR, 5, 2, xx, 13)
+    for xx in range(4, 12):                 # the pool, with soft foamy banks
+        for yy in range(4, 9):
+            nb = lambda a, b: 4 <= a < 12 and 4 <= b < 9
+            import blend as B
+            k = B.mask(nb, xx, yy)
+            f.put('ground', M.BL, k & 15, 7 * 16 + (k >> 4), xx, yy) if k != 255 else f.put('ground', M.NW, 1, 7, xx, yy)
+            f.col[yy * 16 + xx] = M.DEEP
+    for xx in (7, 8):
+        f.warp(xx, 13, m.id, x + xx - 6, y + 3, 2)
+        f.col[13 * 16 + xx] = M.OPEN
+        f.put('ground', M.NI, 12, 13, xx, 13)
+    for (a, b) in ((5, 3), (10, 3), (4, 9), (11, 9)):
+        f.spawn('fairy', a, b)
+    f.spawn('villager', 8, 10, look='baker', who='Princess', roam=0, dir=2, heal=True,
+            talk=[[None, ['Welcome to my spring. Rest, and be whole again.', 'Catch a fairy in a bottle and it will save you when you fall. Fairies hate this. Do it anyway.']]])
+    f.entry = [7, 12]
+    return f
+
+
+def place_features(new, shadows, M):
+    """Towns, homes and fairy fountains go in after the land is sliced (their ground was cleared by the generator)."""
+    out = []
+    every = new + shadows
+    for tname, t in TOWNS_BUILT.items():
+        m, tx, ty = local(new, t['region'], t['at'])
+        for yy in range(24):
+            for xx in range(40):
+                X, Y = tx + xx, ty + yy
+                if not m.ok(X, Y):
+                    continue
+                road = yy in (7, 8, 20, 21) or xx in (19, 20)
+                if road:
+                    m.put('ground', M.NF, *((12, 8) if t['ground'] == '.' else (1, 4)), X, Y)
+                m.col[Y * m.w + X] = M.OPEN
+                m.layers['deco'][Y * m.w + X] = -1
+                m.layers['over'][Y * m.w + X] = -1
+        M.fountain(m, tx + 23, ty + 11)
+        M.stall(m, tx + 8, ty + 9)
+        for (hx, hy), h in zip(TOWN_HOUSES, t['houses']):
+            out.append(build_house(M, m, tx + hx, ty + hy, h[0], h[1], h[2], h[3], h[4], h[5] if len(h) > 5 else None))
+        M.signboard(m, tx + 18, ty + 9, tname.upper() + '|' + ('A town on the brook. Mind the goose.' if tname == 'Brookhaven' else 'Last water before the dunes.'))
+        looks = ['farmer', 'baker', 'trader', 'fisher', 'elder', 'guard']
+        for k, (vx, vy) in enumerate(((13, 11), (28, 10), (5, 12), (34, 13), (17, 18))):
+            m.spawn('villager', tx + vx, ty + vy, look=looks[k % len(looks)], roam=12, talk=[[None, [
+                ['Welcome to ' + tname + '. We have a fountain. It is very wet.', 'Have you seen the castle? Ask before you visit. Vex does not like visitors.', 'My cousin went abroad with a suitcase of flowers. Came back rich and smelling of daisies.', 'They say there are fairies in caves all over the land. Fairies in caves! Whatever next.', 'I would tell you a secret, but my energy is too low. Come back in five minutes.'][k]]]])
+    for (hid, name, reg, at, kind, look, lines) in HOMES:
+        m, x, y = local(new, reg, at)
+        out.append(build_house(M, m, x, y, hid, name, kind, look, lines, 'bottles' if hid == 'wf_witch' else None))
+    for i, (reg, at, shadow) in enumerate(FOUNTAINS):
+        m, x, y = local(every, reg, at)
+        out.append(fountain_cave(M, m, x, y, 'fairy%d' % (i + 1)))
+    return out
 
 
 def carry(old, nm, t, wins, M):
