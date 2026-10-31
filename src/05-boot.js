@@ -35,11 +35,12 @@ LV.open = function (opts) {
     if (e.code === 'Escape' && !opts.noClose) { LV.close(); e.preventDefault(); return; }
     if (game.input.key(e.code, true)) e.preventDefault();
   }, true);
-  addEventListener('keyup', function (e) { if (game.input.key(e.code, false)) e.preventDefault(); }, true);
+  addEventListener('keyup', function (e) { if (root.style.display === 'none' || typing(e)) return; if (game.input.key(e.code, false)) e.preventDefault(); }, true);
   LV.loop = new LV.Loop(function (dt) { game.update(dt); }, function () { game.render(); });
   LV.loop.start();
   // save every few seconds while playing
-  LV.saver = setInterval(function () { if (game.mode === 'title') return; const h = game.hero; if (h.state !== 'walk' || game.scroll) return; Object.assign(game.save, { x: h.x, y: h.y, dir: h.dir, hp: Math.max(4, h.hp), maxHp: h.maxHp }); game.store.set(game.save); }, 4000);
+  LV.saver = setInterval(function () { if (game.mode === 'title' || root.style.display === 'none') return;   // nothing runs while the window is closed
+    const h = game.hero; if (h.state !== 'walk' || game.scroll) return; Object.assign(game.save, { x: h.x, y: h.y, dir: h.dir, hp: Math.max(4, h.hp), maxHp: h.maxHp }); game.store.set(game.save); }, 4000);
   return game;
 };
-LV.close = function () { if (!LV.root) return; LV.root.style.display = 'none'; if (LV.loop) LV.loop.stop(); if (LV.game) LV.game.input.clear(); };
+LV.close = function () { if (!LV.root) return; const g = LV.game; if (g && g.mode !== 'title' && g.hero && g.hero.state === 'walk' && !g.scroll) { try { Object.assign(g.save, { x: g.hero.x, y: g.hero.y, dir: g.hero.dir, hp: Math.max(4, g.hero.hp), maxHp: g.hero.maxHp }); g.store.set(g.save); } catch (e) {} } LV.root.style.display = 'none'; if (LV.loop) LV.loop.stop(); if (LV.game) LV.game.input.clear(); };
