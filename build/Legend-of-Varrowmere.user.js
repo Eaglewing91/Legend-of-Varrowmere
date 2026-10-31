@@ -4272,7 +4272,16 @@ LV.itemIcon = (function (orig) {
   const IM = function (k) { return LV.IMG[k]; };
   // HUD hearts: the pack's heart in five fill steps (empty .. full), shrunk to the HUD's 8 px grid
   const heart = LV.heart;
-  LV.heart = function (ctx, x, y, q) { const im = IM('ui_hearts'); if (!im) return heart(ctx, x, y, q); ctx.drawImage(im, Math.round(q) * 16, 0, 16, 16, x - 1, y - 1, 9, 9); };
+  // the pack's heart, redrawn pixel for pixel at HUD size (shrinking the 16 px art turns it to mush), in the pack's colours
+  const H = ['.oo.oo.', 'ohrorro', 'orrrrro', 'orrrrro', '.orrro.', '..oro..', '...o...'];
+  LV.heart = function (ctx, x, y, q) {
+    for (let j = 0; j < 7; j++) for (let k = 0; k < 7; k++) {
+      const c = H[j][k]; if (c === '.') continue;
+      const full = q >= 4 || (q >= 3 && !(k >= 4 && j >= 3)) || (q >= 2 && k <= 3) || (q >= 1 && k <= 3 && j >= 3);
+      ctx.fillStyle = c === 'o' ? '#2b1418' : !full ? '#5c3a3e' : c === 'h' ? '#ffd3c4' : (k <= 2 && j <= 2) ? '#ff6b5e' : '#e43b44';
+      ctx.fillRect(x + k, y + j - 1, 1, 1);
+    }
+  };
   // a placed bomb: the pack's bomb, blinking red before it goes off
   const bomb = LV.Bomb.prototype.draw;
   LV.Bomb.prototype.draw = function (ctx, ox, oy) {
