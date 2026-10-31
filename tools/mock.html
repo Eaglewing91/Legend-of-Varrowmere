@@ -39,7 +39,72 @@ function stall(x, y) { // a market stall 3x3 tiles
 function pot(x, y) { px(x + 8, y + 10, '#8a4a2a', 16, 16); px(x + 6, y + 12, '#a35a33', 20, 10); px(x + 9, y + 8, '#6a3820', 14, 4); px(x + 10, y + 14, '#c27447', 3, 6); px(x + 7, y + 26, 'rgba(0,0,0,.3)', 18, 3); }
 function sign(x, y) { px(x + 14, y + 16, '#5b3a22', 4, 14); px(x + 4, y + 6, '#8a5a32', 24, 14); px(x + 5, y + 7, '#a8713e', 22, 3); px(x + 8, y + 11, '#5b3a22', 16, 1); px(x + 8, y + 14, '#5b3a22', 12, 1); }
 
-/* ---------- characters (adult proportions, 24x40) ---------- */
+
+/* ---------- sprite builder: shapes on a pixel grid, then automatic outline and shading ---------- */
+function Sprite(w, h) { this.w = w; this.h = h; this.c = new Array(w * h).fill(null); }
+Sprite.prototype.p = function (x, y, c) { if (x >= 0 && y >= 0 && x < this.w && y < this.h) this.c[y * this.w + x] = c; };
+Sprite.prototype.rect = function (x, y, w, h, c) { for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) this.p(x + i, y + j, c); };
+Sprite.prototype.ell = function (cx, cy, rx, ry, c) { for (let y = Math.floor(cy - ry); y <= cy + ry; y++) for (let x = Math.floor(cx - rx); x <= cx + rx; x++) { const dx = (x + .5 - cx) / rx, dy = (y + .5 - cy) / ry; if (dx * dx + dy * dy <= 1) this.p(x, y, c); } };
+Sprite.prototype.get = function (x, y) { return x < 0 || y < 0 || x >= this.w || y >= this.h ? null : this.c[y * this.w + x]; };
+function shade(hex, f) { const n = parseInt(hex.slice(1), 16); let r = n >> 16, g2 = (n >> 8) & 255, b = n & 255; const m = v => Math.max(0, Math.min(255, Math.round(f > 0 ? v + (255 - v) * f : v * (1 + f)))); return '#' + [m(r), m(g2), m(b)].map(v => v.toString(16).padStart(2, '0')).join(''); }
+// draw: base colours shaded by neighbours (light from top-left), then a dark outline round the whole shape
+function drawSprite(S, x0, y0, flip) {
+  const out = '#180f14';
+  for (let y = 0; y < S.h; y++) for (let x = 0; x < S.w; x++) {
+    const sx = flip ? S.w - 1 - x : x, c = S.get(sx, y);
+    if (c) {
+      let col = c;
+      if (c[0] === '#' && !c.endsWith('!')) {
+        const up = S.get(sx, y - 1), lf = S.get(flip ? sx + 1 : sx - 1, y), dn = S.get(sx, y + 1), rt = S.get(flip ? sx - 1 : sx + 1, y);
+        if (up !== c || lf !== c) col = shade(c, .22);
+        if (dn !== c || rt !== c) col = shade(c, -.28);
+        if ((up !== c || lf !== c) && (dn !== c || rt !== c)) col = c;
+      }
+      px(x0 + x, y0 + y, col.replace('!', ''));
+    } else if (S.get(sx - 1, y) || S.get(sx + 1, y) || S.get(sx, y - 1) || S.get(sx, y + 1)) px(x0 + x, y0 + y, out);
+  }
+}
+function heroSprite() {
+  const S = new Sprite(34, 46), O = 1;
+  // legs and shoes
+  S.rect(10, 33, 6, 8, '#2e3858'); S.rect(18, 33, 6, 8, '#2e3858'); S.rect(15, 33, 4, 3, '#2e3858');
+  S.rect(9, 40, 7, 4, '#eef0f4'); S.rect(18, 40, 7, 4, '#eef0f4'); S.rect(9, 43, 7, 1, '#9aa0b0!'); S.rect(18, 43, 7, 1, '#9aa0b0!');
+  // jacket body, sleeves, hood
+  S.rect(9, 19, 16, 14, '#d23a32'); S.rect(5, 20, 5, 11, '#d23a32'); S.rect(24, 20, 5, 11, '#d23a32');
+  S.ell(17, 20, 7, 3, '#a8262a');
+  S.rect(15, 21, 4, 11, '#2c2c36'); S.rect(16, 21, 1, 11, '#4a4a58!');
+  S.rect(9, 31, 16, 2, '#4a3220'); S.rect(16, 31, 2, 2, '#e8b840!');
+  S.rect(5, 30, 5, 3, '#e8a878'); S.rect(24, 30, 5, 3, '#e8a878');
+  S.rect(5, 29, 5, 1, '#a8262a!'); S.rect(24, 29, 5, 1, '#a8262a!');
+  // head: big, readable, adult (stubble, strong jaw)
+  S.rect(15, 17, 4, 3, '#d8946a');
+  S.ell(17, 11, 9, 8.5, '#e8a878');
+  S.rect(9, 9, 2, 5, '#e8a878'); S.rect(24, 9, 2, 5, '#e8a878');
+  S.ell(17, 6.5, 10, 6.5, '#6a3420'); S.rect(8, 6, 3, 6, '#6a3420'); S.rect(23, 6, 3, 6, '#6a3420');
+  S.p(12, 9, '#6a3420'); S.p(13, 10, '#6a3420'); S.p(20, 10, '#6a3420'); S.p(21, 9, '#6a3420'); S.rect(14, 9, 2, 1, '#6a3420'); S.rect(18, 9, 2, 1, '#6a3420');
+  S.rect(12, 11, 3, 1, '#4a2414!'); S.rect(19, 11, 3, 1, '#4a2414!');
+  S.rect(13, 12, 2, 2, '#1c1418!'); S.rect(19, 12, 2, 2, '#1c1418!'); S.p(13, 12, '#ffffff!'); S.p(19, 12, '#ffffff!');
+  S.p(17, 14, '#c8805a!');
+  S.rect(12, 15, 11, 3, '#b8805e'); S.rect(15, 16, 4, 1, '#7a3a2a!');
+  return S;
+}
+function soldierSprite() {
+  const S = new Sprite(34, 46);
+  S.rect(10, 33, 6, 8, '#3a2a52'); S.rect(18, 33, 6, 8, '#3a2a52'); S.rect(9, 40, 7, 4, '#241a30'); S.rect(18, 40, 7, 4, '#241a30');
+  S.rect(8, 19, 18, 14, '#6a34a0'); S.rect(5, 20, 4, 10, '#6a34a0'); S.rect(25, 20, 4, 10, '#6a34a0');
+  S.rect(8, 19, 18, 3, '#e0b030'); S.rect(16, 22, 2, 9, '#e0b030'); S.rect(8, 31, 18, 2, '#e0b030');
+  S.rect(5, 29, 4, 3, '#d8a070'); S.rect(25, 29, 4, 3, '#d8a070');
+  S.ell(17, 12, 9, 8, '#e0b030'); S.rect(8, 12, 18, 5, '#e0b030');
+  S.rect(10, 11, 14, 6, '#2a1d40'); S.rect(12, 13, 3, 2, '#ff4040!'); S.rect(19, 13, 3, 2, '#ff4040!');
+  S.rect(16, 2, 2, 5, '#c03030'); S.ell(17, 2, 3, 2.5, '#d84040');
+  return S;
+}
+function shieldSpear(x, y, flip) { // gold round shield + spear, drawn over the soldier
+  const sx = flip ? x + 24 : x - 4; g.fillStyle = '#180f14'; g.beginPath(); g.arc(sx + 6, y + 27, 8, 0, 6.28); g.fill(); g.fillStyle = '#e0b030'; g.beginPath(); g.arc(sx + 6, y + 27, 6.5, 0, 6.28); g.fill(); g.fillStyle = '#6a34a0'; g.fillRect(sx + 4, y + 23, 4, 8); g.fillStyle = '#fff2b0'; g.fillRect(sx + 3, y + 23, 2, 2);
+  const px2 = flip ? x + 2 : x + 30; px(px2, y - 6, '#180f14', 4, 46); px(px2 + 1, y - 5, '#8a5a32', 2, 44); px(px2 - 1, y - 12, '#180f14', 6, 8); px(px2, y - 11, '#d8dde5', 4, 6); px(px2 + 1, y - 13, '#d8dde5', 2, 2);
+}
+
+/* ---------- old characters ---------- */
 const HERO = [
 '........hhhhhh..........',
 '......hhhhhhhhhh........',
@@ -102,11 +167,13 @@ const GOON = [
 '....KKKKKK.KKKKKK.......'];
 const GOON_PAL = { d: '#1a1a22', s: '#c8946c', E: '#1a0f0a', b: '#5a3a2a', p: '#5b2f8a', P: '#3e1d66', w: '#e8e8e8', g: '#e0b030', k: '#2a2030', q: '#3a2a52', Q: '#2a1d40', K: '#141218' };
 function shadow(x, y, w) { g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(x, y, w, 4, 0, 0, 6.28); g.fill(); }
-function hero(x, y) { shadow(x + 11, y + 32, 10); spr(HERO, HERO_PAL, x, y);
+let HS, SS; function hero(x, y) { HS = HS || heroSprite(); shadow(x + 17, y + 44, 13); drawSprite(HS, x, y);
+  px(x + 28, y + 6, '#180f14', 5, 26); px(x + 29, y + 7, '#9aa0aa', 3, 22); px(x + 30, y + 7, '#e8edf5', 1, 22); px(x + 27, y + 28, '#180f14', 7, 5); px(x + 28, y + 29, '#6a4428', 5, 3);
+  px(x + 1, y + 20, '#180f14', 9, 14); px(x + 2, y + 21, '#3a5ab8', 7, 12); px(x + 3, y + 22, '#6a8ae0', 2, 9); px(x + 5, y + 25, '#e8c040', 2, 4); return;
   // shield on left arm, blade on right
   px(x - 2, y + 15, '#2a3a8a', 7, 11); px(x - 1, y + 16, '#4a6ad0', 5, 9); px(x + 1, y + 19, '#e0c040', 2, 3);
   px(x + 20, y + 4, '#9aa0aa', 3, 16); px(x + 21, y + 4, '#d8dde5', 1, 16); px(x + 18, y + 19, '#5a3a22', 7, 3); }
-function goon(x, y, f) { shadow(x + 11, y + 25, 10); spr(GOON, GOON_PAL, x, y, f); px(f ? x + 1 : x + 19, y + 2, '#b0b6c0', 3, 16); }
+function goon(x, y, f) { SS = SS || soldierSprite(); shadow(x + 17, y + 44, 13); drawSprite(SS, x, y, f); shieldSpear(x, y, f); return; px(f ? x + 1 : x + 19, y + 2, '#b0b6c0', 3, 16); }
 
 /* ---------- HUD (original-style layout) ---------- */
 function hud() {
@@ -144,8 +211,8 @@ function park(t) {
   stall(11 * T, 3 * T - 6);
   [[2, 9], [12, 9], [5, 6]].forEach(p => pot(p[0] * T, p[1] * T));
   sign(9 * T + 4, 9 * T + 6);
-  goon(12 * T + 4, 6 * T + 10, true); goon(10 * T + 20, 8 * T + 30, true);
-  hero(7 * T + 6, 7 * T + 2);
+  goon(12 * T + 4, 6 * T - 4, true); goon(10 * T + 14, 8 * T + 14, true);
+  hero(7 * T - 1, 7 * T - 12);
   lamp(6 * T + 10, 6 * T + 10); lamp(9 * T + 14, 6 * T + 10);
   // lighting: dusk tint, lamp glow, fireflies
   g.globalCompositeOperation = 'multiply'; g.fillStyle = '#7d6fb0'; g.fillRect(0, 0, W, H);
