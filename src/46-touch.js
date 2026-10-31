@@ -23,7 +23,20 @@ LV.Input.prototype.key = (function (orig) {
     '.lv-top{right:8px;top:8px;display:flex;gap:6px}', '.lv-top .lv-k{padding:6px 11px;border-radius:999px;font-size:11px}',
     '.lv-padbtn{position:absolute;top:10px;right:100px;padding:6px 10px;border:1px solid #555;border-radius:6px;background:#222;color:#ddd;font:600 13px sans-serif;cursor:pointer}',
     '.lv-padbtn.lv-on{border-color:#e0843a;background:#5a3416}',
-    '@media (max-width:520px){.lv-dpad{grid-template-columns:repeat(3,40px);grid-template-rows:repeat(3,40px)}.lv-ab{width:130px;height:130px}.lv-ab .lv-k{width:48px;height:48px}}'
+    '@media (max-width:520px){.lv-dpad{grid-template-columns:repeat(3,40px);grid-template-rows:repeat(3,40px)}.lv-ab{width:130px;height:130px}.lv-ab .lv-k{width:48px;height:48px}}',
+    // portrait (Torn PDA and other phones): the picture on top, the pad underneath, sized like Tornies
+    '.lv-root.lv-under{inset:10px!important;justify-content:flex-start!important;padding:8px;gap:10px;box-sizing:border-box;border-radius:14px;border:1px solid var(--line,#1e2d40);background:radial-gradient(ellipse at top,#0f1c2c,#0a1119 70%)!important}',
+    '.lv-root.lv-under > canvas{border-radius:10px;border:1px solid #2c4466;box-shadow:none!important}',
+    '.lv-pad.lv-under{position:static;inset:auto;pointer-events:auto;width:100%;max-width:520px;align-items:center;justify-content:space-between;gap:10px}',
+    '.lv-pad.lv-under.lv-on{display:flex}',
+    '.lv-pad.lv-under > *{position:relative;left:auto;right:auto;top:auto;transform:none}',
+    '.lv-pad.lv-under .lv-dpad{grid-template-columns:repeat(3,50px);grid-template-rows:repeat(3,50px)}',
+    '.lv-pad.lv-under .lv-top{order:2;flex-direction:column;gap:10px}',
+    '.lv-pad.lv-under .lv-top .lv-k{padding:7px 14px;font-size:12px}',
+    '.lv-pad.lv-under .lv-ab{order:3;width:150px;height:150px}',
+    '.lv-pad.lv-under .lv-ab .lv-k{width:62px;height:62px}',
+    '.lv-pad.lv-under .lv-ab [data-b="attack"]{right:0;top:44px}', '.lv-pad.lv-under .lv-ab [data-b="item"]{left:0;top:80px}', '.lv-pad.lv-under .lv-ab [data-b="action"]{left:40px;top:0}',
+    '@media (max-width:520px){.lv-root.lv-under{padding:6px}.lv-pad.lv-under{gap:6px}.lv-pad.lv-under .lv-dpad{grid-template-columns:repeat(3,42px);grid-template-rows:repeat(3,42px)}.lv-pad.lv-under .lv-ab{width:128px;height:128px}.lv-pad.lv-under .lv-ab .lv-k{width:52px;height:52px;font-size:18px}.lv-pad.lv-under .lv-ab [data-b="attack"]{top:38px}.lv-pad.lv-under .lv-ab [data-b="item"]{top:70px}.lv-pad.lv-under .lv-ab [data-b="action"]{left:36px}.lv-pad.lv-under .lv-top .lv-k{padding:6px 10px;font-size:11px}}'
   ].join('\n');
   const HTML = '<div class="lv-dpad"><span></span><b class="lv-k" data-b="up">▲</b><span></span><b class="lv-k" data-b="left">◀</b><span></span><b class="lv-k" data-b="right">▶</b><span></span><b class="lv-k" data-b="down">▼</b><span></span></div>' +
     '<div class="lv-ab"><b class="lv-k" data-b="action" title="Talk, lift, open (C or Space)">✋</b><b class="lv-k" data-b="attack" title="Sword (Z or click)">⚔️</b><b class="lv-k" data-b="item" title="Item (X)">✦</b></div>' +
@@ -84,6 +97,17 @@ LV.Input.prototype.key = (function (orig) {
       const fit = LV.fit;
       LV.fit = function () {
         fit();
+        const hb = LV.root.parentNode, under = !!(LV.embedded && hb && hb.clientHeight > hb.clientWidth);
+        LV.root.classList.add('lv-root'); LV.root.classList.toggle('lv-under', under); if (LV.padEl) LV.padEl.classList.toggle('lv-under', under);
+        if (under) {
+          // as Tornies: the picture fills the width (its 720 x 480 screen's size), the pad sits underneath
+          const cv = LV.canvas, R = LV.root, padH = LV.padOn && LV.padEl ? (LV.padEl.offsetHeight || 170) + 10 : 0;
+          const availW = R.clientWidth - 16, availH = R.clientHeight - 16 - padH;
+          const tw = 720 * Math.max(0.3, Math.min(availW / 720, availH / 480, 1.6));
+          const w = Math.max(120, Math.min(tw, availH * LV.VIEW_W / LV.VIEW_H));
+          cv.style.width = Math.floor(w) + 'px'; cv.style.height = Math.floor(w * LV.VIEW_H / LV.VIEW_W) + 'px';
+          return;
+        }
         if (!LV.padOn) return;
         const host = LV.root.parentNode, W = LV.embedded && host ? host.clientWidth : innerWidth, cv = LV.canvas;
         const room = Math.max(120, W - 2 * 170), w = parseFloat(cv.style.width) || cv.width;

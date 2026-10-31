@@ -6,6 +6,10 @@ Dates are in TCT (Torn City Time).
 
 ---
 
+## 1.0.11 — 2026-10-31
+### Changed
+- **On phones (Torn PDA)** Legend of Varrowmere is laid out like Tornies: the picture at the top, the same width as Tornies' screen, in the same frame, with the touch pad underneath it instead of squeezed in at the sides. Desktop and sideways play are unchanged.
+
 ## 1.0.10 — 2026-10-31
 ### Fixed
 - Walking onto the next screen could set Wren down inside a bush, tree or rock, leaving her stuck. She now steps to the nearest free spot on the new screen (or back, if there is none). Checked at every screen edge in the game.
