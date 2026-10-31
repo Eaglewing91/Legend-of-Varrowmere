@@ -1,0 +1,46 @@
+"""Build Legend of Varrowmere.
+
+python3 build.py          -> build/Legend-of-Varrowmere.user.js (the userscript) and build/dev.html (a test page)
+Art sheets are embedded as base64 PNG; maps come from tools/maps.py.
+"""
+import base64, glob, json, os, subprocess
+
+VERSION = '0.1.0'
+os.makedirs('build', exist_ok=True)
+subprocess.run(['python3', 'tools/maps.py'], check=True)
+
+ART = {'overworld': 'Overworld.png', 'inner': 'Inner.png', 'cave': 'cave.png', 'objects': 'objects.png', 'hero': 'character.png', 'log': 'log.png', 'npc': 'NPC_test.png'}
+art = {k: base64.b64encode(open('art/pack-armm1998/' + f, 'rb').read()).decode() for k, f in ART.items()}
+
+src = '\n'.join(open(f).read() for f in sorted(glob.glob('src/*.js')))
+maps = open('src/data/maps.json').read()
+body = src + '\nLV.MAPS = ' + maps + ';\nLV.ART = ' + json.dumps(art) + ';\n'
+
+header = f"""// ==UserScript==
+// @name         Legend of Varrowmere
+// @namespace    eaglewing.legend-of-varrowmere
+// @version      {VERSION}
+// @description  A top-down action-adventure in the style of the 16-bit classics. Opens in its own window over the Torn page; makes no requests.
+// @author       Eaglewing [571041]
+// @match        https://www.torn.com/*
+// @grant        GM_getValue
+// @grant        GM_setValue
+// @grant        GM_registerMenuCommand
+// @run-at       document-idle
+// ==/UserScript==
+/* Art: "Zelda-like tilesets and sprites" by ArMM1998 (OpenGameArt, CC0). Everything else (c) Eaglewing [571041], all rights reserved. */
+"""
+launcher = """
+(function () {
+  if (typeof GM_registerMenuCommand === 'function') GM_registerMenuCommand('Play Legend of Varrowmere', function () { LV.loadArt().then(function () { LV.open(); }); });
+})();
+"""
+open('build/Legend-of-Varrowmere.user.js', 'w').write(header + '(function () {\n' + body + launcher + '\n})();\n')
+
+dev = """<!doctype html><html><head><meta charset="utf-8"><title>Legend of Varrowmere - dev</title><style>body{margin:0;background:#000}</style></head><body>
+<script>""" + body + """
+window.LV = LV;
+LV.loadArt().then(function () { LV.open({ noClose: true, muted: /mute/.test(location.hash), store: LV.memoryStore() }); window.ready = true; });
+</script></body></html>"""
+open('build/dev.html', 'w').write(dev)
+print('built', os.path.getsize('build/Legend-of-Varrowmere.user.js'), 'bytes')

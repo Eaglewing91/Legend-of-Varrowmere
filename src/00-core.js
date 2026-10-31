@@ -1,11 +1,11 @@
 /* ================= Legend of Varrowmere: engine core =================
    Fixed 60 Hz simulation, decoupled rendering, input, maths helpers.
-   Internal resolution 512 x 448 (16 x 14 tiles of 32 px, the original's 256 x 224 screen at 2x). */
+   Internal resolution 256 x 224: 16 x 14 tiles of 16 px, the original's SNES screen. */
 'use strict';
 const LV = {};
-LV.TILE = 32;
-LV.VIEW_W = 512;
-LV.VIEW_H = 448;
+LV.TILE = 16;
+LV.VIEW_W = 256;
+LV.VIEW_H = 224;
 LV.STEP = 1 / 60;
 
 /* ---------- maths ---------- */
