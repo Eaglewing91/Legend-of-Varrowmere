@@ -432,22 +432,18 @@ def meadow_ruins():
         statue_pair(m, x, 15)
     m.sign(22, 16, "Carved in the stone:|'The meadow's valor sleeps behind three locks.'")
     # west room (0,1): push the block onto the switch to open the shutter to the key
-    for (x, y) in [(5, 19), (10, 19), (7, 22)]:
+    for (x, y) in [(10, 20), (12, 19), (7, 22)]:
         m.solid(x, y, 1, 1, BLOCK)
     m.extra['plates'] = [[7, 24]]
     m.solid(7, 24, 1, 1, PLATE)
     m.extra['triggers'].append({'type': 'plate', 'at': [[7, 24]], 'open': 'westkey'})
-    for x in range(2, 6):
-        m.solid(x, 17, 1, 1, SOLID)
-        m.put('deco', IN, 6, 7, x, 17)
-    m.solid(2, 15, 1, 2, SOLID)
-    m.solid(5, 15, 1, 2, SOLID)
-    for y in (15, 16):
-        m.put('deco', IN, 6, 7, 2, y)
-        m.put('deco', IN, 6, 7, 5, y)
-    m.solid(3, 17, 2, 1, SHUTTER)
-    m.extra.setdefault('shutters', {})['westkey'] = [[3, 17], [4, 17]]
-    m.chest(3, 15, 'key')
+    # an alcove in the top-left corner: walls either side, a shutter in front, the key inside
+    for (x, y) in [(2, 17), (2, 18), (5, 17), (5, 18), (2, 19), (5, 19)]:
+        m.solid(x, y, 1, 1, SOLID)
+        m.put('deco', IN, 6, 7, x, y)
+    m.solid(3, 19, 2, 1, SHUTTER)
+    m.extra.setdefault('shutters', {})['westkey'] = [[3, 19], [4, 19]]
+    m.chest(3, 17, 'key')
     m.chest(12, 22, 'compass')
     m.spawn('log', 11, 23)
     # north room (1,0): light both torches to open the west shutter; the map is here

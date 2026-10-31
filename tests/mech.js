@@ -91,7 +91,7 @@ const { chromium } = require('playwright');
   r = await p.evaluate(() => { const g = LV.game; g.save.keys.ruins1 = 0; delete g.save.flags['ruins1:door:31,21']; delete g.save.flags['ruins1:door:31,22']; delete g.save.flags['ruins1:door:32,21']; delete g.save.flags['ruins1:door:32,22']; place('ruins1', 30, 21, 1); g.actors = []; step(40, ['right']); return { door: g.world.c(31, 21), msg: !!g.dialog }; });
   check('no key, door stays shut and says so', r.door === 12 && r.msg, r);
   // 22. Push the block onto the switch to open the shutter
-  r = await p.evaluate(() => { const g = LV.game; place('ruins1', 7, 21, 2); g.actors = []; const b = g.world.c(7, 22), sh = g.world.c(3, 17); step(25, ['down']); const one = g.world.c(7, 23); step(40, ['down']); step(5, []); return { block: b, shutBefore: sh, oneTile: one, onPlate: g.world.c(7, 24), shutter: g.world.c(3, 17) }; });
+  r = await p.evaluate(() => { const g = LV.game; place('ruins1', 7, 21, 2); g.actors = []; const b = g.world.c(7, 22), sh = g.world.c(3, 19); step(25, ['down']); const one = g.world.c(7, 23); step(40, ['down']); step(5, []); return { block: b, shutBefore: sh, oneTile: one, onPlate: g.world.c(7, 24), shutter: g.world.c(3, 19) }; });
   check('block slides a tile at a time onto the switch, shutter opens', r.block === 14 && r.shutBefore === 16 && r.oneTile === 14 && r.onPlate === 14 && r.shutter === 0, r);
   // 23. Lighting both torches opens the shutter
   r = await p.evaluate(() => { const g = LV.game; g.save.items.lantern = 1; g.save.equip = 'lantern'; place('ruins1', 18, 5, 0); g.actors = []; step(1, [], ['item']); step(15, []); const one = g.world.c(16, 7); place('ruins1', 29, 5, 0); g.actors = []; step(1, [], ['item']); step(15, []); return { one: one, both: g.world.c(16, 7) }; });
