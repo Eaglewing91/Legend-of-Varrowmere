@@ -336,6 +336,14 @@ const { chromium } = require('playwright');
     place('mg_chests', 3, 9, 3); const v = g.actors.find(a => a.npc && a.look === 'scholar'); v.onTalk(g); const cb = g.dialog && g.dialog.cb; g.dialog = null; if (cb) cb(0); step(30, []); out.vault = g.world.id === 'arcadevault';
     return out; });
   check('shadow bosses give Crystals; seven open the Keep and the Arcade Vault', Object.values(r).every(v => v === true), r);
+  // 69. Side quests: return the plushie, win the Northreach race, go fishing
+  r = await p.evaluate(() => { const g = LV.game, S = g.save, out = {};
+    S.items.plushie = 1; delete S.flags.plushie_back; S.cash = 0; place('marrowgate', 56, 12, 0); const gd = g.actors.find(a => a.npc && a.look === 'guard'); gd.onTalk(g); g.dialog = null; out.plushie = S.flags.plushie_back === 1 && S.cash === 150;
+    delete S.flags.raceWon; const sh = S.shards; place('northreach', 9, 25, 0); const rc = g.actors.find(a => a.npc && a.look === 'guard'); rc.onTalk(g); const cb = g.dialog.cb; g.dialog = null; cb(0); g.dialog = null;
+    const goal = g.world.def.race_goal; H().x = goal[0] * 16 + 8; H().y = goal[1] * 16 + 12; step(2, []); g.dialog = null; out.race = S.shards === sh + 1;
+    S.cash = 100; place('southshore', 40, 7, 0); const f = g.actors.find(a => a.npc && a.look === 'fisher'); f.onTalk(g); const cb2 = g.dialog.cb; g.dialog = null; cb2(0); g.dialog = null; out.fish = S.cash !== 100;
+    return out; });
+  check('side quests: plushie, race, fishing', Object.values(r).every(Boolean), r);
   console.log(results.join('\n')); console.log('errors', errs);
   await b.close();
   process.exit(results.some(x => x.startsWith('FAIL')) || errs.length ? 1 : 0);

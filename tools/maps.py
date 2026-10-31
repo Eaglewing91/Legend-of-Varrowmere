@@ -1098,13 +1098,13 @@ def marrowgate():
         (36, 17, 'trader', 0, [[None, ['Fresh fish! Yesterday\'s fish! Fish of uncertain age!']]]),
         (46, 16, 'scholar', 0, [[None, ['The Chancellor\'s tax collectors come every Tuesday. We all go on holiday on Tuesdays.']]]),
         (29, 17, 'baker', 16, [[None, ['I bake bread for the whole town. Nobody pays. They just say "put it on my tab".', 'I do not have a tab. I have never had a tab.']]]),
-        (56, 11, 'guard', 0, [[None, ['Town watch. Nothing to report. Somebody stole a plushie from a stall, but the plushie seemed happy to go.']]]),
+        (56, 11, 'guard', 0, [['plushie_back', ['Town watch. Nothing to report. The plushie is home. It looks smug.']], [None, ['Town watch. Nothing to report. Somebody stole a plushie from a stall, but the plushie seemed happy to go.', 'If you ever find it, bring it back. The stall owner has not stopped crying.']]]),
         (8, 18, 'elder', 10, [[None, ['In my day we walked to the hospital. Uphill. Both ways. After being mugged. Both ways.']]]),
         (52, 22, 'farmer', 0, [[None, ['Those boulders? Been there since my grandfather tried to move them. He is still trying, in a way.', 'Folk say a strong pair of gloves would shift them.']]]),
         (16, 24, 'fisher', 0, [[None, ['This is the dig field.']]]),
     ]
     for (x, y, look, roam, talk) in people:
-        m.spawn('villager', x, y, look=look, roam=roam, talk=talk, digfield=(look == 'fisher'))
+        m.spawn('villager', x, y, look=look, roam=roam, talk=talk, digfield=(look == 'fisher'), plushie=(look == 'guard'))
     for (x, y) in [(50, 23), (52, 23), (51, 24), (50, 25), (52, 25), (50, 24), (52, 24)]:
         m.col[y * m.w + x] = DARKROCK
         m.layers['deco'][y * m.w + x] = -1
@@ -1170,7 +1170,7 @@ def willowfen():
     s_.extra['names'] = ['Bottle Hollow', 'Mudflats', 'Lily Pond', 'Fen Fringe']
     house(s_, 6, 3, ('wf_bottles', 7, 12, 0))
     signboard(s_, 11, 8, "BOTTLES BY BELLAMY|Empty bottles, full bottles, bottles of regret.")
-    s_.extra['digs'] = {'5,22': 'heart_shard', '16,10': 'cash20', '7,23': 'arrows'}
+    s_.extra['digs'] = {'5,22': 'cash50', '16,10': 'cash20', '7,23': 'arrows'}
     s_.chest(21, 20, 'cash50')
     s_.solid(21, 25, 1, 1, POST)
     for (k, x, y) in [('snapjaw', 7, 16), ('snapjaw', 21, 4), ('log', 24, 12), ('soldierBlue', 10, 20)]:
@@ -1559,8 +1559,11 @@ def outer_regions():
           ['Crag Field', 'Windy Rise', 'Shepherd Hill', 'South Downs'], keep=[(6, 16, 10, 20)])
     house(m, 6, 16, ('nr_shepherd', 7, 12, 0))
     m.spawn('villager', 12, 22, look='farmer', roam=14, talk=[[None, ['Sheep? No, I keep logs. The logs keep me. It is a complicated arrangement.']]])
+    m.spawn('villager', 9, 24, look='guard', roam=0, dir=1, racer=True, talk=[[None, ['Fancy a race? Touch the flag before the clock runs out.']]])
+    best = max(((abs(x - 9) + abs(y - 24), x, y) for y in range(3, m.h - 3) for x in range(3, m.w - 3) if m.col[y * m.w + x] == OPEN and m.col[(y + 1) * m.w + x] == OPEN), default=(0, 20, 5))
+    m.extra['race_goal'] = [best[1], best[2]]
     signboard(m, 14, 24, 'NORTHREACH DOWNS|North-east: Frostspire. West: Whisperwood. South: the Highlands.')
-    m.extra['digs'] = {'25,9': 'heart_shard', '5,5': 'cash20'}
+    m.extra['digs'] = {'25,9': 'cash50', '5,5': 'cash20'}
     for (k, x, y) in [('log', 20, 8), ('log', 8, 10), ('soldier', 22, 20), ('archer', 26, 14)]:
         m.spawn(k, x, y)
     out.append(interior('nr_shepherd', "Shepherd's Hut", ('northreach', 8, 21), 'house', npcs=[
@@ -1582,7 +1585,7 @@ def outer_regions():
     for x in range(38, 43):
         m.solid(x, 6, 1, 1, PEG)
     m.sign(37, 8, 'EAGLE CRAG|A great nest sits on the peak. The bird is away. A note: BACK SOON, GONE FISHING.')
-    m.extra['digs'] = {'70,20': 'cash50', '12,22': 'heart_shard'}
+    m.extra['digs'] = {'70,20': 'cash50', '12,22': 'bombs'}
     secret_cave(m, 64, 20, 'grotto7', ['heart_shard'], 'Frost-cold air. Someone left a heart shard and a very sad snowman.')
     for (k, x, y) in [('soldierBlue', 30, 12), ('archer', 50, 8), ('captain', 60, 16), ('log', 14, 18), ('wisp', 44, 20), ('soldier', 70, 10), ('archer', 25, 22)]:
         m.spawn(k, x, y)
@@ -1627,7 +1630,7 @@ def outer_regions():
     signboard(m, 41, 8, 'EASTVALE|Turnips, more turnips, and on special occasions, turnips.')
     m.spawn('villager', 52, 9, look='baker', roam=8, gives='net', got=['Here, take my old Bug Net. I am too old for bugs. I am into rocks now.', 'You got the Bug Net! Catch fairies in empty bottles.'], talk=[[None, ['I collect bugs. And fairies, if you can catch them. Try the glade in Whisperwood.']]])
     m.spawn('villager', 44, 9, look='farmer', roam=12, talk=[[None, ['The Chancellor taxes turnips now. So we grow them under other turnips. Hidden turnips. Tax-free.']]])
-    m.extra['digs'] = {'64,10': 'heart_shard', '12,9': 'cash20'}
+    m.extra['digs'] = {'64,10': 'cash50', '12,9': 'cash20'}
     for (k, x, y) in [('log', 20, 8), ('log', 56, 6), ('soldier', 30, 10), ('soldier', 70, 8)]:
         m.spawn(k, x, y)
     out.append(interior('ev_mill', 'Vale Mill', ('eastvale', 36, 7), 'house', npcs=[
@@ -1649,7 +1652,7 @@ def outer_regions():
         m.col[y * m.w + x] = DARKROCK
     m.sign(10, 38, 'THE DUKE OF SALTMARSH|He took his secrets to the grave. Also his cloak. He was very attached to it.')
     m.sign(8, 37, 'Here lies Grimsby. He borrowed money from the wrong man. And the right man. And several others.')
-    m.extra['digs'] = {'8, 36'.replace(' ', ''): 'heart_shard', '20,20': 'cash20', '25,40': 'cash50'}
+    m.extra['digs'] = {'8,36': 'cash100', '20,20': 'cash20', '25,40': 'cash50'}
     m.spawn('villager', 16, 33, look='scholar', roam=6, talk=[[None, ['I tend the graves. Quiet work. The residents never complain about the hours.', 'There is a cloak buried with the old Duke, they say. A cloak that hides you from sight.']]])
     crypt = interior('sm_crypt', "The Duke's Crypt", ('saltmarsh', 11, 38), 'house', chests=[(7, 4, 'cloak')])
     crypt.music = 'cave'
@@ -1665,7 +1668,7 @@ def outer_regions():
     m.stamp(OW, 4, 31, 37, 4, 4, 3, col=SOLID)
     m.sign(36, 8, 'Old script is carved into the stone: [you cannot read it]')
     m.extra['oldscript'] = {'36,8': 'The sun temple keeps its gift for those who read. Stand where the shadow of the third pillar falls at noon, and dig.'}
-    m.extra['digs'] = {'44,10': 'heart_shard', '40,9': 'quake', '10,40': 'cash50', '60,52': 'cash100', '28,48': 'bombs'}
+    m.extra['digs'] = {'44,10': 'cash100', '40,9': 'quake', '10,40': 'cash50', '60,52': 'cash100', '28,48': 'bombs'}
     house(m, 20, 22, ('ds_camp', 7, 12, 0))
     m.spawn('villager', 27, 28, look='trader', roam=6, talk=[[None, ['Welcome to the nomad camp! We move every day. Today we moved zero metres. Tomorrow, who knows?']]])
     secret_cave(m, 48, 44, 'grotto9', ['heart_shard', 'bottle'], 'A cool cellar under the sand. Somebody has been storing ice here. Somebody very optimistic.')
@@ -1677,11 +1680,27 @@ def outer_regions():
     # Southshore (0-5, 7): the south coast below the towns
     m = R('southshore', 'Southshore', 0, 7, 6, 1, 'coast', [('n', 14, 15), ('n', 35, 39)], 97,
           ['Fen Beach', 'Shell Cove', 'Marrow Sands', 'Pier Point', 'Long Beach', 'Smugglers\' Bay'], sea='s', hub=(48, 5))
-    m.spawn('villager', 40, 6, look='fisher', roam=10, talk=[[None, ['Best beach in Varrowmere. Only beach in Varrowmere. Both true.']]])
-    m.extra['digs'] = {'70,6': 'heart_shard', '30,6': 'bottle', '20,5': 'cash20', '88,6': 'cash50'}
+    m.spawn('villager', 40, 6, look='fisher', roam=0, dir=2, fishing=True, talk=[[None, ['Best beach in Varrowmere. Only beach in Varrowmere. Both true.']]])
+    m.extra['digs'] = {'70,6': 'cash50', '30,6': 'bottle', '20,5': 'cash20', '88,6': 'cash50'}
     for (k, x, y) in [('log', 26, 5), ('soldier', 60, 5), ('snapjaw', 50, 11)]:
         m.spawn(k, x, y)
     return out
+
+
+GHOST_LINES = [
+    'I was mugged so many times I started charging admission.',
+    'Do not trust the Chancellor. Do not trust me either. I am a ghost; we lie for fun.',
+    'Back home I had a plushie collection. Here I have a collection of regrets.',
+    'They hospitalised me for a week. I came back and the queue for the hospital was longer than the stay.',
+    'I put all my cash in a bank once. The bank put it in the Chancellor.',
+    'Energy drinks are not food. I learned that the hard way. I am a ghost now.',
+    'In the shadow, everything costs double and nobody pays.',
+    'I travelled the world once. Came back with a suitcase full of flowers. Still not sure why.',
+    'Never attack someone with a higher level than you. Wise words. Shame I ignored them.',
+    'Seven Crystals, they say. I only ever found three. And a sock.',
+    'My nerve is full, but my courage is empty.',
+    'The bazaar here sells shadows of things. I bought a shadow of a sandwich. Very filling, emotionally.',
+]
 
 
 def shadow_regions():
@@ -1694,6 +1713,17 @@ def shadow_regions():
         s_.extra['names'] = ['Shadow ' + n for n in m.extra.get('names', [])]
         R = random.Random(sum(map(ord, m.id)))
         pool = ['captain', 'soldierBlue', 'wisp', 'archer', 'captain', 'wisp']
+        free = [(x, y) for y in range(3, s_.h - 3) for x in range(3, s_.w - 3) if s_.col[y * s_.w + x] == OPEN and s_.col[(y + 1) * s_.w + x] == OPEN and s_.layers['deco'][y * s_.w + x] < 0]
+        R.shuffle(free)
+        digs = {}
+        for (x, y) in free[:3]:
+            digs['%d,%d' % (x, y)] = R.choice(['cash20', 'cash50', 'bombs', 'arrows', 'cash5'])
+        s_.extra['digs'] = digs
+        if len(free) > 4:
+            cx, cy = free[3]
+            s_.chest(cx, cy, R.choice(['cash50', 'cash100', 'arrows', 'bombs']))
+        for (x, y) in free[4:6]:
+            s_.spawn('villager', x, y, look=R.choice(['elder', 'farmer', 'scholar', 'baker', 'fisher']), roam=8, ghost=True, talk=[[None, [R.choice(GHOST_LINES)]]])
         for a in s_.areas:
             for k in range(2):
                 for _ in range(40):
@@ -1793,10 +1823,8 @@ def make_dungeon(mid, name, back, theme, item, crystal, mini, boss, gate):
     # north-west room (0,0): the item gate guards a heart piece and some cash
     for y in range(3, 13):
         m.solid(11, y, 1, 1, gate)
-    m.chest(5, 5, 'heart_shard')
-    m.chest(8, 5, 'cash50')
-    if gate == DARKROCK:
-        pass
+    m.chest(5, 5, 'cash100')
+    m.chest(8, 5, 'plushie' if mid == 'thievesden' else 'arrows')
     # the boss room (2,0)
     m.spawn(boss, 40, 7)
     if boss == 'shellback':

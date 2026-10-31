@@ -39,6 +39,7 @@ Win the three Pendants and draw the Dawnblade. Break Vex's barrier, then follow 
 | Z (or J) | Sword. Hold to charge a Spin Attack |
 | X (or K) | Use the selected item |
 | C (or L) | Talk, read, open, lift, throw |
+| Shift (or V) | Dash (with the Running Shoes) |
 | Enter | Item menu (pause) |
 | M | Map |
 | N | Music on / off |

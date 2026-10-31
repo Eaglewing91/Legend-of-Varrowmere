@@ -54,23 +54,24 @@ energy meter + energy jars, half energy (frost spirit), wishing wells (bomb bag 
 Placed in dungeons still to build: Sledgehammer (Bonehollow), Boxing Gloves (Thieves' Den), Blue Mail (Frostmere), Brick Wand (Mirefen), Red Mail (Turtleback),
 Golden Blade (the Arcade Vault).
 
-## Secrets (~150)
+## Secrets  [x]
 
-24 heart pieces in all, 4 bottles, 8 upgrade fountains, 30+ grottos and caves, dig spots, cash stashes,
-bombable walls, mirror puzzles, and hidden rooms in every dungeon.
+26 heart pieces (chests, digs, the chest game, the gallery, the dig field, the race), 4 bottles, 2 wishing wells,
+9 grottos, the crypt, the mirror pen, 68 dig spots, about 90 chests outside dungeon keys and maps, pegs, dark boulders,
+bombable boulders and walls, hidden dungeon rooms behind item gates in every Shadow dungeon.
 
-## Towns, people, side quests, minigames
+## Towns, people, side quests, minigames  [x]
 
-Marrowgate (big town), Cinderfold, a desert camp, a mountain hermit, about 80 villagers.
-Side quests: the smith's sword, the lost brother, the bottle merchant, the race. Minigames: shooting gallery,
-chest game, digging field, the race, fishing.
+Marrowgate, Cinderfold, the nomad camp, the hermit, the shepherd, 85 villagers and ghosts.
+Side quests: Durn and the tempered blade, the stolen plushie, the bug collector's net, the River Spirit's flippers.
+Minigames: shooting gallery, Lucky Lids, the dig field, the Northreach race, fishing at Southshore.
 
-## Torn flavour
+## Torn flavour  [x]
 
-Items and jokes from Torn (no Torn place names): Sledgehammer, Boxing Gloves, Kazoo, Riot Shield, energy drinks,
-the hospital, mugging, nerve, the bazaar, plushies, and so on.
+Sledgehammer, Boxing Gloves, Kazoo, Riot Shield, energy drinks, the hospital, mugging, nerve, the bazaar, plushies,
+the stock market, travelling abroad with a suitcase of flowers, and more in the villagers' lines.
 
-## Leaderboards (needs the Arcade server: an external site, so flagged and covered in the ToS)
+## Leaderboards (needs the Arcade server: an external site, so flagged and covered in the ToS)  [ ] waiting on approval
 
 Fastest completion, fewest deaths, most secrets.
 
