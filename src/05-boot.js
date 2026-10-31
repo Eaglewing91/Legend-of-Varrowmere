@@ -4,7 +4,7 @@ LV.IMG = {};
 LV.loadArt = function () {
   return Promise.all(Object.keys(LV.ART).map(function (k) {
     return new Promise(function (res) { const im = new Image(); im.onload = function () { LV.IMG[k] = im; res(); }; im.onerror = res; im.src = 'data:image/png;base64,' + LV.ART[k]; });
-  }));
+  })).then(function () { LV.prepareEnemyArt(); });
 };
 LV.storeFor = function () {
   const key = 'lv_save';

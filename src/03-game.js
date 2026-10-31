@@ -44,8 +44,9 @@ LV.Game.prototype.update = function (dt) {
   if (this.fadeTo) { this.fade += dt * 4; if (this.fade >= 1) { const f = this.fadeTo; this.fadeTo = null; f(); } return; }
   if (this.fade > 0) { this.fade = Math.max(0, this.fade - dt * 4); }
   if (this.dialog) { if (this.input.pressed.attack || this.input.pressed.action) this.nextDialog(); return; }
-  if (this.input.pressed.menu) this.paused = !this.paused;
-  if (this.paused) return;
+  if (this.paused) { this.menuUpdate(); return; }
+  if (this.input.pressed.menu) { this.paused = true; this.menu = null; this.sfx('door'); return; }
+  if (this.shake > 0) this.shake -= dt;
   if (this.scroll) { this.stepScroll(dt); return; }
   const h = this.hero;
   h.update(this, dt);
@@ -174,10 +175,12 @@ LV.Game.prototype.checkWarp = function () {
 
 /* ---------- drawing ---------- */
 LV.Game.prototype.render = function () {
-  const ctx = this.ctx, ox = Math.round(this.cam.x), oy = Math.round(this.cam.y);
+  const sh = this.shake > 0 ? Math.round((Math.random() - 0.5) * 4) : 0;
+  const ctx = this.ctx, ox = Math.round(this.cam.x) + sh, oy = Math.round(this.cam.y);
   ctx.fillStyle = this.world.indoor ? '#120c10' : '#000'; ctx.fillRect(0, 0, LV.VIEW_W, LV.VIEW_H);
   LV.drawLayer(ctx, this.world, 'ground', ox, oy);
   LV.drawLayer(ctx, this.world, 'deco', ox, oy);
+  LV.drawSpecialTiles(ctx, this, ox, oy);
   // actors sorted by their feet so nearer things overlap farther ones
   const all = [this.hero].concat(this.actors, this.pickups, this.shots);
   all.sort(function (a, b) { return a.y - b.y; });
@@ -188,15 +191,18 @@ LV.Game.prototype.render = function () {
   if (this.world.dark) this.drawDark(ctx, ox, oy);
   LV.drawHud(ctx, this);
   if (this.dialog) LV.drawDialog(ctx, this.dialog);
-  if (this.paused) { ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(0, 0, LV.VIEW_W, LV.VIEW_H); LV.text(ctx, 'PAUSED', 106, 104, '#fff'); }
+  if (this.paused) LV.drawMenu(ctx, this);
   if (this.fade > 0) { ctx.fillStyle = 'rgba(0,0,0,' + Math.min(1, this.fade) + ')'; ctx.fillRect(0, 0, LV.VIEW_W, LV.VIEW_H); }
 };
 // Dark rooms: everything is dim except a glow round the hero (bigger with the Lantern), as in the original
 LV.Game.prototype.drawDark = function (ctx, ox, oy) {
-  const h = this.hero, x = h.x - ox, y = h.y - oy - 10, r = this.save.items.lantern ? 64 : 30;
-  const g = ctx.createRadialGradient(x, y, r * 0.3, x, y, r);
-  g.addColorStop(0, 'rgba(8,4,16,0)'); g.addColorStop(1, 'rgba(8,4,16,.86)');
-  ctx.fillStyle = g; ctx.fillRect(0, 0, LV.VIEW_W, LV.VIEW_H);
+  const h = this.hero, lights = [[h.x - ox, h.y - oy - 10, this.save.items.lantern ? 64 : 30]], w = this.world;
+  for (let i = 0; i < w.col.length; i++) if (w.col[i] === LV.C.TORCH_LIT) lights.push([(i % w.w) * 16 + 8 - ox, Math.floor(i / w.w) * 16 + 4 - oy, 56]);
+  if (!this.darkCv) { this.darkCv = document.createElement('canvas'); this.darkCv.width = LV.VIEW_W; this.darkCv.height = LV.VIEW_H; }
+  const d = this.darkCv.getContext('2d'); d.globalCompositeOperation = 'source-over'; d.clearRect(0, 0, LV.VIEW_W, LV.VIEW_H);
+  d.fillStyle = 'rgba(8,4,16,.88)'; d.fillRect(0, 0, LV.VIEW_W, LV.VIEW_H); d.globalCompositeOperation = 'destination-out';
+  for (const L of lights) { const gr = d.createRadialGradient(L[0], L[1], L[2] * 0.3, L[0], L[1], L[2]); gr.addColorStop(0, 'rgba(0,0,0,1)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); d.fillStyle = gr; d.fillRect(L[0] - L[2], L[1] - L[2], L[2] * 2, L[2] * 2); }
+  ctx.drawImage(this.darkCv, 0, 0);
 };
 
 /* ---------- sound: tiny generated effects (no audio files) ---------- */

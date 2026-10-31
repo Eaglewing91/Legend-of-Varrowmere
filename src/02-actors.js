@@ -95,6 +95,7 @@ LV.Hero.prototype.update = function (g, dt) {
     case 'walk': {
       if (inp.pressed.attack) { this.startAttack(g); return; }
       if (inp.pressed.action) { if (g.interact(this)) return; }
+      if (inp.pressed.item) { g.useItem(this); if (this.state !== 'walk') return; }
       const sp = 84, len = Math.hypot(ax.x, ax.y) || 1;
       this.moving = !!(ax.x || ax.y);
       if (this.moving) {
@@ -135,6 +136,7 @@ LV.Hero.prototype.update = function (g, dt) {
       if (this.st >= T) { this.state = 'walk'; this.st = 0; }
       break;
     }
+    case 'item': { if (this.st > 0.2) { this.state = 'walk'; this.st = 0; } break; }
     case 'fall': {
       if (this.st > 0.6) { this.x = this.safe.x; this.y = this.safe.y; this.state = 'walk'; this.st = 0; this.hp -= 2; this.inv = 0.8; g.sfx('hurt'); if (this.hp <= 0) { this.hp = 0; g.heroDown(); } }
       break;
@@ -172,6 +174,7 @@ LV.Hero.prototype.draw = function (ctx, ox, oy) {
     ctx.drawImage(img, f * 32, 128 + LV.ATK_ROW[d] * 32, 32, 32, X - 16, Y - 28, 32, 32);
     return;
   }
+  if (this.state === 'item') { ctx.drawImage(img, 0, LV.HERO_ROW[this.dir] * 32, 16, 32, X - 8, Y - 28, 16, 32); return; }
   if (this.state === 'charge') { ctx.drawImage(img, 3 * 32, 128 + LV.ATK_ROW[this.dir] * 32, 32, 32, X - 16, Y - 28, 32, 32); if (this.charge >= 0.8 && Math.floor(this.t * 16) % 2) { ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.fillRect(X - 1, Y - 30, 2, 2); } return; }
   let col = this.moving ? Math.floor(this.anim) % 4 : 0;
   if (this.state === 'carry') col = 9 + (this.moving ? Math.floor(this.anim) % 4 : 0);
@@ -184,10 +187,11 @@ LV.ENEMIES = {};
 // The living log: sleeps until you come close, then waddles after you. Touching it costs half a heart.
 LV.ENEMIES.log = function (x, y) {
   const e = new LV.Actor({ x: x, y: y, hp: 3, contact: 2, body: [-6, -6, 12, 6], hurt: [-7, -20, 14, 20], kind: 'log' });
-  e.state = 'sleep'; e.speed = 34; e.wander = 0; e.wx = 0; e.wy = 0; e.drop = true;
+  e.state = 'sleep'; e.speed = 34; e.wander = 0; e.wx = 0; e.wy = 0; e.drop = true; e.weakToDice = true;
   e.update = function (g, dt) {
     this.t += dt; if (this.inv > 0) this.inv -= dt;
     if (this.kb > 0) { this.kb -= dt; LV.move(this, g.world, this.kbx * dt, this.kby * dt, 'enemy'); return; }
+    if (this.stun > 0) { this.stun -= dt; return; }
     const h = g.hero, dx = h.x - this.x, dy = h.y - this.y, d = Math.hypot(dx, dy);
     if (this.state === 'sleep') { if (d < 56) { this.state = 'wake'; this.t = 0; } return; }
     if (this.state === 'wake') { if (this.t > 0.5) { this.state = 'chase'; this.t = 0; } return; }

@@ -13,7 +13,7 @@ const { chromium } = require('playwright');
       for (let i = 0; i < n; i++) { if (i === 0) (press || []).forEach(k => g.input._queue.push(k)); g.update(1 / 60); }
       g.input.clear();
     };
-    window.place = function (map, tx, ty, dir) { g.enter(map, tx * 16 + 8, ty * 16 + 12, dir); };
+    window.place = function (map, tx, ty, dir) { g.dialog = null; g.paused = false; g.fadeTo = null; g.fade = 0; g.scroll = null; g.enter(map, tx * 16 + 8, ty * 16 + 12, dir); g.hero.inv = 0; g.hero.state = 'walk'; };
     window.addLog = function (tx, ty) { const e = LV.ENEMIES.log(tx * 16 + 8, ty * 16 + 14); e.state = 'chase'; e.speed = 0; g.actors.push(e); return g.actors.length - 1; };
     window.H = () => g.hero;
   });
@@ -56,6 +56,31 @@ const { chromium } = require('playwright');
   // 12. Signs are read from in front
   r = await p.evaluate(() => { place('meadow', 9, 6, 0); step(1, [], ['action']); return !!LV.game.dialog; });
   check('signs can be read', r, r);
+
+
+  // 13. Bombs: blast opens the cracked wall (and hurts the hero if too close)
+  r = await p.evaluate(() => { const g = LV.game; g.save.bombs = 5; g.save.items.bombbag = 1; g.save.equip = 'bombs'; place('cave1', 14, 8, 1); g.actors = []; H().hp = 12; step(1, [], ['item']); step(40, ['up']); step(100, []); return { wall: g.world.c(15, 8), bombs: g.save.bombs, hp: H().hp }; });
+  check('bomb opens cracked wall, safe at distance', r.wall === 0 && r.bombs === 4 && r.hp === 12, r);
+  r = await p.evaluate(() => { const g = LV.game; place('cave1', 6, 10, 1); g.actors = []; H().hp = 12; step(1, [], ['item']); step(130, []); return H().hp; });
+  check('standing on a bomb hurts', r === 8, r);
+  // 14. Shield: an enemy arrow from the front is blocked, from behind it hits
+  r = await p.evaluate(() => { const g = LV.game; place('meadow', 20, 9, 1); g.actors = []; H().hp = 12; g.shots.push(new LV.Arrow(24 * 16, 9 * 16 + 4, 3, 'enemy')); step(60, []); const front = H().hp; H().inv = 0; g.shots.push(new LV.Arrow(16 * 16, 9 * 16 + 4, 1, 'enemy')); step(60, []); return { front: front, back: H().hp }; });
+  check('shield blocks arrows from the front only', r.front === 12 && r.back === 10, r);
+  // 15. Hero arrows hurt enemies and stop at walls
+  r = await p.evaluate(() => { const g = LV.game; g.save.items.bow = 1; g.save.arrows = 5; g.save.equip = 'bow'; place('meadow', 20, 9, 1); g.actors = []; const i = addLog(24, 9); const e = g.actors[i]; e.hp = 5; step(1, [], ['item']); step(60, []); return { hp: e.hp, arrows: g.save.arrows }; });
+  check('arrows hit enemies', r.hp === 3 && r.arrows === 4, r);
+  // 16. Ricochet Dice stun enemies and come back
+  r = await p.evaluate(() => { const g = LV.game; g.save.items.dice = 1; g.save.equip = 'dice'; place('meadow', 20, 9, 1); g.actors = []; const i = addLog(23, 9); const e = g.actors[i]; step(1, [], ['item']); step(20, []); const stun = e.stun; step(80, []); return { stun: stun > 0, back: !g.shots.some(s => s.kind === 'dice') }; });
+  check('dice stun and return', r.stun && r.back, r);
+  // 17. Item menu: Enter opens it, arrows choose, Enter closes
+  r = await p.evaluate(() => { const g = LV.game; place('meadow', 8, 8, 2); g.save.equip = 'bow'; step(1, [], ['menu']); const open = g.paused; step(1, [], ['right']); const eq = g.save.equip; step(1, [], ['menu']); return { open: open, eq: eq, closed: !g.paused }; });
+  check('item menu selects items', r.open && r.eq === 'dice' && r.closed, r);
+  // 18. Soldiers spot you, chase and swing their swords
+  r = await p.evaluate(() => { const g = LV.game; place('meadow', 20, 9, 1); g.actors = []; H().hp = 12; const s = LV.ENEMIES.soldier(23 * 16 + 8, 9 * 16 + 14); s.dir = 3; g.actors.push(s); let n = 0; while (H().hp === 12 && n++ < 400) step(1, []); return { hp: H().hp, frames: n }; });
+  check('soldier chases and hits', r.hp < 12 && r.frames < 300, r);
+  // 19. Lantern lights torches
+  r = await p.evaluate(() => { const g = LV.game; g.save.items.lantern = 1; g.save.equip = 'lantern'; place('cave1', 2, 5, 0); g.actors = []; step(1, [], ['item']); step(5, []); return g.world.c(2, 4); });
+  check('lantern lights torches', r === 11, r);
 
   console.log(results.join('\n')); console.log('errors', errs);
   await b.close();

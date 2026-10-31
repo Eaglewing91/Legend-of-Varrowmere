@@ -11,7 +11,7 @@ LV.drawHud = function (ctx, g) {
   ctx.fillStyle = '#3cbe50'; ctx.fillRect(9, 9 + 30 - Math.round(30 * (s.energy === undefined ? 1 : s.energy)), 5, Math.round(30 * (s.energy === undefined ? 1 : s.energy)));
   // item box
   ctx.fillStyle = '#10101a'; ctx.fillRect(19, 7, 22, 22); ctx.fillStyle = '#f0f0f0'; ctx.fillRect(20, 8, 20, 20); ctx.fillStyle = '#181828'; ctx.fillRect(21, 9, 18, 18);
-  if (s.items.lantern) { ctx.fillStyle = '#e0b040'; ctx.fillRect(27, 13, 6, 9); ctx.fillStyle = '#fff6c0'; ctx.fillRect(28, 15, 4, 5); }
+  if (s.equip) LV.itemIcon(ctx, s.equip, 22, 10);
   // counters
   ctx.drawImage(LV.IMG.objects, 0, 64, 16, 16, 46, 5, 12, 12); LV.text(ctx, ('00' + s.cash).slice(-3), 46, 18);
   ctx.fillStyle = '#28408c'; ctx.fillRect(79, 9, 7, 7); ctx.fillStyle = '#a08060'; ctx.fillRect(82, 7, 1, 2); LV.text(ctx, ('0' + s.bombs).slice(-2), 77, 18);
@@ -33,6 +33,19 @@ LV.heart = function (ctx, x, y, q) {
     if (c === 'o') ctx.fillStyle = '#1e0a10';
     else ctx.fillStyle = (q >= 4 || (q >= 2 && k <= 3) || (q >= 1 && k <= 1)) ? '#e82838' : '#501a24';
     ctx.fillRect(x + k, y + j, 1, 1);
+  }
+};
+// Torches (braziers) and cracked walls are drawn from their collision codes
+LV.drawSpecialTiles = function (ctx, g, ox, oy) {
+  const w = g.world, x0 = Math.max(0, Math.floor(ox / 16)), y0 = Math.max(0, Math.floor(oy / 16)), x1 = Math.min(w.w - 1, x0 + 17), y1 = Math.min(w.h - 1, y0 + 15);
+  for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) {
+    const c = w.col[ty * w.w + tx], X = tx * 16 - ox, Y = ty * 16 - oy;
+    if (c === LV.C.TORCH || c === LV.C.TORCH_LIT) {
+      ctx.fillStyle = '#171717'; ctx.fillRect(X + 2, Y + 4, 12, 12); ctx.fillStyle = '#8a8a9a'; ctx.fillRect(X + 3, Y + 5, 10, 10); ctx.fillStyle = '#b8b8c8'; ctx.fillRect(X + 3, Y + 5, 10, 2); ctx.fillStyle = '#4a4a5a'; ctx.fillRect(X + 4, Y + 8, 8, 2);
+      if (c === LV.C.TORCH_LIT) ctx.drawImage(LV.IMG.objects, (4 + Math.floor(g.t * 10) % 6) * 16, 32, 16, 16, X, Y - 8, 16, 16);
+    } else if (c === LV.C.CRACK) {
+      ctx.fillStyle = '#171717'; ctx.fillRect(X + 7, Y + 2, 1, 5); ctx.fillRect(X + 5, Y + 6, 3, 1); ctx.fillRect(X + 4, Y + 7, 1, 5); ctx.fillRect(X + 8, Y + 7, 4, 1); ctx.fillRect(X + 11, Y + 8, 1, 4);
+    }
   }
 };
 // Dialog box at the bottom, wrapped to the box width

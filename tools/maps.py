@@ -11,7 +11,7 @@ Collision codes: 0 open, 1 solid, 2 deep water, 3 pit, 4 ledge (jump south), 5 l
 """
 import json, os
 OW, IN, CV, OB = 0, 1, 2, 3
-OPEN, SOLID, DEEP, PIT, LEDGE, LOW, BUSH, ROCK, SHALLOW = range(9)
+OPEN, SOLID, DEEP, PIT, LEDGE, LOW, BUSH, ROCK, SHALLOW, CRACK, TORCH, TORCH_LIT = range(12)
 
 
 def ref(sheet, tx, ty):
@@ -194,7 +194,11 @@ def thistledown():
     flowers(m, [(21, 9), (22, 6), (26, 9), (18, 9)])
     signboard(m, 25, 7, 'EAST CAVE|Beware of the logs. They are not just logs.')
     m.spawn('log', 21, 7)
-    m.spawn('log', 24, 5)
+    m.spawn('soldier', 22, 10)
+    m.spawn('archer', 26, 4)
+    m.chest(30, 4, 'bombs')
+    for (x, y) in [(29, 4), (30, 5), (31, 4)]:
+        bush(m, x, y)
     m.entry = [8, 8]
     return m
 
@@ -230,21 +234,38 @@ def home():
 
 
 def cave1():
-    m = Map('cave1', 16, 14, 'East Cave', indoor=True, dark=True, music='cave')
+    m = Map('cave1', 32, 14, 'East Cave', indoor=True, dark=True, music='cave')
+    m.area(0, 0)
+    m.area(16, 0)
     m.fill(CV, 0, 0)
-    for x in range(16):
+    for x in range(32):
         for r in range(3):
             m.put('deco', CV, 1 + (x % 3), 3 + r, x, r)
-    m.solid(0, 0, 16, 3)
+    m.solid(0, 0, 32, 3)
     m.solid(0, 0, 1, 14)
-    m.solid(15, 0, 1, 14)
+    m.solid(31, 0, 1, 14)
+    m.solid(0, 13, 32, 1)
+    m.solid(7, 13, 2, 1, OPEN)
+    for y in range(3, 13):                        # rock wall between the cave and the hidden chamber
+        m.put('deco', CV, 2, 4, 15, y)
+        m.put('deco', CV, 2, 4, 16, y)
+    m.solid(15, 3, 2, 10)
+    m.solid(15, 8, 1, 1, CRACK)
+    m.solid(16, 8, 1, 1, OPEN)
+    m.put('deco', CV, 0, 0, 16, 8)
     m.nine(CV, 1, 0, 9, 5, 12, 8, col=PIT)
     m.nine(CV, 0, 7, 1, 8, 4, 11, col=DEEP)
+    m.solid(2, 4, 1, 1, TORCH)
+    m.solid(13, 4, 1, 1, TORCH)
     m.chest(7, 4, 'heart_shard')
+    m.chest(23, 6, 'bow')
+    m.chest(20, 10, 'arrows')
     m.warp(7, 13, 'meadow', 28, 8, 2)
     m.warp(8, 13, 'meadow', 29, 8, 2)
     m.spawn('log', 5, 6)
     m.spawn('log', 12, 11)
+    m.spawn('log', 25, 9)
+    m.sign(14, 11, 'Scratched into the rock:|"The wall to the east sounds hollow."')
     m.entry = [7, 12]
     return m
 
