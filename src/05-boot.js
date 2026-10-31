@@ -28,6 +28,7 @@ LV.open = function (opts) {
   root.appendChild(cv); root.appendChild(bar); (opts.parent || document.body).appendChild(root);
   const game = new LV.Game(cv, { store: opts.store || LV.storeFor(), muted: opts.muted });
   LV.game = game;
+  if (opts.title) game.showTitle(opts.stores);
   const typing = function (e) { const t = e.target; return t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)); };
   addEventListener('keydown', function (e) {
     if (root.style.display === 'none' || typing(e)) return;
@@ -38,7 +39,7 @@ LV.open = function (opts) {
   LV.loop = new LV.Loop(function (dt) { game.update(dt); }, function () { game.render(); });
   LV.loop.start();
   // save every few seconds while playing
-  LV.saver = setInterval(function () { const h = game.hero; if (h.state !== 'walk' || game.scroll) return; Object.assign(game.save, { x: h.x, y: h.y, dir: h.dir, hp: Math.max(4, h.hp), maxHp: h.maxHp }); game.store.set(game.save); }, 4000);
+  LV.saver = setInterval(function () { if (game.mode === 'title') return; const h = game.hero; if (h.state !== 'walk' || game.scroll) return; Object.assign(game.save, { x: h.x, y: h.y, dir: h.dir, hp: Math.max(4, h.hp), maxHp: h.maxHp }); game.store.set(game.save); }, 4000);
   return game;
 };
 LV.close = function () { if (!LV.root) return; LV.root.style.display = 'none'; if (LV.loop) LV.loop.stop(); if (LV.game) LV.game.input.clear(); };

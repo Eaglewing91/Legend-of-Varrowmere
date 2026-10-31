@@ -32,7 +32,7 @@ header = f"""// ==UserScript==
 """
 launcher = """
 (function () {
-  if (typeof GM_registerMenuCommand === 'function') GM_registerMenuCommand('Play Legend of Varrowmere', function () { LV.loadArt().then(function () { LV.open(); }); });
+  if (typeof GM_registerMenuCommand === 'function') GM_registerMenuCommand('Play Legend of Varrowmere', function () { LV.loadArt().then(function () { LV.open({ title: true }); }); });
 })();
 """
 open('build/Legend-of-Varrowmere.user.js', 'w').write(header + '(function () {\n' + body + launcher + '\n})();\n')
@@ -40,7 +40,7 @@ open('build/Legend-of-Varrowmere.user.js', 'w').write(header + '(function () {\n
 dev = """<!doctype html><html><head><meta charset="utf-8"><title>Legend of Varrowmere - dev</title><style>body{margin:0;background:#000}</style></head><body>
 <script>""" + body + """
 window.LV = LV;
-LV.loadArt().then(function () { LV.open({ noClose: true, muted: /mute/.test(location.hash), store: LV.memoryStore() }); window.ready = true; });
+LV.loadArt().then(function () { LV.open({ noClose: true, muted: /mute/.test(location.hash), store: LV.memoryStore(), title: /title/.test(location.hash), stores: [0, 1, 2].map(function () { return LV.memoryStore(); }) }); window.ready = true; });
 </script></body></html>"""
 open('build/dev.html', 'w').write(dev)
 print('built', os.path.getsize('build/Legend-of-Varrowmere.user.js'), 'bytes')

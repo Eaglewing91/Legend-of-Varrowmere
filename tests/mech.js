@@ -103,6 +103,21 @@ const { chromium } = require('playwright');
   r = await p.evaluate(() => { const g = LV.game; delete g.save.flags['ruins1:boss']; place('ruins1', 40, 10, 0); g.area = g.world.areaAt(40 * 16, 10 * 16); const before = g.save.maxHp; g.actors.filter(a => a.boss).forEach(a => g.kill(a)); step(2, []); const pk = g.pickups.find(p => p.kind === 'container'); if (!pk) return { none: g.actors.map(a => a.kind), pk: g.pickups.map(p => p.kind) }; H().x = pk.x; H().y = pk.y + 4; step(2, []); for (let i = 0; i < 5; i++) step(1, [], ['action']); step(40, []); return { hp: g.save.maxHp - before, map: g.world.id, pendant: !!g.save.items.pendant_ruins1 }; });
   check('boss gives life container and pendant, then exits', r.hp === 4 && r.pendant && r.map === 'meadow', r);
 
+  // 28. Villagers: talk with the action button, they block the way and can't be hurt
+  r = await p.evaluate(() => { const g = LV.game; delete g.save.items.pendant_ruins1; place('meadow', 13, 10, 1); const v = g.actors.find(a => a.npc && a.look === 'elder'); v.x = 14 * 16 + 8; v.y = 10 * 16 + 14; v.roam = 0; v.goal = null;
+    step(1, [], ['action']); const said = g.dialog && g.dialog.lines[0]; g.dialog = null; const hp = v.hp; step(16, [], ['attack']); const hp2 = v.hp;
+    step(40, ['right']); const blocked = H().x < v.x - 6; return { said: said, hurt: hp2 < hp, blocked: blocked }; });
+  check('villager talks, blocks and is unharmed', /Wren/.test(r.said) && !r.hurt && r.blocked, r);
+  // 29. Villager lines change once the first Pendant is won
+  r = await p.evaluate(() => { const g = LV.game; g.save.items.pendant_ruins1 = 1; const v = g.actors.find(a => a.npc && a.look === 'elder'); const l = v.lines(g)[0]; delete g.save.items.pendant_ruins1; return l; });
+  check('villager lines follow the story', /Pendant of Courage/.test(r), r);
+  // 30. Title: pick an empty file, the intro plays, the file is saved; erase needs two presses
+  r = await p.evaluate(() => { const g = LV.game; const st = [0, 1, 2].map(() => LV.memoryStore()); st[1].set(Object.assign(LV.newSave(), { maxHp: 20 })); g.showTitle(st);
+    step(30, []); step(1, [], ['menu']); const files = g.title.stage; step(1, [], ['down']); step(1, [], ['down']); step(1, [], ['menu']);
+    const mode = g.mode, intro = !!(g.dialog && /Pendants/.test(g.dialog.lines[0])), saved = !!(st[2].get() && st[2].get().flags.intro); g.dialog = null;
+    g.showTitle(st); step(30, []); step(1, [], ['menu']); step(1, [], ['up']); step(1, [], ['menu']); const er = g.title.erase; step(1, [], ['down']); step(1, [], ['down']); step(1, [], ['menu']); const still = !!st[1].get(); step(1, [], ['menu']); const gone = !st[1].get();
+    g.mode = 'play'; g.title = null; return { files, mode, intro, saved, er, still, gone }; });
+  check('title, file select, new game and erase', r.files === 'files' && r.mode === 'play' && r.intro && r.saved && r.er && r.still && r.gone, r);
   console.log(results.join('\n')); console.log('errors', errs);
   await b.close();
   process.exit(results.some(x => x.startsWith('FAIL')) || errs.length ? 1 : 0);

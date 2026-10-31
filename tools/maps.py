@@ -204,6 +204,19 @@ def thistledown():
     m.sign(21, 6, 'MEADOW RUINS|Keep out. By order of Chancellor Vex.')
     for (x, y) in [(29, 4), (30, 5), (31, 4)]:
         bush(m, x, y)
+    # villagers
+    m.spawn('villager', 14, 10, look='elder', roam=10, talk=[
+        ['pendant_ruins1', ['You found the Pendant of Courage! I knew you had it in you.', 'Four more Pendants are hidden across Varrowmere. The lake, the hills, the marsh, the peaks...', 'Find them before Vex does.']],
+        [None, ['Wren! You look like you slept in a hedge.', 'East of here, past the cave, the old Meadow Ruins sit behind the gate.', 'Vex has soldiers guarding it. Cut the bushes for hearts, and mind the logs.']]])
+    m.spawn('villager', 12, 6, look='trader', roam=0, dir=2, talk=[
+        [None, ['Fresh goods! Prices go up every time you look at them. That is just how markets work.', 'Energy drinks? Sold out. Some fellow bought forty and ran off to train in the woods.']]])
+    m.spawn('villager', 7, 12, look='fisher', roam=0, dir=2, talk=[
+        [None, ['Three days I have been fishing here.', 'So far: one boot, one cart wheel and somebody\'s crumpled receipt for a plushie.']]])
+    m.spawn('villager', 3, 11, look='farmer', roam=24, talk=[
+        [None, ['Those logs in the east meadow are not logs.', 'I sat on one. Spent a week in hospital. The nurse said it happens more than you would think.']]])
+    m.spawn('villager', 8, 1, look='guard', roam=0, dir=2, talk=[
+        ['pendant_ruins1', ['Still no orders to open the north road.', 'I have asked for a raise twice. They gave me two more nerve and a pat on the head.']],
+        [None, ['The north road is closed by order of the Chancellor.', 'Do not ask me why. I just stand here. The pay is terrible.']]])
     m.entry = [8, 8]
     return m
 
