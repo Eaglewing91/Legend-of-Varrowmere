@@ -249,7 +249,7 @@ const { chromium } = require('playwright');
   check('twin maws give the Crystal of the Deep', r.n === 2 && r.crystal && /Deep/.test(r.line), r);
   // 55. Shadow Keep gate opens with both Crystals
   r = await p.evaluate(() => { const g = LV.game; delete g.save.flags.crystals; delete g.save.items.crystal_vault; delete g.save.items.crystal_quarry; place('s_grove', 23, 8, 0); g.actors = []; const shut = g.world.c(23, 6);
-    g.save.items.crystal_vault = 1; g.save.items.crystal_quarry = 1; place('s_grove', 23, 8, 0); g.actors = []; step(60, ['up']); step(30, []); return { shut, map: g.world.id }; });
+    ['vault', 'quarry', 'bonehollow', 'thievesden', 'frostmere', 'mirefen', 'turtleback'].forEach(k => { g.save.items['crystal_' + k] = 1; }); place('s_grove', 23, 8, 0); g.actors = []; step(60, ['up']); step(30, []); return { shut, map: g.world.id }; });
   check('Shadow Keep opens with both Crystals', r.shut === 1 && r.map === 'keep', r);
   // 56. Mirror secret: the gateless pen's heart piece, reached by mirroring in from the shadow side
   r = await p.evaluate(() => { const g = LV.game; g.save.items.mirror = 1; g.save.equip = 'mirror'; delete g.save.opened['grove:13,7']; place('s_grove', 13, 8, 0); g.actors = []; step(1, [], ['item']); step(20, []);
@@ -323,6 +323,19 @@ const { chromium } = require('playwright');
     S.items.book = 1; place('desert', 36, 9, 0); g.actors = []; step(1, [], ['action']); out.script = !!(g.dialog && /pillar/.test(g.dialog.lines[1] || '')); g.dialog = null;
     return out; });
   check('gear: pegs, frost, medal, cloak, wand, gloves, net, well, kazoo, crypt, old script', Object.values(r).every(Boolean), r);
+  // 68. The five new Shadow bosses each fall and give their Crystal; seven Crystals open the Keep and the Arcade Vault
+  r = await p.evaluate(() => { const g = LV.game, S = g.save, out = {};
+    [['bonehollow', 'hollowking'], ['thievesden', 'banditqueen'], ['frostmere', 'frostwyrm'], ['mirefen', 'bogmaw'], ['turtleback', 'shellback']].forEach(([d, k]) => {
+      delete S.items['crystal_' + d]; delete S.flags[d + ':boss']; place(d, 40, 11, 0); g.area = g.world.areaAt(40 * 16, 8 * 16);
+      const b = g.actors.find(a => a.boss); if (!b) { out[d] = 'no boss'; return; }
+      g.actors = [b]; step(2, []); g.dialog = null; b.hp = 1; b.inv = 0; b.immune = null; b.bubbles && b.bubbles.forEach(x => { x.dead = true; }); b.phase = 'bound'; b.state = b.state === 'fade' ? 'wait' : b.state; if (b.kind === 'brute') b.state = 'dazed';
+      LV.applyHit(g, new LV.Hit({ team: 'hero', kind: b.name === 'Shellback' ? 'bomb' : 'blade', power: 4, from: { x: H().x, y: H().y }, box: b.tailBox ? b.tailBox() : b.hurtBox() }), b); step(2, []);
+      const c = g.pickups.find(p => p.kind === 'container'); if (c) g.collect(c); g.dialog = null; out[d] = !!S.items['crystal_' + d];
+    });
+    ['vault', 'quarry'].forEach(k => { S.items['crystal_' + k] = 1; }); out.seven = LV.crystals(S) === 7;
+    place('mg_chests', 3, 9, 3); const v = g.actors.find(a => a.npc && a.look === 'scholar'); v.onTalk(g); const cb = g.dialog && g.dialog.cb; g.dialog = null; if (cb) cb(0); step(30, []); out.vault = g.world.id === 'arcadevault';
+    return out; });
+  check('shadow bosses give Crystals; seven open the Keep and the Arcade Vault', Object.values(r).every(v => v === true), r);
   console.log(results.join('\n')); console.log('errors', errs);
   await b.close();
   process.exit(results.some(x => x.startsWith('FAIL')) || errs.length ? 1 : 0);

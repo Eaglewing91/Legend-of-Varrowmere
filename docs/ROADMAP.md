@@ -36,13 +36,13 @@ Status key: [x] done  [~] in progress  [ ] to do
 | 4 | Ashford Castle | light | (Vex) | [x] |
 | 5 | Drowned Vault | shadow | Power Glove | [x] |
 | 6 | Hollow Quarry | shadow | Mirror Shield | [x] |
-| 7 | Bonehollow (Whisperwood shadow) | shadow | Fire-staff upgrade / Medal | [ ] |
-| 8 | Thieves' Den (Marrowgate shadow) | shadow | Boxing Gloves (lift dark rocks) | [ ] |
-| 9 | Frostmere Palace (Icemere shadow) | shadow | Blue Mail | [ ] |
-| 10 | Mirefen Temple (Willowfen shadow) | shadow | Brick Wand (make blocks) | [ ] |
-| 11 | Turtleback (Frostspire shadow) | shadow | Red Mail / Riot Shield | [ ] |
-| 12 | Shadow Keep (needs all 7 Crystals) | shadow | Sunfire Arrows | [x] (gate to change to 7) |
-| + | Bonus: the Arcade Vault (optional, hard) | light | Golden Blade | [ ] |
+| 7 | Bonehollow (Whisperwood shadow): the Hollow King | shadow | Sledgehammer | [x] |
+| 8 | Thieves' Den (Marrowgate shadow): the Bandit Queen | shadow | Boxing Gloves (lift dark rocks) | [x] |
+| 9 | Frostmere Palace (Icemere shadow): the Frost Wyrm | shadow | Blue Mail | [x] |
+| 10 | Mirefen Temple (Willowfen shadow): the Bog Maw | shadow | Brick Wand (make blocks) | [x] |
+| 11 | Turtleback (Frostspire shadow): Shellback | shadow | Red Mail | [x] |
+| 12 | Shadow Keep (needs all 7 Crystals) | shadow | Sunfire Arrows | [x] |
+| + | Bonus: the Arcade Vault (down from Lucky Lids, needs 7 Crystals) | - | Golden Blade | [x] |
 
 ## Items
 

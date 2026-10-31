@@ -1134,6 +1134,7 @@ def marrowgate_interiors():
     out.append(interior('mg_store', 'Odds and Ends', back(33, 3), 'shop', npcs=[
         (7, 5, dict(look='trader', roam=0, dir=2, shop=True, talk=[[None, ['Odds and Ends! Mostly ends. Have a look.']]]))]))
     out.append(interior('mg_chests', 'Lucky Lids', back(44, 3), 'game', npcs=[
+        (2, 9, dict(look='scholar', roam=0, dir=1, vault=True, talk=[[None, ['Psst. The real game is downstairs. Members only. Membership: seven Crystals.']]])),
         (7, 5, dict(look='trader', roam=0, dir=2, chestgame=True, talk=[[None, ['Lucky Lids! Twenty cash, pick two chests, keep what is inside.', 'The house always wins, but sometimes the house is having a bad day.']]]))]))
     out.append(interior('mg_elder', "Mayor Tull's House", back(49, 3), 'house', npcs=[
         (7, 7, dict(look='elder', roam=6, talk=[
@@ -1700,12 +1701,128 @@ def shadow_regions():
                     if s_.col[y * s_.w + x] == OPEN:
                         s_.spawn(R.choice(pool), x, y)
                         break
+        ent = {'s_whisperwood': [(38, 4, 'bonehollow'), (39, 4, 'bonehollow')], 's_marrowgate': [(46, 7, 'thievesden')],
+               's_icemere': [(24, 12, 'frostmere'), (25, 12, 'frostmere')], 's_willowfen': [(5, 21, 'mirefen')],
+               's_frostspire': [(19, 5, 'turtleback'), (20, 5, 'turtleback')]}.get(s_.id, [])
+        for (x, y, to) in ent:
+            s_.warp(x, y, to, 23 if x % 2 == 0 else 24, 25, 0)
         out.append(s_)
     return out
 
 
+def make_dungeon(mid, name, back, theme, item, crystal, mini, boss, gate):
+    """A Shadow dungeon from the common plan, dressed by theme, with an item gate that needs the dungeon's own item:
+       (0,0) secret room behind the item gate (heart piece)   (1,0) Big Chest, boss door east   (2,0) BOSS
+       (0,1) the Small Key behind a puzzle                    (1,1) entrance: clear it to go north (2,1) mini-boss, then the Big Key"""
+    m = Map(mid, 48, 28, name, indoor=True, music='dungeon')
+    for ry in range(2):
+        for rx in range(3):
+            room(m, rx, ry)
+    m.extra.update({'dungeon': mid, 'exit': [back[0], back[1], back[2]], 'boss': True, 'pendant': crystal, 'shadow': True, 'lava': [], 'flood': [], 'spill': []})
+    def lava(x0, y0, x1, y1):
+        for y in range(y0, y1 + 1):
+            for x in range(x0, x1 + 1):
+                m.col[y * m.w + x] = PIT
+                m.extra['lava'].append(y * m.w + x)
+    def pit(x0, y0, x1, y1):
+        for y in range(y0, y1 + 1):
+            for x in range(x0, x1 + 1):
+                m.col[y * m.w + x] = PIT
+                m.put('ground', CV, 1, 1, x, y)
+    def pool(x0, y0, x1, y1, kind=None):
+        for y in range(y0, y1 + 1):
+            for x in range(x0, x1 + 1):
+                if kind:
+                    m.extra[kind].append(y * m.w + x)
+                else:
+                    m.col[y * m.w + x] = DEEP
+    hazard = {'forest': pit, 'thieves': pit, 'ice': pool, 'swamp': lambda *a: pool(*a, kind='flood'), 'turtle': lava}[theme]
+    foes = {'forest': ['wisp', 'log', 'captain'], 'thieves': ['soldier', 'archer', 'captain'], 'ice': ['snapjaw', 'soldierBlue', 'wisp'],
+            'swamp': ['snapjaw', 'log', 'soldierBlue'], 'turtle': ['wisp', 'captain', 'archer']}[theme]
+    # entrance (1,1)
+    door(m, 1, 1, 's')
+    m.warp(23, 27, back[0], back[1], back[2], 2)
+    m.warp(24, 27, back[0], back[1], back[2], 2)
+    door(m, 1, 1, 'n', SHUTTER, 'hall')
+    door(m, 1, 0, 's')
+    m.extra.setdefault('triggers', []).append({'type': 'clear', 'area': 4, 'open': 'hall'})
+    hazard(18, 18, 20, 21)
+    hazard(27, 18, 29, 21)
+    for k, (x, y) in enumerate([(21, 19), (26, 19), (23, 22)]):
+        m.spawn(foes[k % 3], x, y)
+    door(m, 1, 1, 'w')
+    door(m, 0, 1, 'e')
+    door(m, 1, 1, 'e', LOCKED)
+    door(m, 2, 1, 'w', LOCKED)
+    # west room (0,1): the Small Key in an alcove opened by a switch (push the block on, or light the torches)
+    for (x, y) in [(2, 17), (2, 18), (5, 17), (5, 18), (2, 19), (5, 19)]:
+        m.solid(x, y, 1, 1, SOLID)
+        m.put('deco', IN, 6, 7, x, y)
+    m.solid(3, 19, 2, 1, SHUTTER)
+    m.extra.setdefault('shutters', {})['wkey'] = [[3, 19], [4, 19]]
+    m.chest(3, 17, 'key')
+    if theme in ('forest', 'turtle'):
+        m.solid(8, 17, 1, 1, TORCH)
+        m.solid(13, 17, 1, 1, TORCH)
+        m.extra['triggers'].append({'type': 'torches', 'at': [[8, 17], [13, 17]], 'open': 'wkey'})
+    else:
+        m.solid(10, 21, 1, 1, BLOCK)
+        m.extra['plates'] = [[10, 24]]
+        m.solid(10, 24, 1, 1, PLATE)
+        m.extra['triggers'].append({'type': 'plate', 'at': [[10, 24]], 'open': 'wkey'})
+    hazard(2, 22, 5, 24)
+    m.spawn(foes[0], 12, 19)
+    m.spawn(foes[1], 7, 25)
+    m.chest(13, 25, 'compass')
+    # east room (2,1): the mini-boss; the Big Key appears when it falls
+    m.spawn(mini, 40, 21)
+    m.chests['40,17'] = {'item': 'bigkey', 'big': False}
+    m.extra.setdefault('reveal', {})['mini'] = [[40, 17]]
+    m.extra['triggers'].append({'type': 'clear', 'area': 5, 'open': 'mini'})
+    m.chest(45, 25, 'map')
+    # north room (1,0): the Big Chest, hazards, the boss door east, and the item gate west
+    bigchest(m, 23, 4, item)
+    hazard(17, 8, 19, 11)
+    hazard(28, 8, 30, 11)
+    m.spawn(foes[2], 20, 6)
+    m.spawn(foes[0], 27, 10)
+    door(m, 1, 0, 'e', BIGLOCK)
+    door(m, 2, 0, 'w', BIGLOCK)
+    door(m, 1, 0, 'w')
+    door(m, 0, 0, 'e')
+    # north-west room (0,0): the item gate guards a heart piece and some cash
+    for y in range(3, 13):
+        m.solid(11, y, 1, 1, gate)
+    m.chest(5, 5, 'heart_shard')
+    m.chest(8, 5, 'cash50')
+    if gate == DARKROCK:
+        pass
+    # the boss room (2,0)
+    m.spawn(boss, 40, 7)
+    if boss == 'shellback':
+        rocks(m, [(35, 5), (44, 5), (35, 11), (44, 11)])
+    m.entry = [23, 25]
+    return m
+
+
+def shadow_dungeons():
+    return [
+        make_dungeon('bonehollow', 'Bonehollow', ('s_whisperwood', 38, 5), 'forest', 'hammer', 'Crystal of Bone', 'garrow', 'hollowking', PEG),
+        make_dungeon('thievesden', "Thieves' Den", ('s_marrowgate', 46, 8), 'thieves', 'gloves', 'Crystal of Shadows', 'brask2', 'banditqueen', DARKROCK),
+        make_dungeon('frostmere', 'Frostmere Palace', ('s_icemere', 24, 13), 'ice', 'bluemail', 'Crystal of Frost', 'drowned', 'frostwyrm', PEG),
+        make_dungeon('mirefen', 'Mirefen Temple', ('s_willowfen', 5, 22), 'swamp', 'wand', 'Crystal of the Mire', 'hald', 'bogmaw', DARKROCK),
+        make_dungeon('turtleback', 'Turtleback', ('s_frostspire', 20, 6), 'turtle', 'redmail', 'Crystal of Embers', 'quarryboss', 'shellback', PEG),
+    ]
+
+
+def arcade_vault():
+    """The bonus dungeon: hard, optional, deep under Marrowgate's chest game. The Golden Blade waits at the end."""
+    m = make_dungeon('arcadevault', 'The Arcade Vault', ('marrowgate', 46, 8), 'turtle', 'golden', 'Arcade Token', 'brask2', 'pyrewyrm', DARKROCK)
+    return m
+
+
 if __name__ == '__main__':
-    out = {m.id: m.json() for m in (thistledown(), home(), cave1(), meadow_ruins(), riverhead(), sunken_shrine(), highlands(), ember_forge(), grove(), ashford_castle(), *shadow_world(), drowned_vault(), hollow_quarry(), shadow_keep(), marrowgate(), *marrowgate_interiors(), *willowfen(), *whisperwood(), *outer_regions(), *shadow_regions())}
+    out = {m.id: m.json() for m in (thistledown(), home(), cave1(), meadow_ruins(), riverhead(), sunken_shrine(), highlands(), ember_forge(), grove(), ashford_castle(), *shadow_world(), drowned_vault(), hollow_quarry(), shadow_keep(), marrowgate(), *marrowgate_interiors(), *willowfen(), *whisperwood(), *outer_regions(), *shadow_regions(), *shadow_dungeons(), arcade_vault())}
     out.update({g.id: g.json() for g in GROTTOS})
     os.makedirs('src/data', exist_ok=True)
     json.dump(out, open('src/data/maps.json', 'w'), separators=(',', ':'))
