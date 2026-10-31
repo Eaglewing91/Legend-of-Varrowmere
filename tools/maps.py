@@ -2151,6 +2151,9 @@ def hazard_cells(look, k):
 
 def make_dungeon(mid, name, back, theme, item, crystal, mini, boss, gate):
     """A dungeon laid out by its own layout (LAYOUTS / DUNGEON_STYLE): its own room arrangement, key puzzles, hazards and secrets."""
+    import dungeons
+    if mid in dungeons.SPECS:          # hand-designed (tools/dungeons.py)
+        return dungeons.build(sys.modules[__name__], mid, name, back, theme, item, crystal, mini, boss, gate)
     lay, puzzles, look = DUNGEON_STYLE.get(mid, ('cross', ['torches'], 'pillars'))
     L = LAYOUTS[lay]
     gw, gh = L['size']
