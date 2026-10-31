@@ -220,14 +220,32 @@ def signboard(m, x, y, text):
 # F  forest wall  b  bush            r  boulder (Glove) O  big boulder (2x2, top-left)   *  flowers
 # H  house (5x5, top-left; the door is the middle of its bottom row)   f  fence (ends joined)   |  fence post
 # S  market stall (5x6, top-left)   W  fountain (3x3, top-left)   B  barrels (2x2)   p  pit
-def paint(m, rows, ox=0, oy=0, base='.'):
+def ground_tile(m, gc, X, Y):
+    if gc == ':':
+        m.put('ground', OW, 12, 13, X, Y)
+    elif gc in 'sw':
+        r = (X * 7 + Y * 13) % 23
+        if gc == 's':
+            m.put('ground', NF, *((0, 4) if r == 0 else (1, 4) if r == 1 else (1, 1)), X, Y)
+        else:
+            m.put('ground', NF, *((0, 18) if r in (0, 5) else (1, 18) if r in (1, 9, 14) else (1, 15)), X, Y)
+
+
+def paint(m, rows, ox=0, oy=0, base='.', grounds=None):
     H_ = len(rows)
     W_ = max(len(r) for r in rows)
     g = [r.ljust(W_, '.') for r in rows]
-    g = round_corners(g)
+    g = round_corners(g) if grounds is None else g
     at = lambda x, y: g[y][x] if 0 <= y < H_ and 0 <= x < W_ else None
     grass(m, ox, oy, ox + W_ - 1, oy + H_ - 1)
-    if base in (':', 's', 'w'):          # dry, sandy and snowy lands: everything that isn't grass, water or road sits on the land's own ground
+    if grounds is not None:              # the world builder says what ground lies under every tile
+        for y in range(H_):
+            for x in range(W_):
+                c = g[y][x]
+                gc = c if c in 'sw' else grounds[y][x]
+                if gc != '.' and c not in '~-=h':
+                    ground_tile(m, gc, ox + x, oy + y)
+    elif base in (':', 's', 'w'):          # dry, sandy and snowy lands: everything that isn't grass, water or road sits on the land's own ground
         for y in range(H_):
             for x in range(W_):
                 if g[y][x] not in '.*b~-=':
@@ -255,8 +273,11 @@ def paint(m, rows, ox=0, oy=0, base='.'):
                 m.put('ground', OW, 8, 23, X, Y)
             elif c == ':':
                 m.put('ground', OW, 12, 13, X, Y)
+            elif c == 'h':                    # a plank bridge over water
+                m.put('ground', NW, 1, 13, X, Y)
+                m.col[Y * m.w + X] = OPEN
             elif c == '~':
-                k = BLEND.mask(lambda a, b: at(a, b) in ('~', None), x, y)      # water with soft, foamy banks
+                k = BLEND.mask(lambda a, b: at(a, b) in ('~', 'h', None), x, y)      # water with soft, foamy banks
                 nb = [at(x + i, y + j) for i in (-1, 0, 1) for j in (-1, 0, 1)]
                 pair = 5 if any(n in (':', '-', '=') for n in nb) else 6 if base == 's' and not any(n == '.' for n in nb) else 4
                 m.put('ground', NW, 1, 7, X, Y) if k == 255 else m.put('ground', BL, k & 15, pair * 16 + (k >> 4), X, Y)
@@ -281,10 +302,23 @@ def paint(m, rows, ox=0, oy=0, base='.'):
                 m.put('deco', OW, 28, 2, X, Y)
             elif c == 'g':
                 m.stamp(OW, 35, 5, X, Y, 2, 2, col=SOLID)
-    soften(m, g, ox, oy, base)
+    if grounds is not None:
+        soften_grounds(m, g, grounds, ox, oy)
+    else:
+        soften(m, g, ox, oy, base)
     paint_forest(m, g, ox, oy, base)
     if band:
         dress_border(m, g, ox, oy, base, band)
+    rock = {(ox + x, oy + y) for y in range(H_) for x in range(W_) if g[y][x] == 'Q'}
+    if rock:                            # rock masses: a packed jumble of the pack's rocks (and a tree or two)
+        gb = grounds[0][0] if grounds else base
+        kits = {}
+        for (X, Y) in rock:
+            gc = grounds[Y - oy][X - ox] if grounds else base
+            kits.setdefault(gc, set()).add((X, Y))
+        for gc, cells in kits.items():
+            dress_border(m, g, ox, oy, gc, cells, BORDER_KITS.get(gc, BORDER_KITS['.']))
+        void = gb
     for y in range(H_):
         for x in range(W_):
             c, X, Y = g[y][x], ox + x, oy + y
@@ -297,6 +331,8 @@ def paint(m, rows, ox=0, oy=0, base='.'):
                     m.stamp(NN, 16, 6, X, Y, 2, 2, col=SOLID)
                 else:
                     boulder(m, X, Y)
+            elif c == 'T' and (Y + 1 >= m.h or X + 1 >= m.w):
+                pass
             elif c == 'T':          # a round tree from the pack (2x2): crown over the top row
                 k = (X + Y) % 3
                 tx, ty = ((8, 0) if k else (10, 0)) if base == 'w' else ((0, 0), (16, 0), (18, 0))[k]
@@ -348,6 +384,32 @@ def round_corners(g):
                     rows[y][x] = '.'
                     break
     return [''.join(r) for r in rows]
+
+
+def soften_grounds(m, g, gr, ox, oy):
+    """Blend edges when the ground changes inside one area: grass meeting sand, snow or rocky dirt, and dirt paths in grass."""
+    H_, W_ = len(g), len(g[0])
+    G = lambda x, y: (g[y][x] if g[y][x] in 'sw' else gr[y][x]) if 0 <= x < W_ and 0 <= y < H_ else None
+    for y in range(H_):
+        for x in range(W_):
+            c = g[y][x]
+            if c in '~h':
+                continue
+            if gr[y][x] == '.' and c in ':-=':
+                k = BLEND.mask(lambda a, b: not (0 <= a < W_ and 0 <= b < H_) or g[b][a] in ':-=', x, y)
+                if k != 255:
+                    m.put('ground', BL, k & 15, (k >> 4), ox + x, oy + y)
+                continue
+            if G(x, y) != '.' or c in 'QFTOg_':
+                continue
+            others = [G(x + i, y + j) for i in (-1, 0, 1) for j in (-1, 0, 1)]
+            kind = next((o for o in ('s', 'w', ':') if o in others), None)
+            if not kind:
+                continue
+            pair = {'s': 1, 'w': 2, ':': 3}[kind]
+            k = BLEND.mask(lambda a, b: G(a, b) in ('.', None), x, y)
+            if k != 255:
+                m.put('ground', BL, k & 15, pair * 16 + (k >> 4), ox + x, oy + y)
 
 
 def soften(m, g, ox, oy, base):
@@ -587,13 +649,13 @@ def interior(mid, name, back, kind='house', npcs=(), chests=(), signs=()):
     return m
 
 
-def region(mid, name, wx, wy, sw, sh, rows, music='village', base='.'):
+def region(mid, name, wx, wy, sw, sh, rows, music='village', base='.', grounds=None):
     m = Map(mid, sw * 16, sh * 14, name, music=music)
     for j in range(sh):
         for i in range(sw):
             m.area(i * 16, j * 14)
     m.extra['world'] = [wx, wy]
-    paint(m, rows, base=base)
+    paint(m, rows, base=base, grounds=grounds)
     return m
 
 
@@ -2122,8 +2184,24 @@ def arcade_vault():
 
 
 if __name__ == '__main__':
-    out = {m.id: m.json() for m in (thistledown(), home(), cave1(), meadow_ruins(), riverhead(), sunken_shrine(), highlands(), ember_forge(), grove(), ashford_castle(), *shadow_world(), drowned_vault(), hollow_quarry(), shadow_keep(), marrowgate(), *marrowgate_interiors(), *willowfen(), *whisperwood(), *outer_regions(), *shadow_regions(), *shadow_dungeons(), arcade_vault())}
+    built = [thistledown(), home(), cave1(), meadow_ruins(), riverhead(), sunken_shrine(), highlands(), ember_forge(), grove(), ashford_castle(), *shadow_world(), drowned_vault(), hollow_quarry(), shadow_keep(), marrowgate(), *marrowgate_interiors(), *willowfen(), *whisperwood(), *outer_regions(), *shadow_regions(), *shadow_dungeons(), arcade_vault()]
+    import world as WORLD
+    built = WORLD.rebuild(built, sys.modules[__name__])      # lay the overworld out to tools/worldplan.py
+    out = {m.id: m.json() for m in built}
     out.update({g.id: g.json() for g in GROTTOS})
     os.makedirs('src/data', exist_ok=True)
+    def rle(a):                         # run-length: value, count, value, count ... (decoded in src/01-world.js)
+        o, i = [], 0
+        while i < len(a):
+            j = i
+            while j < len(a) and a[j] == a[i]:
+                j += 1
+            o += [a[i], j - i]
+            i = j
+        return o
+    for d in out.values():
+        d['layers'] = {k: rle(v) for k, v in d['layers'].items()}
+        d['col'] = rle(d['col'])
+        d['rle'] = 1
     json.dump(out, open('src/data/maps.json', 'w'), separators=(',', ':'))
     print('maps', {k: (v['w'], v['h']) for k, v in out.items()})

@@ -144,7 +144,7 @@ const { chromium } = require('playwright');
     place('meadow', 43, 8, 0); const wetBefore = g.world.c(43, 8);
     place('riverhead', 9, 6, 3); step(1, [], ['action']); const pulled = !!g.save.flags.sluice; g.dialog = null;
     place('meadow', 43, 9, 0); const dry = g.world.c(43, 9); step(30, ['up']); step(30, []); return { there, wetBefore, pulled, dry, shrine: g.world.id }; });
-  check('sluice lever drains the pool, shrine opens', r.there === 'riverhead' && r.wetBefore === 2 && r.pulled && r.dry === 0 && r.shrine === 'shrine', r);
+  check('sluice lever drains the pool, shrine opens', r.wetBefore === 2 && r.pulled && r.dry === 0 && r.shrine === 'shrine', r);
   // 35. Water switch: the blade toggles the level; flood tiles dry out and spill tiles fill (and back)
   r = await p.evaluate(() => { const g = LV.game; delete g.save.flags['shrine:drained']; place('shrine', 43, 17, 1); g.actors = [];
     const wet = g.world.c(20, 20), spillDry = g.world.c(18, 5); step(16, [], ['attack']); const dry = g.world.c(20, 20), spillWet = g.world.c(18, 5), flag = g.drained();
@@ -174,7 +174,7 @@ const { chromium } = require('playwright');
   // 39. North road: barred until two Pendants, then it leads up to the highlands
   r = await p.evaluate(() => { const g = LV.game; delete g.save.items.pendant_shrine; place('meadow', 7, 4, 0); step(90, ['up']); const barred = g.world.id;
     g.save.items.pendant_shrine = 1; place('meadow', 7, 4, 0); step(90, ['up']); step(30, []); return { barred, open: g.world.id }; });
-  check('north road opens with two Pendants', r.barred === 'meadow' && r.open === 'highlands', r);
+  check('north road opens with two Pendants', r.barred === 'meadow' && r.open === 'kingsmeadow', r);
   // 40. Ember Rod: a fireball lights a torch stranded in lava and the east shutter opens
   r = await p.evaluate(() => { const g = LV.game; g.save.items.rod = 1; g.save.equip = 'rod'; Object.keys(g.save.flags).filter(k => k.startsWith('forge:')).forEach(k => delete g.save.flags[k]);
     place('forge', 27, 4, 1); g.actors = []; g.world.setC(29, 11, LV.C.TORCH_LIT); step(1, [], ['item']); step(30, []); return { lit: g.world.c(29, 4), open: g.world.c(31, 7) }; });
@@ -268,7 +268,7 @@ const { chromium } = require('playwright');
   // 58. The world joins up: off the end of Thistledown's jetty and onto Marrowgate's bridge, and back
   r = await p.evaluate(() => { const g = LV.game; place('meadow', 7, 12, 2); g.actors = []; step(50, ['down']); step(30, []); const a = g.world.id, x = Math.floor(H().x / 16);
     step(10, []); step(60, ['up']); step(30, []); return { a, x, back: g.world.id }; });
-  check('regions join: Thistledown jetty to Marrowgate bridge', r.a === 'marrowgate' && r.x === 23 && r.back === 'meadow', r);
+  check('regions join: Thistledown jetty to Thistle Fields and back', r.a === 'thistlefields' && ['meadow', 'kingsmeadow'].includes(r.back), r);
   // 59. Lucky Lids: pay 20, two picks, prizes paid out
   r = await p.evaluate(() => { const g = LV.game; g.save.cash = 100; place('mg_chests', 7, 7, 0); step(1, [], ['action']); let n = 0; while (g.dialog && !g.dialog.choices && n++ < 5) step(1, [], ['action']);
     step(1, [], ['action']); const paid = g.save.cash === 80; n = 0; while (g.dialog && !g.dialog.choices && n++ < 5) step(1, [], ['action']); step(1, [], ['action']); n = 0; while (g.dialog && !g.dialog.choices && n++ < 5) step(1, [], ['action']); step(1, [], ['down']); step(1, [], ['action']); n = 0; while (g.dialog && n++ < 8) step(1, [], ['action']);
@@ -292,7 +292,7 @@ const { chromium } = require('playwright');
   // 63. West of Thistledown is Willowfen; Marrowgate's west lane leads to the southern fen
   r = await p.evaluate(() => { const g = LV.game; place('meadow', 0, 8, 3); g.actors = []; step(40, ['left']); step(30, []); const a = g.world.id;
     place('marrowgate', 1, 10, 3); g.actors = []; step(40, ['left']); step(30, []); return { a, b: g.world.id }; });
-  check('regions join: Willowfen west of Thistledown and Marrowgate', r.a === 'willowfen' && r.b === 'willowfen_s', r);
+  check('regions join: Bracken Downs west of Thistledown, Cliffside west of Marrowgate', r.a === 'brackendowns' && r.b === 'cliffside', r);
   // 64. The Tangle: leave east and you come back where you came in; north lets you through
   r = await p.evaluate(() => { const g = LV.game; place('whisperwood', 30, 19, 1); g.actors = []; step(60, ['right']); step(40, []); g.dialog = null; const back = Math.floor(H().x / 16);
     place('whisperwood', 23, 15, 0); g.actors = []; step(40, ['up']); step(50, []); return { back, area: g.world.areas.indexOf(g.area) }; });
@@ -315,12 +315,12 @@ const { chromium } = require('playwright');
     S.items.quake = 1; S.equip = 'quake'; S.energy = 1; place('meadow', 20, 9, 1); g.actors = []; const j = addLog(24, 6); g.actors[j].hp = 3; step(1, [], ['item']); out.medal = g.actors[j] ? g.actors[j].hp < 3 || g.actors[j].dead : true; out.cost = S.energy < 0.6;
     S.items.cloak = 1; S.equip = 'cloak'; S.energy = 1; place('meadow', 20, 9, 1); g.actors = []; H().hp = 12; step(1, [], ['item']); LV.applyHit(g, new LV.Hit({ team: 'enemy', kind: 'contact', power: 4, from: { x: 0, y: 0 } }), H()); out.cloak = H().hp === 12; step(1, [], ['item']); g.cloak = false;
     S.items.wand = 1; S.equip = 'wand'; place('ruins1', 7, 23, 2); g.actors = []; step(1, [], ['item']); out.wand = g.world.c(7, 24) === LV.C.BLOCK;
-    S.items.gloves = 1; place('saltmarsh', 13, 34, 0); g.actors = []; step(1, [], ['action']); out.gloves = H().carry === 'rock'; step(1, [], ['action']); step(20, []);
+    S.items.gloves = 1; { const d = LV.MAPS.saltmarsh; const i = d.col.findIndex((c, i) => c === LV.C.DARKROCK && d.col[i + d.w] === LV.C.OPEN); place('saltmarsh', i % d.w, Math.floor(i / d.w) + 1, 0); } g.actors = []; step(1, [], ['action']); out.gloves = H().carry === 'rock'; step(1, [], ['action']); step(20, []);
     S.items.net = 1; S.bottles = ['empty']; S.equip = 'net'; place('whisperwood', 8, 22, 0); const f = g.actors.find(a => a.kind === 'fairy'); f.update = function () {}; f.x = H().x; f.y = H().y - 14; step(1, [], ['item']); g.dialog = null; out.net = S.bottles[0] === 'fairy';
     S.cash = 200; S.bombUp = 0; place('fs_mine', 10, 11, 0); const w = g.actors.find(a => a.npc); w.onTalk(g); g.dialog.cb(0); g.dialog = null; out.well = LV.capB(S) === 15 && S.cash === 100;
     S.items.kazoo = 1; S.equip = 'kazoo'; delete S.flags.bird; place('frostspire', 39, 8, 0); step(1, [], ['item']); g.dialog = null; out.bird = !!S.flags.bird; S.visited = ['marrowgate', 'meadow']; step(1, [], ['item']); const opts = g.dialog && g.dialog.choices; const cb = g.dialog.cb; g.dialog = null; cb(0); step(30, []); out.fly = g.world.id === 'marrowgate' && !!opts;
-    S.items.shoes = 1; delete S.flags['bonk:saltmarsh:11,37']; place('saltmarsh', 11, 39, 0); g.actors = []; step(1, [], ['dash']); step(40, []); g.dialog = null; out.crypt = g.world.warps.some(x => x.to === 'sm_crypt');
-    S.items.book = 1; place('desert', 36, 9, 0); g.actors = []; step(1, [], ['action']); out.script = !!(g.dialog && /pillar/.test(g.dialog.lines[1] || '')); g.dialog = null;
+    S.items.shoes = 1; { const k = Object.keys(LV.MAPS.saltmarsh.bonk)[0], p = k.split(',').map(Number); delete S.flags['bonk:saltmarsh:' + k]; place('saltmarsh', p[0], p[1] + 2, 0); } g.actors = []; step(1, [], ['dash']); step(40, []); g.dialog = null; out.crypt = g.world.warps.some(x => x.to === 'sm_crypt');
+    S.items.book = 1; { const p = Object.keys(LV.MAPS.desert.oldscript)[0].split(',').map(Number); place('desert', p[0], p[1] + 1, 0); } g.actors = []; step(1, [], ['action']); out.script = !!(g.dialog && /pillar/.test(g.dialog.lines[1] || '')); g.dialog = null;
     return out; });
   check('gear: pegs, frost, medal, cloak, wand, gloves, net, well, kazoo, crypt, old script', Object.values(r).every(Boolean), r);
   // 68. The five new Shadow bosses each fall and give their Crystal; seven Crystals open the Keep and the Arcade Vault

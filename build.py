@@ -5,7 +5,7 @@ Art sheets are embedded as base64 PNG; maps come from tools/maps.py.
 """
 import base64, glob, json, os, subprocess
 
-VERSION = '0.21.0'
+VERSION = '0.22.0'
 os.makedirs('build', exist_ok=True)
 subprocess.run(['python3', 'tools/maps.py'], check=True)
 subprocess.run(['python3', 'tools/patch_sheets.py'], check=True)
@@ -34,7 +34,8 @@ snd = {os.path.basename(f)[:-4]: base64.b64encode(open(f, 'rb').read()).decode()
 mus = {os.path.basename(f)[:-4]: base64.b64encode(open(f, 'rb').read()).decode() for f in sorted(glob.glob('art/ninja-adventure/music/*.ogg'))}
 src = '\n'.join(open(f).read() for f in sorted(glob.glob('src/*.js')))
 maps = open('src/data/maps.json').read()
-body = src + '\nLV.MAPS = ' + maps + ';\nLV.ART = ' + json.dumps(art) + ';\nLV.SOUNDS = ' + json.dumps(snd) + ';\nLV.MUSIC = ' + json.dumps(mus) + ';\n'
+unrle = "(function () { const un = function (a) { const o = []; for (let i = 0; i < a.length; i += 2) for (let k = 0; k < a[i + 1]; k++) o.push(a[i]); return o; }; Object.values(LV.MAPS).forEach(function (d) { if (!d.rle) return; Object.keys(d.layers).forEach(function (k) { d.layers[k] = un(d.layers[k]); }); d.col = un(d.col); delete d.rle; }); })();"
+body = src + '\nLV.MAPS = ' + maps + ';\n' + unrle + '\nLV.ART = ' + json.dumps(art) + ';\nLV.SOUNDS = ' + json.dumps(snd) + ';\nLV.MUSIC = ' + json.dumps(mus) + ';\n'
 
 header = f"""// ==UserScript==
 // @name         Legend of Varrowmere

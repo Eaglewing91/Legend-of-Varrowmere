@@ -11,7 +11,7 @@ const { chromium } = require('playwright');
         g.save.flags = Object.assign({}, fs, { barrier: 1 }); g.save.items = { pendant_shrine: 1 };
         g.enter(id, LV.MAPS[id].entry[0] * 16 + 8, LV.MAPS[id].entry[1] * 16 + 12, 0); const w = g.world, C = LV.C;
         const ok = c => [C.OPEN, C.LOCKED, C.BIGLOCK, C.SHUTTER, C.PLATE, C.SHALLOW, C.CRACK, C.BUSH, C.ROCK, C.DEEP, C.PEG, C.DARKROCK].includes(c);
-        const seen = new Set(), q = []; [LV.MAPS[id].entry].concat((w.warps || []).map(x => [x.x, x.y])).forEach(st => { const k = st.join(); if (!seen.has(k)) { seen.add(k); q.push(st.slice()); } });
+        const seen = new Set(), q = []; const edges = []; if (LV.MAPS[id].world) for (let x = 0; x < w.w; x++) for (let y = 0; y < w.h; y++) if ((x === 0 || y === 0 || x === w.w - 1 || y === w.h - 1) && [C.OPEN, C.SHALLOW, C.BUSH].includes(w.c(x, y))) edges.push([x, y]); [LV.MAPS[id].entry].concat(edges, (w.warps || []).map(x => [x.x, x.y])).forEach(st => { const k = st.join(); if (!seen.has(k)) { seen.add(k); q.push(st.slice()); } });
         while (q.length) { const [x, y] = q.pop(); for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) { const nx = x + dx, ny = y + dy, k = nx + ',' + ny; if (seen.has(k) || nx < 0 || ny < 0 || nx >= w.w || ny >= w.h) continue; if (!ok(w.c(nx, ny))) continue; seen.add(k); q.push([nx, ny]); } }
         Object.keys(w.chests).forEach(k => { const [x, y] = k.split(',').map(Number); if (seen.has(x + ',' + (y + 1))) res['chest ' + k] = 1; else res['chest ' + k] = res['chest ' + k] || 0; });
         w.warps.forEach(wp => { const k = 'warp ' + wp.x + ',' + wp.y + '>' + wp.to; if (seen.has(wp.x + ',' + wp.y)) res[k] = 1; else res[k] = res[k] || 0; });

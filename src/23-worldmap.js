@@ -7,7 +7,8 @@ LV.Game.prototype.drawMap = (function (orig) {
     LV.worldMaps = LV.worldMaps || {};
     if (!LV.worldMaps[key]) {
       // draw every region of this world into one big picture once, then shrink it
-      const c = document.createElement('canvas'); c.width = 12 * 64; c.height = 8 * 56; const x = c.getContext('2d');
+      const regs = Object.values(LV.MAPS).filter(function (d) { return d.world && !!d.shadow === shadow; }), gw = Math.max.apply(null, regs.map(function (d) { return d.world[0] + d.w / 16; })), gh = Math.max.apply(null, regs.map(function (d) { return d.world[1] + d.h / 14; }));
+      const c = document.createElement('canvas'); c.width = gw * 64; c.height = gh * 56; const x = c.getContext('2d');
       x.fillStyle = '#1a2a1a'; x.fillRect(0, 0, c.width, c.height);
       Object.values(LV.MAPS).forEach(function (d) {
         if (!d.world || !!d.shadow !== shadow) return;
@@ -17,7 +18,7 @@ LV.Game.prototype.drawMap = (function (orig) {
       });
       LV.worldMaps[key] = c;
     }
-    const c = LV.worldMaps[key], X = 8, Y = 24, sc = 240 / c.width;
+    const c = LV.worldMaps[key], sc = Math.min(240 / c.width, 192 / c.height), X = Math.round(128 - c.width * sc / 2), Y = 24;
     ctx.fillStyle = '#0c0c1c'; ctx.fillRect(0, 0, LV.VIEW_W, LV.VIEW_H); LV.drawPanel(ctx, 4, 20, 248, 200);
     ctx.imageSmoothingEnabled = true; ctx.drawImage(c, X, Y, c.width * sc, c.height * sc); ctx.imageSmoothingEnabled = false;
     LV.text(ctx, (shadow ? 'SHADOW ' : '') + 'VARROWMERE', 8, 6, '#f8d040');

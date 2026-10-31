@@ -37,7 +37,8 @@ const LATER = { marrowgate: ['51,23'], skyridge: ['28,3'], saltmarsh: ['13,32'],
           Object.keys(w.def.reveal || {}).forEach(k => g.openShutters(k, true));
           const walk = c => [C.OPEN, C.LOCKED, C.BIGLOCK, C.SHUTTER, C.PLATE, C.SHALLOW, C.CRACK, C.BUSH].includes(c) || (c === C.DEEP && it.fins) || (c === C.ROCK && it.glove) || (c === C.PEG && it.hammer) || (c === C.DARKROCK && it.gloves);
           // start from every warp tile (map entrances) and the entry point
-          const starts = (w.warps || []).map(x => [x.x, x.y]).concat([LV.MAPS[id].entry]).concat(carry.filter(t => walk(w.c(t[0], t[1]))));
+          const edges = []; if (LV.MAPS[id].world) for (let x = 0; x < w.w; x++) for (let y = 0; y < w.h; y++) if ((x === 0 || y === 0 || x === w.w - 1 || y === w.h - 1) && walk(w.c(x, y))) edges.push([x, y]);
+          const starts = (w.warps || []).map(x => [x.x, x.y]).concat([LV.MAPS[id].entry], edges).concat(carry.filter(t => walk(w.c(t[0], t[1]))));
           const seen = new Set(); const q = [];
           starts.forEach(s => { const k = s.join(); if (!seen.has(k)) { seen.add(k); q.push(s.slice()); } });
           let grew = true;

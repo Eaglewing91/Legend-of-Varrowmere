@@ -10,7 +10,7 @@ const { chromium } = require('playwright');
     LV.loop.stop(); const out = [], C = LV.C, walk = c => [C.OPEN, C.SHALLOW, C.BUSH, C.PLATE].includes(c);
     const regs = Object.values(LV.MAPS).filter(d => d.world && !!d.shadow === shadow);
     // overlap and the picture
-    const grid = Array.from({ length: 8 }, () => Array(12).fill('.'));
+    const GWm = Math.max(...regs.map(d => d.world[0] + d.w / 16)), GHm = Math.max(...regs.map(d => d.world[1] + d.h / 14)); const grid = Array.from({ length: GHm }, () => Array(GWm).fill('.'));
     regs.forEach((d, i) => { for (let y = 0; y < d.h / 14; y++) for (let x = 0; x < d.w / 16; x++) { const gx = d.world[0] + x, gy = d.world[1] + y; if (grid[gy][gx] !== '.') out.push('OVERLAP ' + d.id + ' with ' + grid[gy][gx] + ' at ' + gx + ',' + gy); grid[gy][gx] = d.id[0].toUpperCase() === grid[gy][gx] ? grid[gy][gx] : d.id.slice(0, 1).toUpperCase(); } });
     // seams
     const colAt = (d, tx, ty) => d.col[ty * d.w + tx], seams = {};
