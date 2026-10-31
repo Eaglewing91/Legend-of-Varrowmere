@@ -11,7 +11,7 @@ Collision codes: 0 open, 1 solid, 2 deep water, 3 pit, 4 ledge (jump south), 5 l
 """
 import json, os
 OW, IN, CV, OB = 0, 1, 2, 3
-OPEN, SOLID, DEEP, PIT, LEDGE, LOW, BUSH, ROCK, SHALLOW, CRACK, TORCH, TORCH_LIT, LOCKED, BIGLOCK, BLOCK, PLATE, SHUTTER, BIGCHEST = range(18)
+OPEN, SOLID, DEEP, PIT, LEDGE, LOW, BUSH, ROCK, SHALLOW, CRACK, TORCH, TORCH_LIT, LOCKED, BIGLOCK, BLOCK, PLATE, SHUTTER, BIGCHEST, LEVER = range(19)
 
 
 def ref(sheet, tx, ty):
@@ -82,6 +82,22 @@ class Map:
         d = {'kind': kind, 'x': x, 'y': y}
         d.update(kw)
         self.spawns.append(d)
+
+    def snapshot(self):
+        import copy
+        return copy.deepcopy(self.layers), list(self.col), copy.deepcopy(self.warps)
+
+    def variant(self, when, before):
+        """Record what changed since snapshot() as a variant applied when a story flag is set, then undo it."""
+        layers, col, warps = before
+        ch = {'when': when, 'tiles': [], 'col': [], 'warps': [w for w in self.warps if w not in warps]}
+        for name in self.layers:
+            for i, (a, b) in enumerate(zip(layers[name], self.layers[name])):
+                if a != b: ch['tiles'].append([name, i, b])
+        for i, (a, b) in enumerate(zip(col, self.col)):
+            if a != b: ch['col'].append([i, b])
+        self.layers, self.col, self.warps = layers, col, warps
+        self.extra.setdefault('variants', []).append(ch)
 
     def json(self):
         return {'id': self.id, 'name': self.name, 'w': self.w, 'h': self.h, 'layers': self.layers, 'col': self.col,
@@ -215,8 +231,10 @@ def thistledown():
     m.spawn('villager', 12, 6, look='trader', roam=0, dir=2, shop=True, talk=[
         [None, ['Fresh goods! Prices go up every time you look at them. That is just how markets work.', 'Energy drinks? Sold out. Some fellow bought forty and ran off to train in the woods.']]])
     # screen 3: Reedwater, a pool hiding the Sunken Shrine (dungeon 2)
-    for x0 in (34, 38, 42, 46):
+    for x0 in (34, 38, 44):
         forest(m, x0, -3)
+    m.warp(42, 0, 'riverhead', 11, 12, 0)        # a gap in the trees: the path upstream
+    m.warp(43, 0, 'riverhead', 12, 12, 0)
     stone_pad(m, 32, 8, 36)
     lake(m, 37, 3, 48, 10)
     m.stamp(OW, 6, 6, 40, 3, 2, 3)              # jetty out onto the pool
@@ -230,6 +248,19 @@ def thistledown():
     m.spawn('soldierBlue', 34, 6)
     m.spawn('archer', 35, 4)
     m.spawn('log', 33, 9)
+    # once the sluice upstream is shut, the pool drains and the Sunken Shrine's gate shows
+    before = m.snapshot()
+    grass(m, 37, 3, 47, 3)
+    for y in range(4, 11):
+        for x in range(37, 48):
+            m.put('ground', OW, 12, 13, x, y)
+            m.layers['deco'][y * m.w + x] = -1
+            m.col[y * m.w + x] = OPEN
+    m.stamp(OW, 6, 6, 40, 3, 2, 3)
+    m.stamp(OW, 4, 31, 42, 5, 4, 3, col=SOLID)
+    m.warp(43, 7, 'shrine', 23, 25, 0)
+    m.warp(44, 7, 'shrine', 24, 25, 0)
+    m.variant('sluice', before)
     m.spawn('villager', 7, 12, look='fisher', roam=0, dir=2, talk=[
         [None, ['Three days I have been fishing here.', 'So far: one boot, one cart wheel and somebody\'s crumpled receipt for a plushie.']]])
     m.spawn('villager', 3, 11, look='farmer', roam=24, talk=[
@@ -419,9 +450,11 @@ def meadow_ruins():
     door(m, 1, 0, 'e', BIGLOCK)
     door(m, 2, 0, 'w', BIGLOCK)
     # north-west room (0,0): the Big Key, guarded; a cracked wall hides a fairy... (a nurse) spring later
-    m.chest(7, 4, 'bigkey')
-    m.spawn('soldierBlue', 6, 8)
-    m.spawn('archer', 10, 10)
+    # the Big Key chest appears once the mini-boss, Captain Brask, is beaten
+    m.chests['7,4'] = {'item': 'bigkey', 'big': False}
+    m.extra.setdefault('reveal', {})['brask'] = [[7, 4]]
+    m.extra['triggers'].append({'type': 'clear', 'area': 0, 'open': 'brask'})
+    m.spawn('brute', 8, 8)
     m.solid(1, 8, 1, 1, CRACK)
     # east room (2,1): the Big Chest with the Bow
     bigchest(m, 39, 19, 'bow')
@@ -435,8 +468,49 @@ def meadow_ruins():
     return m
 
 
+def riverhead():
+    """Upstream of Reedwater: the river runs under the Chancellor's sluice gate. Pull the lever to shut it."""
+    m = Map('riverhead', 16, 14, 'Riverhead')
+    m.area(0, 0)
+    grass(m, 0, 0, 15, 13)
+    for x0 in (-3, 13):
+        forest(m, x0, -3)
+        forest(m, x0, 3)
+        forest(m, x0, 9)
+    lake(m, 3, -1, 7, 14)
+    m.stamp(OW, 4, 31, 3, 4, 4, 3, col=SOLID)     # the sluice gate over the river
+    m.solid(8, 6, 1, 1, LEVER)
+    m.sign(9, 4, "SLUICE GATE|Property of the Chancellor's Waterworks.|Do not touch the lever. We mean it. Probably.")
+    road_ns(m, 11, 0, 13)
+    m.warp(11, 13, 'meadow', 42, 1, 2)
+    m.warp(12, 13, 'meadow', 43, 1, 2)
+    m.spawn('soldier', 10, 9)
+    m.spawn('archer', 12, 3)
+    m.spawn('log', 9, 11)
+    for (x, y) in [(9, 1), (10, 1), (9, 2)]:
+        bush(m, x, y)
+    m.chest(10, 2, 'arrows')
+    m.entry = [11, 12]
+    return m
+
+
+def sunken_shrine():
+    """Dungeon 2 (being built): entrance hall."""
+    m = Map('shrine', 48, 28, 'Sunken Shrine', indoor=True, music='dungeon')
+    for ry in range(2):
+        for rx in range(3):
+            room(m, rx, ry)
+    m.extra.update({'dungeon': 'shrine', 'exit': ['meadow', 43, 8]})
+    door(m, 1, 1, 's')
+    m.warp(23, 27, 'meadow', 43, 8, 2)
+    m.warp(24, 27, 'meadow', 43, 8, 2)
+    m.sign(23, 16, 'Water stains climb the walls to the ceiling. This place was flooded for a long time.')
+    m.entry = [23, 25]
+    return m
+
+
 if __name__ == '__main__':
-    out = {m.id: m.json() for m in (thistledown(), home(), cave1(), meadow_ruins())}
+    out = {m.id: m.json() for m in (thistledown(), home(), cave1(), meadow_ruins(), riverhead(), sunken_shrine())}
     os.makedirs('src/data', exist_ok=True)
     json.dump(out, open('src/data/maps.json', 'w'), separators=(',', ':'))
     print('maps', {k: (v['w'], v['h']) for k, v in out.items()})

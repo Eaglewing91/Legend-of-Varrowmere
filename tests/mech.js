@@ -130,6 +130,21 @@ const { chromium } = require('playwright');
   // 32. Map screen opens with M, rooms are recorded as visited
   r = await p.evaluate(() => { const g = LV.game; place('ruins1', 23, 24, 0); g.save.seen = {}; step(2, []); step(1, [], ['map']); const open = g.mapOpen; g.render(); step(1, [], ['map']); return { open, closed: !g.mapOpen, seen: (g.save.seen.ruins1 || []).length }; });
   check('map screen and visited rooms', r.open && r.closed && r.seen === 1, r);
+  // 33. Captain Brask: blade glances off until he charges into a wall; beating him reveals the Big Key chest
+  r = await p.evaluate(() => { const g = LV.game; delete g.save.flags['ruins1:open:brask']; delete g.save.opened['ruins1:7,4']; place('ruins1', 4, 9, 1);
+    const b = g.actors.find(a => a.kind === 'brute'); const hidden = g.world.c(7, 4) === 0;
+    b.x = 5 * 16 + 12; b.y = 9 * 16 + 12; b.inv = 0; step(16, [], ['attack']); const hp1 = b.hp;
+    b.state = 'charge'; b.st = 0; b.dir = 0; let n = 0; while (b.state === 'charge' && n++ < 200) step(1, []); const dazed = b.state === 'dazed';
+    b.x = 5 * 16 + 12; b.y = 9 * 16 + 12; H().x = 4 * 16 + 8; H().y = 9 * 16 + 12; H().dir = 1; b.inv = 0; b.st = 0; step(16, [], ['attack']); const hp2 = b.hp;
+    b.hp = 1; b.inv = 0; b.state = 'dazed'; b.st = 0; step(16, [], ['attack']); step(5, []);
+    return { hidden, hp1, dazed, hp2, dead: !g.actors.includes(b), shown: g.world.c(7, 4) === 1 }; });
+  check('mini-boss: armoured until dazed, reveals the Big Key', r.hidden && r.hp1 === 12 && r.dazed && r.hp2 < 12 && r.dead && r.shown, r);
+  // 34. The sluice lever drains Reedwater and opens the way to the Sunken Shrine
+  r = await p.evaluate(() => { const g = LV.game; delete g.save.flags.sluice; place('meadow', 43, 3, 0); step(70, ['up']); step(30, []); const there = g.world.id;
+    place('meadow', 43, 8, 0); const wetBefore = g.world.c(43, 8);
+    place('riverhead', 9, 6, 3); step(1, [], ['action']); const pulled = !!g.save.flags.sluice; g.dialog = null;
+    place('meadow', 43, 9, 0); const dry = g.world.c(43, 9); step(30, ['up']); step(30, []); return { there, wetBefore, pulled, dry, shrine: g.world.id }; });
+  check('sluice lever drains the pool, shrine opens', r.there === 'riverhead' && r.wetBefore === 2 && r.pulled && r.dry === 0 && r.shrine === 'shrine', r);
   console.log(results.join('\n')); console.log('errors', errs);
   await b.close();
   process.exit(results.some(x => x.startsWith('FAIL')) || errs.length ? 1 : 0);
