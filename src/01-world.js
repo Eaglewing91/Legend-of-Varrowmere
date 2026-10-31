@@ -1,7 +1,7 @@
 /* ================= World: maps, collision, drawing tiles =================
    Maps come from tools/maps.py (src/data/maps.json). Art comes from the CC0 pack sheets in LV.IMG. */
 LV.C = { OPEN: 0, SOLID: 1, DEEP: 2, PIT: 3, LEDGE: 4, LOW: 5, BUSH: 6, ROCK: 7, SHALLOW: 8 };
-LV.SHEETS = ['overworld', 'inner', 'cave', 'objects', 'nafloor', 'nanature', 'blend'];
+LV.SHEETS = ['overworld', 'inner', 'cave', 'objects', 'nafloor', 'nanature', 'blend', 'nawater', 'nahouse', 'narelief', 'naelem', 'nadetail', 'nainfloor'];
 
 LV.World = function (def) {
   this.def = def; this.id = def.id; this.name = def.name; this.w = def.w; this.h = def.h;

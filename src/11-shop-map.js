@@ -25,10 +25,10 @@ LV.drawDialog = (function (orig) {
   return function (ctx, d) {
     if (!d.choices || d.i !== d.lines.length - 1) return orig(ctx, d);
     const x = 24, h = 20 + d.choices.length * 12, y = 210 - h - 0, w = 208;
-    ctx.fillStyle = '#f0f0f0'; ctx.fillRect(x - 2, y - 2, w + 4, h + 4); ctx.fillStyle = '#18183a'; ctx.fillRect(x, y, w, h);
-    LV.text(ctx, d.lines[d.i], x + 8, y + 6);
-    d.choices.forEach(function (c, i) { LV.text(ctx, c, x + 20, y + 20 + i * 12, d.sel === i ? '#f8d040' : '#fff'); });
-    ctx.fillStyle = '#f8d040'; ctx.fillRect(x + 10, y + 23 + d.sel * 12, 4, 4);
+    const paper = LV.drawBox(ctx, x - 2, y - 2, w + 4, h + 4);
+    LV.text(ctx, d.lines[d.i], x + 8, y + 6, paper ? LV.INK : '#fff');
+    d.choices.forEach(function (c, i) { LV.text(ctx, c, x + 20, y + 20 + i * 12, d.sel === i ? (paper ? LV.INK_SEL : '#f8d040') : (paper ? LV.INK : '#fff')); });
+    ctx.fillStyle = paper ? LV.INK_SEL : '#f8d040'; ctx.fillRect(x + 10, y + 23 + d.sel * 12, 4, 4);
   };
 })(LV.drawDialog);
 

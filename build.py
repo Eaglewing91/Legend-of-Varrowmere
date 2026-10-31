@@ -9,7 +9,11 @@ VERSION = '0.17.0'
 os.makedirs('build', exist_ok=True)
 subprocess.run(['python3', 'tools/maps.py'], check=True)
 
-ART = {'overworld': 'pack-armm1998/Overworld.png', 'inner': 'pack-armm1998/Inner.png', 'cave': 'pack-armm1998/cave.png', 'objects': 'pack-armm1998/objects.png', 'hero': 'pack-armm1998/character.png', 'log': 'pack-armm1998/log.png', 'na': 'ninja-adventure/monsters.png', 'nafloor': 'ninja-adventure/TilesetFloor.png', 'nanature': 'ninja-adventure/TilesetNature.png', 'blend': 'generated/blend.png'}
+ART = {'overworld': 'pack-armm1998/Overworld.png', 'inner': 'pack-armm1998/Inner.png', 'cave': 'pack-armm1998/cave.png', 'objects': 'pack-armm1998/objects.png', 'hero': 'pack-armm1998/character.png', 'log': 'pack-armm1998/log.png', 'na': 'ninja-adventure/monsters.png', 'nafloor': 'ninja-adventure/TilesetFloor.png', 'nanature': 'ninja-adventure/TilesetNature.png', 'blend': 'generated/blend.png', 'nawater': 'ninja-adventure/TilesetWater.png', 'nahouse': 'ninja-adventure/TilesetHouse.png', 'narelief': 'ninja-adventure/TilesetRelief.png', 'naelem': 'ninja-adventure/TilesetElement.png', 'nadetail': 'ninja-adventure/TilesetFloorDetail.png', 'nainfloor': 'ninja-adventure/TilesetInteriorFloor.png'}
+for f in sorted(glob.glob('art/ninja-adventure/ui/*.png')):
+    ART['ui_' + os.path.basename(f)[:-4]] = f[4:]
+for f in sorted(glob.glob('art/ninja-adventure/anim/*.png')):
+    ART['an_' + os.path.basename(f)[:-4]] = f[4:]
 for f in sorted(glob.glob('art/ninja-adventure/monsters/*.png')):
     ART['m_' + os.path.basename(f)[:-4].lower()] = f[4:]
 for f in sorted(glob.glob('art/ninja-adventure/bosses/*.png')):

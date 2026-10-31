@@ -67,7 +67,8 @@ LV.drawDialog = (function (orig) {
     orig(ctx, d);
     const im = d.face && LV.IMG['cf_' + d.face]; if (!im) return;
     const x = 24, y = (d.choices && d.i === d.lines.length - 1) ? 210 - (20 + d.choices.length * 12) - 46 : 146 - 46;
-    ctx.fillStyle = '#f0f0f0'; ctx.fillRect(x - 2, y - 2, 42, 42); ctx.fillStyle = '#18183a'; ctx.fillRect(x, y, 38, 38);
-    ctx.drawImage(im, x, y, 38, 38);
+    const fb = LV.IMG.ui_facebox;
+    if (fb) { ctx.drawImage(fb, x - 5, y - 5 - 2, 48, 48); ctx.drawImage(im, x, y - 2, 38, 38); }
+    else { ctx.fillStyle = '#f0f0f0'; ctx.fillRect(x - 2, y - 2, 42, 42); ctx.fillStyle = '#18183a'; ctx.fillRect(x, y, 38, 38); ctx.drawImage(im, x, y, 38, 38); }
   };
 })(LV.drawDialog);

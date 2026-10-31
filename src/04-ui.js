@@ -1,7 +1,50 @@
 /* ================= HUD, dialog box and text ================= */
+/* Text in the pack's 8 x 8 pixel font (proportional: each glyph is as wide as its ink), tinted and shadowed.
+   Falls back to the browser's monospace font until the art has loaded. */
+LV.FONT = { tint: {}, w: null };
+LV.fontPrep = function () {
+  const im = LV.IMG.ui_font; if (!im || LV.FONT.w) return !!im;
+  const c = document.createElement('canvas'); c.width = im.width; c.height = im.height; const x = c.getContext('2d'); x.drawImage(im, 0, 0);
+  const d = x.getImageData(0, 0, c.width, c.height).data, w = [];
+  for (let g = 0; g < 120; g++) { const gx = (g % 15) * 8, gy = Math.floor(g / 15) * 8; let lo = 8, hi = -1;
+    for (let yy = 0; yy < 8; yy++) for (let xx = 0; xx < 8; xx++) if (d[((gy + yy) * c.width + gx + xx) * 4 + 3]) { lo = Math.min(lo, xx); hi = Math.max(hi, xx); }
+    w.push(hi < 0 ? [0, 3] : [lo, hi - lo + 1]); }
+  LV.FONT.w = w; return true;
+};
+LV.fontTint = function (col) {
+  if (LV.FONT.tint[col]) return LV.FONT.tint[col];
+  const im = LV.IMG.ui_font, c = document.createElement('canvas'); c.width = im.width; c.height = im.height; const x = c.getContext('2d');
+  x.drawImage(im, 0, 0); x.globalCompositeOperation = 'source-in'; x.fillStyle = col; x.fillRect(0, 0, c.width, c.height);
+  return (LV.FONT.tint[col] = c);
+};
+LV.textWidth = function (s, size) {
+  if (!LV.fontPrep()) return s.length * 5;
+  const k = Math.max(1, Math.round((size || 8) / 8)); let n = 0;
+  for (const ch of s) { const g = ch.charCodeAt(0) - 32; n += (g >= 0 && g < 120 ? LV.FONT.w[g][1] : 3) + 1; }
+  return n * k;
+};
 LV.text = function (ctx, s, x, y, col, size) {
-  ctx.font = 'bold ' + (size || 8) + 'px monospace'; ctx.textBaseline = 'top';
-  ctx.fillStyle = '#000'; ctx.fillText(s, x + 1, y + 1); ctx.fillStyle = col || '#fff'; ctx.fillText(s, x, y);
+  s = String(s);
+  if (!LV.fontPrep()) { ctx.font = 'bold ' + (size || 8) + 'px monospace'; ctx.textBaseline = 'top'; ctx.fillStyle = '#000'; ctx.fillText(s, x + 1, y + 1); ctx.fillStyle = col || '#fff'; ctx.fillText(s, x, y); return; }
+  const k = Math.max(1, Math.round((size || 8) / 8)), ink = LV.fontTint(col || '#fff'), sh = LV.fontTint(col === LV.INK ? 'rgba(0,0,0,0)' : '#000');
+  let cx = Math.round(x);
+  for (const ch of s) {
+    const g = ch.charCodeAt(0) - 32; if (g < 0 || g >= 120) { cx += 4 * k; continue; }
+    const W = LV.FONT.w[g], gx = (g % 15) * 8 + W[0], gy = Math.floor(g / 15) * 8;
+    if (ch !== ' ') { ctx.drawImage(sh, gx, gy, W[1], 8, cx + k, Math.round(y) + k, W[1] * k, 8 * k); ctx.drawImage(ink, gx, gy, W[1], 8, cx, Math.round(y), W[1] * k, 8 * k); }
+    cx += (W[1] + 1) * k;
+  }
+};
+// the pack's parchment box, nine-sliced to any size; dialog text is dark ink on it
+LV.INK = '#4a3428'; LV.INK_SEL = '#c8462a';
+LV.drawBox = function (ctx, x, y, w, h) {
+  const im = LV.IMG.ui_box; if (!im) { ctx.fillStyle = '#f0f0f0'; ctx.fillRect(x - 2, y - 2, w + 4, h + 4); ctx.fillStyle = '#18183a'; ctx.fillRect(x, y, w, h); return false; }
+  const s = 8, W = im.width, H = im.height;
+  const part = function (sx, sy, sw, sh, dx, dy, dw, dh) { if (dw > 0 && dh > 0) ctx.drawImage(im, sx, sy, sw, sh, dx, dy, dw, dh); };
+  part(0, 0, s, s, x, y, s, s); part(s, 0, W - 2 * s, s, x + s, y, w - 2 * s, s); part(W - s, 0, s, s, x + w - s, y, s, s);
+  part(0, s, s, H - 2 * s, x, y + s, s, h - 2 * s); part(s, s, W - 2 * s, H - 2 * s, x + s, y + s, w - 2 * s, h - 2 * s); part(W - s, s, s, H - 2 * s, x + w - s, y + s, s, h - 2 * s);
+  part(0, H - s, s, s, x, y + h - s, s, s); part(s, H - s, W - 2 * s, s, x + s, y + h - s, w - 2 * s, s); part(W - s, H - s, s, s, x + w - s, y + h - s, s, s);
+  return true;
 };
 // The original's layout: energy meter, item box, counters (cash, bombs, arrows, keys) and LIFE with hearts.
 LV.drawHud = function (ctx, g) {
@@ -51,13 +94,13 @@ LV.drawSpecialTiles = function (ctx, g, ox, oy) {
 // Dialog box at the bottom, wrapped to the box width
 LV.drawDialog = function (ctx, d) {
   const x = 24, y = 146, w = 208, h = 64;
-  ctx.fillStyle = '#f0f0f0'; ctx.fillRect(x - 2, y - 2, w + 4, h + 4); ctx.fillStyle = '#18183a'; ctx.fillRect(x, y, w, h);
+  const paper = LV.drawBox(ctx, x - 2, y - 2, w + 4, h + 4), ink = paper ? LV.INK : '#fff';
   ctx.font = 'bold 8px monospace';
   const words = d.lines[d.i].split(' '); let line = '', ly = y + 8;
   for (const wd of words) {
     const test = line ? line + ' ' + wd : wd;
-    if (ctx.measureText(test).width > w - 16) { LV.text(ctx, line, x + 8, ly); ly += 12; line = wd; } else line = test;
+    if (LV.textWidth(test) > w - 16) { LV.text(ctx, line, x + 8, ly, ink); ly += 12; line = wd; } else line = test;
   }
-  if (line) LV.text(ctx, line, x + 8, ly);
+  if (line) LV.text(ctx, line, x + 8, ly, ink);
   if (Math.floor(Date.now() / 300) % 2) { ctx.fillStyle = '#f8d040'; ctx.fillRect(x + w - 12, y + h - 9, 5, 3); ctx.fillRect(x + w - 11, y + h - 6, 3, 2); }
 };

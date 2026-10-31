@@ -17,6 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 OW, IN, CV, OB = 0, 1, 2, 3
 NF, NN = 4, 5          # Ninja Adventure floor and nature sheets
 BL = 6                 # generated soft-edge ground transitions (tools/blend.py)
+NW, NH, NR, NE, ND, NI = 7, 8, 9, 10, 11, 12   # pack water, houses, cliffs, elements, floor details, interior floors
 OPEN, SOLID, DEEP, PIT, LEDGE, LOW, BUSH, ROCK, SHALLOW, CRACK, TORCH, TORCH_LIT, LOCKED, BIGLOCK, BLOCK, PLATE, SHUTTER, BIGCHEST, LEVER, SWITCH, POST, _21, PEDESTAL, BARRIER, PEG, DARKROCK = range(26)
 
 
@@ -128,6 +129,7 @@ class Map:
 
     def json(self):
         self.unpoke()
+        naremap(self)
         return {'id': self.id, 'name': self.name, 'w': self.w, 'h': self.h, 'layers': self.layers, 'col': self.col,
                 'areas': self.areas or [[0, 0, self.w, self.h]], 'warps': self.warps, 'signs': self.signs,
                 'chests': self.chests, 'spawns': self.spawns, 'indoor': self.indoor, 'dark': self.dark,
@@ -253,12 +255,11 @@ def paint(m, rows, ox=0, oy=0, base='.'):
                 m.put('ground', OW, 8, 23, X, Y)
             elif c == ':':
                 m.put('ground', OW, 12, 13, X, Y)
-            elif c == '~' and all(at(x + i, y + j) in ('~', None) or at(x + i, y + j) in '.*bFTO' for i in (-1, 0, 1) for j in (-1, 0, 1)):
-                k = BLEND.mask(lambda a, b: at(a, b) in ('~', None), x, y)      # a pond in grass: soft round banks
-                if k == 255:
-                    m.put('ground', OW, 3, 7, X, Y)
-                else:
-                    m.put('ground', BL, k & 15, 4 * 16 + (k >> 4), X, Y)
+            elif c == '~':
+                k = BLEND.mask(lambda a, b: at(a, b) in ('~', None), x, y)      # water with soft, foamy banks
+                nb = [at(x + i, y + j) for i in (-1, 0, 1) for j in (-1, 0, 1)]
+                pair = 5 if any(n in (':', '-', '=') for n in nb) else 6 if base == 's' and not any(n == '.' for n in nb) else 4
+                m.put('ground', NW, 1, 7, X, Y) if k == 255 else m.put('ground', BL, k & 15, pair * 16 + (k >> 4), X, Y)
                 m.col[Y * m.w + X] = DEEP
             elif c == '~':
                 wet = lambda a, b: at(a, b) in ('~', None)
@@ -353,7 +354,7 @@ def soften(m, g, ox, oy, base):
     """Round off patches of one ground lying on another (dirt on grass, grass on sand or snow) with blend tiles."""
     H_, W_ = len(g), len(g[0])
     if base == '.':
-        pair, top, alike = 0, ':', ':-='
+        pair, top, alike = 0, ':-=', ':-='
     elif base in ('s', 'w', ':'):
         pair, top, alike = {'s': 1, 'w': 2, ':': 3}[base], '.', '.*b~'
     else:
@@ -361,11 +362,91 @@ def soften(m, g, ox, oy, base):
     isB = lambda x, y: not (0 <= x < W_ and 0 <= y < H_) or g[y][x] in alike
     for y in range(H_):
         for x in range(W_):
-            if g[y][x] != top:
+            if g[y][x] not in top:
                 continue
             k = BLEND.mask(isB, x, y)
             if k != 255:
                 m.put('ground', BL, k & 15, pair * 16 + (k >> 4), ox + x, oy + y)
+
+
+HOUSES = [(0, 0), (4, 0), (8, 0), (12, 0)]
+
+
+def naremap(m):
+    """Swap the old art pack's ground, water, roads, flowers, bushes, houses and dungeon tiles for Ninja Adventure ones."""
+    G, D, O = m.layers['ground'], m.layers['deco'], m.layers['over']
+    sh = lambda r: r >> 16
+    t = lambda r: (r & 255, (r >> 8) & 255)
+    W, H = m.w, m.h
+    grass = {(0, 9), (1, 9), (0, 31), (1, 31)}
+    water = {(x, y) for x in (2, 3, 4) for y in (6, 7, 8)}
+    road = {(8, 23), (8, 24), (9, 23), (9, 24)}
+    isw = lambda x, y: not (0 <= x < W and 0 <= y < H) or m.col[y * W + x] in (DEEP,)
+    for y in range(H):
+        for x in range(W):
+            i = y * W + x
+            g = G[i]
+            if g >= 0 and sh(g) == OW:
+                tt = t(g)
+                if tt in grass:
+                    h = (x * 7 + y * 13) % 17
+                    G[i] = ref(NF, 12 + h, 12) if h < 3 else ref(NF, 11, 12)
+                elif tt == (12, 13) or tt in road:
+                    G[i] = ref(NF, 12, 8)
+                elif tt in water:
+                    if m.col[i] == DEEP:
+                        k = BLEND.mask(isw, x, y)
+                        G[i] = ref(NW, 1, 7) if k == 255 else ref(BL, k & 15, 4 * 16 + (k >> 4))
+                    else:
+                        G[i] = ref(NF, 11, 12)
+            elif g >= 0 and sh(g) == IN:
+                tt = t(g)
+                if tt == (1, 1):
+                    G[i] = ref(NI, 12 + (x * 3 + y) % 3, 13)
+                elif tt == (0, 4):
+                    G[i] = ref(NI, 1 + (x + y * 2) % 3, 1)
+                elif 5 <= tt[0] <= 7 and 6 <= tt[1] <= 8 and not (W == 16 and H == 14):
+                    G[i] = ref(NR, tt[0] - 1, tt[1] - 6)
+            d = D[i]
+            if d >= 0 and sh(d) == OW:
+                tt = t(d)
+                if tt == (1, 8):
+                    D[i] = ref(NN, (0, 2, 3, 0)[(x + y) % 4], 11)
+                elif tt == (0, 16):
+                    D[i] = ref(NN, (x * 5 + y) % 3, 10)
+                elif tt == (6, 0):          # a house: the pack's cottage, door where the old one was
+                    hx, hy = HOUSES[(x * 3 + y) % len(HOUSES)]
+                    for j in range(5):
+                        for k in range(5):
+                            if m.ok(x + k, y + j):
+                                D[(y + j) * W + x + k] = -1
+                                if j < 2 or k == 0:
+                                    m.col[(y + j) * W + x + k] = OPEN
+                    for j in range(3):
+                        for k in range(4):
+                            if m.ok(x + 1 + k, y + 2 + j):
+                                D[(y + 2 + j) * W + x + 1 + k] = ref(NH, hx + k, hy + j)
+                                m.col[(y + 2 + j) * W + x + 1 + k] = SOLID if (k, j) not in ((1, 2),) else m.col[(y + 2 + j) * W + x + 1 + k]
+            if D[i] >= 0 and sh(D[i]) == IN:
+                tt = t(D[i])
+                if 5 <= tt[0] <= 7 and 6 <= tt[1] <= 8 and not (W == 16 and H == 14):
+                    D[i] = ref(NR, tt[0] - 1, tt[1] - 6)
+    for v in m.extra.get('variants', []):          # story changes use the same swaps
+        for t_ in v['tiles']:
+            name, i, r = t_
+            if r < 0 or sh(r) != OW:
+                continue
+            tt, x, y = t(r), i % W, i // W
+            if tt in grass:
+                t_[2] = ref(NF, 11, 12)
+            elif tt == (12, 13) or tt in road:
+                t_[2] = ref(NF, 12, 8)
+            elif tt in water:
+                t_[2] = ref(NW, 1, 7)
+            elif tt == (1, 8):
+                t_[2] = ref(NN, 0, 11)
+            elif tt == (0, 16):
+                t_[2] = ref(NN, (x * 5 + y) % 3, 10)
 
 
 # Pack sprites for dressing a rocky border: (tx, ty, w, h, is_tree). Rocks sit on the ground; a tree's top row is its crown.
