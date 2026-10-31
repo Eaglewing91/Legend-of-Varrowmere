@@ -267,7 +267,7 @@ def interior(mid, name, back, kind='house', npcs=(), chests=(), signs=()):
         m.stamp(IN, 16, 1, 2, 3, 2, 3, col=SOLID)
         m.stamp(IN, 10, 1, 9, 6, 3, 3, col=SOLID)
         m.stamp(IN, 12, 10, 11, 2, 2, 3, col=SOLID)
-    if kind in ('shop', 'smith', 'tavern', 'library', 'game'):
+    if kind in ('shop', 'smith', 'tavern', 'game'):
         for x in range(3, 13):
             m.put('deco', IN, 10 if x == 3 else 12 if x == 12 else 11, 3, x, 6)
             m.col[6 * m.w + x] = LOW if kind == 'game' else SOLID
@@ -1069,7 +1069,11 @@ def marrowgate_interiors():
         (11, 8, dict(look='farmer', roam=8, talk=[[None, ['I put my whole savings in the stock market. Now the stock market has my savings, and I have a lovely story.']]])),
         (12, 11, dict(look='scholar', roam=0, dir=3, talk=[[None, ['They say a bird lives on top of Frostspire that will carry you anywhere if you play it a tune.', 'Do you play? No? Neither do I. I just hum at it.']]]))]))
     out.append(interior('mg_smith', 'Brannock Smithy', back(14, 3), 'smith', npcs=[
-        (7, 5, dict(look='guard', roam=0, dir=2, talk=[[None, ['Brannock, smith. My brother Durn and I used to temper blades together.', 'He went into Whisperwood after a rare ore and never came back.', 'Find him, and I will make your blade sing.']]]))]))
+        (7, 5, dict(look='guard', roam=0, dir=2, smith=True, talk=[
+            ['tempered', ['That blade of yours still sings? Good. Look after it. Unlike Durn, who looks after nothing.']],
+            ['durn', ['Durn! You found him! He walked in an hour ago, covered in mud, complaining.', 'A deal is a deal. Give me that sword.']],
+            [None, ['Brannock, smith. My brother Durn and I used to temper blades together.', 'He went into Whisperwood after a rare ore and never came back.', 'Find him, and I will make your blade sing.']]])),
+        (11, 9, dict(look='guard', roam=4, when='durn', talk=[[None, ['Durn. Yes, the lost one. I was not lost, I was "exploring". For three months.', 'Keep the shoes. Bandits stole them from someone faster than me anyway.']]]))]))
     out.append(interior('mg_library', 'Marrowgate Library', back(27, 3), 'library', npcs=[
         (7, 8, dict(look='scholar', roam=0, dir=2, talk=[[None, ['Shh. This is a library.', 'The Book of Old Script is on the top shelf. Nobody can reach it. We put it there in a fit of ambition.', 'A good hard run into the shelf might knock it down.']]]))]))
     out.append(interior('mg_store', 'Odds and Ends', back(33, 3), 'shop', npcs=[
@@ -1122,6 +1126,48 @@ def willowfen():
             [None, ['Old Mole. Retired. Mostly.', 'Want my shovel? Take it. My back says I am done, my heart says one more hole.', 'My back wins. It always wins.']]]))], chests=[(12, 4, 'shovel')]))
     out.append(interior('wf_bottles', 'Bottles by Bellamy', ('willowfen_s', 8, 8), 'shop', npcs=[
         (7, 5, dict(look='scholar', roam=0, dir=2, bottles=True, talk=[[None, ['Bellamy. Bottles. That is the whole business plan.']]]))]))
+    return out
+
+
+def whisperwood():
+    ns = {}
+    exec(open('tools/regions/whisperwood_terrain.py').read(), ns)
+    out = []
+    m = region('whisperwood', 'Whisperwood', 0, 0, 3, 3, ns['ROWS'], music='cave')
+    m.extra['names'] = ['Hidden Glade', 'High Clearing', 'Bandit Hollow', 'Fairy Glade', 'The Tangle', 'Deepwood', 'Wood Gate', 'Ore Clearing', 'Old Stump']
+    # the Tangle (screen 1,1) turns you round unless you leave north (or go back west)
+    m.extra['loop'] = {'area': 4, 'ok': [0, 3], 'to': [17, 21]}
+    m.stamp(OW, 10, 31, 37, 2, 4, 3, col=SOLID)
+    m.warp(38, 4, 'hideout', 7, 12, 0)
+    m.warp(39, 4, 'hideout', 8, 12, 0)
+    m.sign(36, 6, 'A crude sign: KEEP OWT. THIS MEENS YOU. ALSO YOU.')
+    m.chest(7, 4, 'heart_shard')
+    m.spawn('villager', 10, 18, look='baker', roam=0, dir=2, heal=True, ghost=True, talk=[[None, ['I am the spirit of this glade. Rest a moment.', 'The Tangle to the east turns travellers round. Keep heading north and the trees will let you pass.']]])
+    m.sign(22, 33, 'An overturned ore cart. Fresh scratches on the side: "DURN WOZ ERE". Tracks lead north into the trees.')
+    m.extra['digs'] = {'40,35': 'heart_shard', '25,32': 'cash20', '5,33': 'cash5'}
+    secret_cave(m, 40, 31, 'grotto6', ['cash100'], 'A bandit stash. Someone has written IOU on every coin.')
+    for (k, x, y) in [('log', 9, 33), ('log', 24, 35), ('soldier', 20, 6), ('archer', 27, 8), ('captain', 40, 9), ('soldierBlue', 35, 4), ('log', 6, 21), ('wisp', 24, 21)]:
+        m.spawn(k, x, y)
+    out.append(m)
+    # the bandits' hideout: two rooms; Durn is locked in the back
+    h = Map('hideout', 32, 14, 'Bandit Hideout', indoor=True, music='dungeon')
+    room(h, 0, 0)
+    room(h, 1, 0)
+    h.extra.update({'dungeon': 'hideout'})
+    door(h, 0, 0, 's')
+    h.warp(7, 13, 'whisperwood', 38, 5, 2)
+    h.warp(8, 13, 'whisperwood', 39, 5, 2)
+    door(h, 0, 0, 'e', LOCKED)
+    door(h, 1, 0, 'w')
+    h.chests['3,4'] = {'item': 'key', 'big': False}
+    h.extra['reveal'] = {'bandits': [[3, 4]]}
+    h.extra['triggers'] = [{'type': 'clear', 'area': 0, 'open': 'bandits'}]
+    for (k, x, y) in [('captain', 5, 8), ('soldier', 10, 7), ('archer', 12, 10), ('soldierBlue', 4, 10)]:
+        h.spawn(k, x, y)
+    h.spawn('villager', 24, 7, look='guard', roam=0, dir=2, durn=True, when='!durn', talk=[[None, ['Hah! You are no bandit. Who sent you? My brother? Brannock sent a rescuer? He never sends anything. Not even letters.']]])
+    h.chest(28, 4, 'cash50')
+    h.entry = [7, 12]
+    out.append(h)
     return out
 
 
@@ -1434,7 +1480,7 @@ def shadow_keep():
 
 
 if __name__ == '__main__':
-    out = {m.id: m.json() for m in (thistledown(), home(), cave1(), meadow_ruins(), riverhead(), sunken_shrine(), highlands(), ember_forge(), grove(), ashford_castle(), *shadow_world(), drowned_vault(), hollow_quarry(), shadow_keep(), marrowgate(), *marrowgate_interiors(), *willowfen())}
+    out = {m.id: m.json() for m in (thistledown(), home(), cave1(), meadow_ruins(), riverhead(), sunken_shrine(), highlands(), ember_forge(), grove(), ashford_castle(), *shadow_world(), drowned_vault(), hollow_quarry(), shadow_keep(), marrowgate(), *marrowgate_interiors(), *willowfen(), *whisperwood())}
     out.update({g.id: g.json() for g in GROTTOS})
     os.makedirs('src/data', exist_ok=True)
     json.dump(out, open('src/data/maps.json', 'w'), separators=(',', ':'))

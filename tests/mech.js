@@ -293,6 +293,21 @@ const { chromium } = require('playwright');
   r = await p.evaluate(() => { const g = LV.game; place('meadow', 0, 8, 3); g.actors = []; step(40, ['left']); step(30, []); const a = g.world.id;
     place('marrowgate', 1, 10, 3); g.actors = []; step(40, ['left']); step(30, []); return { a, b: g.world.id }; });
   check('regions join: Willowfen west of Thistledown and Marrowgate', r.a === 'willowfen' && r.b === 'willowfen_s', r);
+  // 64. The Tangle: leave east and you come back where you came in; north lets you through
+  r = await p.evaluate(() => { const g = LV.game; place('whisperwood', 30, 19, 1); g.actors = []; step(60, ['right']); step(40, []); g.dialog = null; const back = Math.floor(H().x / 16);
+    place('whisperwood', 23, 15, 0); g.actors = []; step(40, ['up']); step(50, []); return { back, area: g.world.areas.indexOf(g.area) }; });
+  check('the Tangle loops you back unless you go north', r.back === 17 && r.area === 1, r);
+  // 65. Durn: rescued in the hideout he gives the Running Shoes; Brannock then tempers the blade
+  r = await p.evaluate(() => { const g = LV.game; delete g.save.flags.durn; delete g.save.items.shoes; delete g.save.items.tempered; place('hideout', 24, 8, 0); g.actors = g.actors.filter(a => a.npc); const d = g.actors[0]; d.x = 24 * 16 + 8; d.y = 7 * 16 + 14;
+    step(1, [], ['action']); let n = 0; while (g.dialog && n++ < 10) step(1, [], ['action']); const shoes = !!g.save.items.shoes;
+    place('mg_smith', 7, 7, 0); step(1, [], ['action']); n = 0; while (g.dialog && n++ < 10) step(1, [], ['action']); const temp = !!g.save.items.tempered;
+    H().dir = 2; step(1, [], ['attack']); const blade = H().blade; step(20, []); return { shoes, temp, blade }; });
+  check('Durn gives the shoes, Brannock tempers the blade', r.shoes && r.temp && r.blade >= 2, r);
+  // 66. Running Shoes: the dash cuts through enemies and bonks walls; bonk the library shelf for the Book
+  r = await p.evaluate(() => { const g = LV.game; g.save.items.shoes = 1; delete g.save.items.book; place('meadow', 20, 9, 1); g.actors = []; const i = addLog(25, 9); const e = g.actors[i]; e.hp = 1;
+    step(1, [], ['dash']); step(40, []); const killed = e.dead || !g.actors.includes(e);
+    place('mg_library', 7, 8, 0); g.actors = []; step(1, [], ['dash']); step(60, []); const book = !!g.save.items.book; g.dialog = null; return { killed, book }; });
+  check('dash: cuts enemies, bonk knocks the Book down', r.killed && r.book, r);
   console.log(results.join('\n')); console.log('errors', errs);
   await b.close();
   process.exit(results.some(x => x.startsWith('FAIL')) || errs.length ? 1 : 0);
