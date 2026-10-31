@@ -1115,6 +1115,8 @@ def marrowgate():
     m.chest(51, 23, 'heart_shard')
     m.spawn('log', 58, 24)
     m.spawn('soldier', 36, 22)
+    for (x, y) in [(28, 11), (13, 23), (45, 18), (60, 6)]:
+        m.spawn('butterfly', x, y)
     m.entry = [23, 4]
     return m
 
@@ -1555,6 +1557,16 @@ def outer_regions():
         m = region(mid, name, wx, wy, sw, sh, rows, music=music, base=G.THEMES[theme]['ground'])
         m.extra['names'] = names
         m.entry = list(hub or (sw * 8, sh * 7))
+        # wildlife by theme: two creatures and a butterfly or so per screen
+        import random as _r
+        rr = _r.Random(seed * 7)
+        pool = {'fields': ['slime', 'mushroom', 'snake'], 'foothills': ['lizard', 'mole', 'owl'], 'mountain': ['skull', 'owl', 'cyclope'],
+                'lake': ['octopus', 'slime3', 'bluebat'], 'desert': ['snake', 'spiderred', 'skull', 'lizard'], 'coast': ['octopus', 'larva', 'mouse']}[theme]
+        for a in m.areas:
+            spots = [(x, y) for y in range(a[1] + 3, a[1] + a[3] - 3) for x in range(a[0] + 3, a[0] + a[2] - 3) if m.col[y * m.w + x] == OPEN]
+            rr.shuffle(spots)
+            for k, (x, y) in enumerate(spots[:3]):
+                m.spawn(rr.choice(pool) if k < 2 else ('butterfly' if theme in ('fields', 'coast', 'foothills', 'lake') else rr.choice(pool)), x, y)
         out.append(m)
         return m
 
@@ -1717,7 +1729,7 @@ def shadow_regions():
         s_ = shadowize(m, 'Shadow ' + m.name)
         s_.extra['names'] = ['Shadow ' + n for n in m.extra.get('names', [])]
         R = random.Random(sum(map(ord, m.id)))
-        pool = ['captain', 'soldierBlue', 'wisp', 'archer', 'captain', 'wisp']
+        pool = ['skullblue', 'cyclope', 'beast', 'eye', 'bluebat', 'reptile2', 'captain', 'wisp']
         free = [(x, y) for y in range(3, s_.h - 3) for x in range(3, s_.w - 3) if s_.col[y * s_.w + x] == OPEN and s_.col[(y + 1) * s_.w + x] == OPEN and s_.layers['deco'][y * s_.w + x] < 0]
         R.shuffle(free)
         digs = {}
@@ -1772,8 +1784,8 @@ def make_dungeon(mid, name, back, theme, item, crystal, mini, boss, gate):
                 else:
                     m.col[y * m.w + x] = DEEP
     hazard = {'forest': pit, 'thieves': pit, 'ice': pool, 'swamp': lambda *a: pool(*a, kind='flood'), 'turtle': lava}[theme]
-    foes = {'forest': ['wisp', 'log', 'captain'], 'thieves': ['soldier', 'archer', 'captain'], 'ice': ['snapjaw', 'soldierBlue', 'wisp'],
-            'swamp': ['snapjaw', 'log', 'soldierBlue'], 'turtle': ['wisp', 'captain', 'archer']}[theme]
+    foes = {'forest': ['skull', 'bluebat', 'mushroom'], 'thieves': ['soldier', 'archer', 'spiderred'], 'ice': ['slime3', 'skullblue', 'bluebat'],
+            'swamp': ['snake', 'octopus', 'slime'], 'turtle': ['beast', 'eye', 'lizard']}[theme]
     # entrance (1,1)
     door(m, 1, 1, 's')
     m.warp(23, 27, back[0], back[1], back[2], 2)

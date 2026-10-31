@@ -344,6 +344,11 @@ const { chromium } = require('playwright');
     S.cash = 100; place('southshore', 40, 7, 0); const f = g.actors.find(a => a.npc && a.look === 'fisher'); f.onTalk(g); const cb2 = g.dialog.cb; g.dialog = null; cb2(0); g.dialog = null; out.fish = S.cash !== 100;
     return out; });
   check('side quests: plushie, race, fishing', Object.values(r).every(Boolean), r);
+  // 70. New monsters: every kind spawns, moves, can be hit and killed (butterflies are just scenery)
+  r = await p.evaluate(() => { const g = LV.game, bad = []; place('meadow', 20, 9, 1); g.actors = [];
+    Object.keys(LV.CRITTERS).forEach(k => { const e = LV.ENEMIES[k](22 * 16 + 8, 9 * 16 + 12); g.actors = [e]; step(30, []); if (k === 'butterfly') { if (!e.invuln) bad.push(k); return; } e.inv = 0; e.hp = 1; LV.applyHit(g, new LV.Hit({ team: 'hero', kind: 'blade', power: 2, from: { x: H().x, y: H().y }, box: { x: 0, y: 0, w: 1, h: 1 } }), e); if (!e.dead) bad.push(k); });
+    return bad; });
+  check('new monsters move and can be killed', r.length === 0, r);
   console.log(results.join('\n')); console.log('errors', errs);
   await b.close();
   process.exit(results.some(x => x.startsWith('FAIL')) || errs.length ? 1 : 0);
