@@ -37,6 +37,7 @@ LV.open = function (opts) {
   const typing = function (e) { const t = e.target; return t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)); };
   addEventListener('keydown', function (e) {
     if (root.style.display === 'none' || typing(e)) return;
+    if (game.rawKey && game.rawKey(e)) { e.preventDefault(); e.stopPropagation(); return; }   // typing a hero's name
     if (e.code === 'Escape' && !opts.noClose) { LV.close(); e.preventDefault(); return; }
     if (game.input.key(e.code, true)) e.preventDefault();
   }, true);

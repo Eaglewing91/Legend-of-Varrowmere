@@ -113,11 +113,11 @@ const { chromium } = require('playwright');
   check('villager lines follow the story', /Pendant of Valor/.test(r), r);
   // 30. Title: skip the opening, pick an empty file, the intro plays, the file is saved; erase needs two presses
   r = await p.evaluate(() => { const g = LV.game; const st = [0, 1, 2].map(() => LV.memoryStore()); st[1].set(Object.assign(LV.newSave(), { maxHp: 20 })); g.showTitle(st);
-    step(30, []); step(1, [], ['menu']); step(45, []); step(1, [], ['menu']); const files = g.title.stage; step(1, [], ['down']); step(1, [], ['down']); step(1, [], ['menu']); step(40, []);
+    step(30, []); step(1, [], ['menu']); step(45, []); step(1, [], ['menu']); const files = g.title.stage; step(1, [], ['down']); step(1, [], ['down']); step(1, [], ['menu']); const create = g.title.stage === 'create'; step(1, [], ['action']); step(40, []);
     const mode = g.mode, intro = !!(g.dialog && /Pendants/.test(g.dialog.lines[0])), saved = !!(st[2].get() && st[2].get().flags.intro); g.dialog = null;
-    g.showTitle(st); step(45, []); step(1, [], ['menu']); step(1, [], ['up']); step(1, [], ['menu']); const er = g.title.erase; step(1, [], ['down']); step(1, [], ['down']); step(1, [], ['menu']); const still = !!st[1].get(); step(1, [], ['menu']); const gone = !st[1].get();
-    g.mode = 'play'; g.title = null; return { files, mode, intro, saved, er, still, gone }; });
-  check('title, file select, new game and erase', r.files === 'files' && r.mode === 'play' && r.intro && r.saved && r.er && r.still && r.gone, r);
+    g.showTitle(st); step(45, []); step(1, [], ['menu']); step(1, [], ['up']); step(1, [], ['right']); step(1, [], ['menu']); const er = g.title.erase; step(1, [], ['down']); step(1, [], ['down']); step(1, [], ['menu']); const still = !!st[1].get(); step(1, [], ['menu']); const gone = !st[1].get();
+    g.mode = 'play'; g.title = null; return { files, create, mode, intro, saved, er, still, gone }; });
+  check('title, file select, new game and erase', r.files === 'files' && r.create && r.mode === 'play' && r.intro && r.saved && r.er && r.still && r.gone, r);
   // 31. Shop: talk to the trader across the counter, buy with cash; refused when broke or not needed
   r = await p.evaluate(() => { const g = LV.game; place('meadow', 12, 8, 0); g.actors = g.actors.filter(a => a.npc); const t = g.actors.find(a => a.look === 'trader'); t.x = 12 * 16 + 8; t.y = 6 * 16 + 14;
     g.save.cash = 60; H().hp = 4; g.save.items.bow = 1; g.save.arrows = 0;
@@ -436,6 +436,25 @@ const { chromium } = require('playwright');
     out.full = LV.completion(s) === 1000;
     g.save = sv; return out; });
   check('leaderboards: monsters defeated count once, completion 0 to 100%', Object.values(r).every(Boolean), r);
+  // 78. Three heroes: a new file asks for a name and a tunic; files can be copied; people use your name
+  r = await p.evaluate(() => { const g = LV.game, sv = g.save, out = {}; const st = [0, 1, 2].map(() => LV.memoryStore());
+    st[0].set(Object.assign(LV.newSave(), { name: 'ALICE', tunic: 2 })); g.showTitle(st);
+    step(45, []); step(1, [], ['menu']); step(1, [], ['down']); step(1, [], ['menu']); out.create = g.title.stage === 'create';
+    const key = k => g.rawKey({ key: k }); ['b', 'o', 'b', 'x', 'Backspace'].forEach(key); step(1, [], ['right']); step(1, [], ['right']);
+    out.typed = g.title.create.name === 'BOB' && g.title.create.tunic === 2;
+    key('Enter'); step(40, []); out.started = g.mode === 'play' && g.save.name === 'BOB' && g.save.tunic === 2 && LV.IMG.h_walk === LV.tunicImg('h_walk', 2);
+    g.say(['Hello, Wren.']); out.named = /Bob/.test(g.dialog.lines[0]); g.dialog = null;
+    g.showTitle(st); step(45, []); step(1, [], ['menu']); step(1, [], ['up']); step(1, [], ['menu']);   // Copy
+    step(1, [], ['down']); step(1, [], ['menu']); step(1, [], ['menu']);                                  // from file 1... to file 1 (refused)
+    out.refused = !!g.title.msg && g.title.mode === 'copyTo';
+    step(1, [], ['down']); step(1, [], ['down']); step(1, [], ['menu']);                                  // to file 3
+    out.copied = st[2].get() && st[2].get().name === 'ALICE';
+    g.mode = 'play'; g.title = null; g.save = sv; LV.applyTunic(0);
+    // the pause screen draws with everything owned
+    ['bow', 'lantern', 'bombbag', 'hammer', 'shovel', 'pendant_ruins1', 'crystal_vault', 'redmail', 'shield2', 'golden'].forEach(k => { g.save.items[k] = 1; }); g.save.bottles = ['red', 'fairy'];
+    g.paused = true; g.menu = null; g.menuUpdate(); try { g.render(); out.pause = true; } catch (e) { out.pause = e.message; } g.paused = false; g.menu = null;
+    return out; });
+  check('three heroes: name and tunic per file, copy a file, your name in dialogue, pause screen', Object.values(r).every(v => v === true), r);
   console.log(results.join('\n')); console.log('errors', errs);
   await b.close();
   process.exit(results.some(x => x.startsWith('FAIL')) || errs.length ? 1 : 0);

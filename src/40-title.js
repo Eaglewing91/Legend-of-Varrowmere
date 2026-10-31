@@ -122,11 +122,7 @@
     ctx.fillStyle = '#0d0a1c';
     for (let x = 0; x < W; x++) { const y = Math.round(190 + 5 * Math.sin(x * 0.03 + 0.5) - (x > 160 && x < 230 ? 8 * Math.sin((x - 160) / 70 * Math.PI) : 0)); ctx.fillRect(x, y, 1, H - y); }
     for (let x = 2; x < W; x += 3) { const y = Math.round(190 + 5 * Math.sin(x * 0.03 + 0.5) - (x > 160 && x < 230 ? 8 * Math.sin((x - 160) / 70 * Math.PI) : 0)); const sw = Math.round(Math.sin(t * 2 + x * 0.15)); ctx.fillRect(x + sw, y - 3 - (x % 7 === 0 ? 2 : 0), 1, 3); }
-    if (LV.IMG.hero) {
-      const hx = 192, hy = 154;
-      ctx.globalAlpha = 0.85; ctx.drawImage(LV.IMG.hero, 0, LV.HERO_ROW[0] * 32, 16, 32, hx, hy, 16, 32); ctx.globalAlpha = 1;
-      ctx.fillStyle = 'rgba(244,236,208,.35)'; ctx.fillRect(hx + 11, hy + 12, 1, 6);   // moonlight on his shoulder
-    }
+    if (LV.heroFrame) { ctx.globalAlpha = 0.9; LV.heroFrame(ctx, 0, 0, 0, 200, 184); ctx.globalAlpha = 1; }   // Wren, from behind, looking at the castle
     // fireflies
     S.flies.forEach(function (f) { const x = (f.x + Math.sin(t * f.sp + f.ph) * 14 + t * 4) % W, y = f.y + Math.sin(t * f.sp * 1.7 + f.ph) * 6, on = 0.5 + 0.5 * Math.sin(t * 3 + f.ph * 3); if (y > 205) return; ctx.globalAlpha = on; ctx.fillStyle = '#e8ff90'; ctx.fillRect(Math.round(x), Math.round(y), 1, 1); ctx.globalAlpha = on * 0.3; ctx.fillRect(Math.round(x) - 1, Math.round(y) - 1, 3, 3); });
     ctx.globalAlpha = 1;
@@ -202,15 +198,34 @@
       if (T.landed && !T.boom) { T.boom = true; this.sfx('chest'); }
       return;
     }
-    const n = 4;
-    if (p.up) { T.sel = (T.sel + n - 1) % n; T.confirm = null; this.sfx('cursor'); }
-    if (p.down) { T.sel = (T.sel + 1) % n; T.confirm = null; this.sfx('cursor'); }
-    if (!ok) return;
-    if (T.sel === 3) { T.erase = !T.erase; T.confirm = null; this.sfx('cursor'); return; }
-    if (T.erase) {
-      if (T.stores[T.sel].get()) { if (T.confirm === T.sel) { T.stores[T.sel].set(null); T.confirm = null; T.erase = false; this.sfx('kill'); T.shake = 0.2; } else { T.confirm = T.sel; this.sfx('clink'); } }
+    if (T.stage === 'create') {   // choosing a tunic (the name is typed: see rawKey)
+      const C = T.create; C.t += dt;
+      if (p.left) { C.tunic = (C.tunic + LV.TUNICS.length - 1) % LV.TUNICS.length; this.sfx('cursor'); }
+      if (p.right) { C.tunic = (C.tunic + 1) % LV.TUNICS.length; this.sfx('cursor'); }
+      if (p.attack || p.action) this.createFile();
       return;
     }
+    // files: 0-2 the files, 3 Copy, 4 Erase
+    if (T.msgT > 0) T.msgT -= dt;
+    if (p.up) { T.sel = T.sel >= 3 ? 2 : (T.sel + 4) % 5 === 4 ? 3 : T.sel - 1; if (T.sel < 0) T.sel = 3; T.confirm = null; this.sfx('cursor'); }
+    if (p.down) { T.sel = T.sel >= 3 ? 0 : T.sel + 1; T.confirm = null; this.sfx('cursor'); }
+    if ((p.left || p.right) && T.sel >= 3) { T.sel = T.sel === 3 ? 4 : 3; this.sfx('cursor'); }
+    if (!ok) return;
+    const msg = function (t) { T.msg = t; T.msgT = 2; };
+    if (T.sel === 3) { T.mode = T.mode === 'copyFrom' || T.mode === 'copyTo' ? null : 'copyFrom'; T.erase = false; T.confirm = null; this.sfx('cursor'); return; }
+    if (T.sel === 4) { T.mode = T.mode === 'erase' ? null : 'erase'; T.erase = T.mode === 'erase'; T.confirm = null; this.sfx('cursor'); return; }
+    const has = !!T.stores[T.sel].get();
+    if (T.mode === 'erase') {
+      if (has) { if (T.confirm === T.sel) { T.stores[T.sel].set(null); T.confirm = null; T.erase = false; T.mode = null; this.sfx('kill'); T.shake = 0.2; } else { T.confirm = T.sel; this.sfx('clink'); } }
+      return;
+    }
+    if (T.mode === 'copyFrom') { if (!has) { msg('Pick a file that has a game in it.'); this.sfx('clink'); return; } T.copySrc = T.sel; T.mode = 'copyTo'; this.sfx('cursor'); return; }
+    if (T.mode === 'copyTo') {
+      if (T.sel === T.copySrc) { msg('Pick a different file.'); this.sfx('clink'); return; }
+      if (has) { msg('That file is in use. Erase it first.'); this.sfx('clink'); return; }
+      T.stores[T.sel].set(T.stores[T.copySrc].get()); T.mode = null; this.sfx('chest'); msg('File ' + (T.copySrc + 1) + ' copied to file ' + (T.sel + 1) + '.'); return;
+    }
+    if (!has) { T.stage = 'create'; T.create = { slot: T.sel, name: '', tunic: T.sel % LV.TUNICS.length === 0 ? 0 : 0, t: 0 }; this.sfx('door'); return; }
     T.out = 0; T.outFile = T.sel; this.sfx('heart');
   };
   LV.Game.prototype.drawTitle = function () {
@@ -233,11 +248,34 @@
       drawLogo(ctx, T, 58);
       if (T.t - T.logoAt > 1.1 && Math.floor(T.t * 1.6) % 2 === 0) { ctx.textAlign = 'center'; LV.text(ctx, 'PRESS ENTER', 128, 152, '#ffffff'); ctx.textAlign = 'left'; }
       ctx.textAlign = 'center'; LV.text(ctx, 'A Torn Arcade adventure by Eaglewing', 128, 210, '#a898c8'); ctx.textAlign = 'left';
-    } else drawFiles(ctx, this, T);
+    } else if (T.stage === 'create') drawCreate(ctx, this, T); else drawFiles(ctx, this, T);
     if (T.flash > 0) { ctx.fillStyle = 'rgba(255,250,230,' + (T.flash * 0.8).toFixed(3) + ')'; ctx.fillRect(0, 0, W, H); }
     ctx.restore();
     const f = Math.max(T.fade, T.out || 0); if (f > 0) { ctx.fillStyle = 'rgba(' + (T.out ? '255,250,235' : '0,0,0') + ',' + Math.min(1, f).toFixed(3) + ')'; ctx.fillRect(0, 0, W, H); }
   };
+
+  /* ---------- a new hero: type a name, pick a tunic ---------- */
+  function drawCreate(ctx, g, T) {
+    const C = T.create;
+    ctx.fillStyle = 'rgba(6,6,20,.66)'; ctx.fillRect(0, 0, W, H);
+    LV.uiPanel(ctx, 20, 22, 216, 180);
+    ctx.textAlign = 'center'; LV.text(ctx, 'FILE ' + (C.slot + 1) + ': CREATE YOUR HERO', 128, 32, '#f8d870'); ctx.textAlign = 'left';
+    LV.text(ctx, 'NAME', 36, 52, '#c8b890');
+    LV.uiSlot(ctx, 76, 48, 120, 16, true);
+    LV.text(ctx, C.name || '', 82, 52, '#ffffff');
+    if (Math.floor(C.t * 2.5) % 2 === 0 && C.name.length < 8) { ctx.fillStyle = '#f8d048'; ctx.fillRect(82 + LV.textWidth(C.name) + (C.name ? 1 : 0), 52, 4, 8); }
+    if (!C.name) LV.text(ctx, 'WREN', 82, 52, 'rgba(255,255,255,.25)');
+    LV.text(ctx, 'Type up to 8 letters', 82, 67, '#7a7a98');
+    LV.text(ctx, 'TUNIC', 36, 86, '#c8b890');
+    LV.TUNICS.forEach(function (tu, i) {
+      const x = 52 + i * 38, sel = C.tunic === i;
+      LV.uiSlot(ctx, x - 15, 96, 30, 40, sel);
+      LV.heroFrame(ctx, i, 2, sel ? Math.floor(C.t * 6) : 0, x, 130);
+    });
+    ctx.textAlign = 'center'; LV.text(ctx, '< ' + LV.TUNICS[C.tunic].name + ' >', 128, 142, '#ffffff');
+    LV.text(ctx, 'Left/Right: tunic   Enter: begin', 128, 166, '#a8a4c0');
+    LV.text(ctx, 'Backspace: delete   Esc: back', 128, 178, '#7a7a98'); ctx.textAlign = 'left';
+  }
 
   /* ---------- file select ---------- */
   function placeName(s) { const d = LV.MAPS[s.map]; if (!d) return 'Varrowmere'; const n = d.floorName ? d.name + ' ' + d.floorName : d.name; return n || 'Varrowmere'; }
@@ -246,36 +284,40 @@
     ctx.fillStyle = 'rgba(6,6,20,' + (0.62 * slide).toFixed(3) + ')'; ctx.fillRect(0, 0, W, H);
     // a small logo at the top
     const L = S.logo; ctx.drawImage(L.img, 0, 0, L.w, L.h, Math.round(128 - L.w * 0.3), 4, Math.round(L.w * 0.6), Math.round(L.h * 0.6));
-    ctx.textAlign = 'center'; LV.text(ctx, T.erase ? 'ERASE WHICH FILE?' : 'CHOOSE YOUR ADVENTURE', 128, 34, T.erase ? '#ff6a5a' : '#f8d870'); ctx.textAlign = 'left';
+    const head = T.mode === 'erase' ? ['ERASE WHICH FILE?', '#ff6a5a'] : T.mode === 'copyFrom' ? ['COPY WHICH FILE?', '#7ad0ff'] : T.mode === 'copyTo' ? ['COPY FILE ' + (T.copySrc + 1) + ' TO WHICH FILE?', '#7ad0ff'] : ['CHOOSE YOUR ADVENTURE', '#f8d870'];
+    ctx.textAlign = 'center'; LV.text(ctx, head[0], 128, 34, head[1]); ctx.textAlign = 'left';
     for (let i = 0; i < 3; i++) {
       const x = 16 + Math.round((1 - slide) * (i % 2 ? 60 : -60)), y = 46 + i * 42, sel = T.sel === i, s = T.stores[i].get();
-      LV.drawPanel(ctx, x, y, 224, 38, 'panelbg');
+      LV.uiPanel(ctx, x, y, 224, 38, sel ? { border: T.mode === 'erase' ? '#c84a3a' : '#c8a040', fill: '#1a2240' } : null);
       if (sel) {   // a pulsing gold frame and a pointer
         const a = 0.55 + 0.45 * Math.sin(T.t * 6); ctx.globalAlpha = a; ctx.strokeStyle = T.erase ? '#ff5a4a' : '#f8d048'; ctx.lineWidth = 1; ctx.strokeRect(x + 0.5, y + 0.5, 223, 37); ctx.globalAlpha = 1;
         const px = x - 9 + Math.round(Math.sin(T.t * 8)); ctx.fillStyle = '#2a1006'; ctx.fillRect(px - 1, y + 14, 7, 9); ctx.fillStyle = '#f8d048'; for (let j = 0; j < 4; j++) ctx.fillRect(px + j, y + 15 + j, 1, 7 - j * 2);
       }
-      ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(x + 6, y + 4, 22, 30);
+      ctx.fillStyle = '#0a1024'; ctx.fillRect(x + 6, y + 4, 22, 30);
       LV.text(ctx, String(i + 1), x + 9, y + 5, '#c8b890');
       if (!s) {
-        if (LV.IMG.hero) { ctx.globalAlpha = sel ? 0.55 : 0.25; ctx.filter = 'brightness(0.2)'; ctx.drawImage(LV.IMG.hero, 0, LV.HERO_ROW[2] * 32, 16, 32, x + 9, y + 3, 16, 32); ctx.filter = 'none'; ctx.globalAlpha = 1; }
+        ctx.save(); ctx.beginPath(); ctx.rect(x + 6, y + 4, 22, 30); ctx.clip(); ctx.globalAlpha = sel ? 0.55 : 0.25; ctx.filter = 'brightness(0.15)'; LV.heroFrame(ctx, 0, 2, 0, x + 17, y + 30); ctx.filter = 'none'; ctx.globalAlpha = 1; ctx.restore();
         LV.text(ctx, 'NEW ADVENTURE', x + 38, y + 10, sel ? '#ffffff' : '#a0a0b8');
-        LV.text(ctx, 'Begin in Thistledown', x + 38, y + 22, '#7a7a98');
+        LV.text(ctx, 'Create a hero and begin', x + 38, y + 22, '#7a7a98');
         continue;
       }
-      if (LV.IMG.hero) { const col = sel && !T.erase ? Math.floor(T.t * 6) % 4 : 0; ctx.drawImage(LV.IMG.hero, col * 16, LV.HERO_ROW[2] * 32, 16, 32, x + 9, y + 3, 16, 32); }
-      LV.text(ctx, (s.name || 'WREN').toUpperCase(), x + 36, y + 5, '#ffffff');
+      ctx.save(); ctx.beginPath(); ctx.rect(x + 6, y + 4, 22, 30); ctx.clip(); LV.heroFrame(ctx, s.tunic || 0, 2, sel && !T.mode ? Math.floor(T.t * 6) : 0, x + 17, y + 30); ctx.restore();
+      LV.text(ctx, (s.name || 'WREN').toUpperCase(), x + 36, y + 5, '#ffffff'); if (s.tunic) { ctx.fillStyle = 'rgb(' + LV.TUNICS[s.tunic].main.join(',') + ')'; ctx.fillRect(x + 36 + LV.textWidth((s.name || 'WREN').toUpperCase()) + 4, y + 7, 4, 4); }
       const hearts = s.maxHp / 4;
-      for (let k = 0; k < Math.min(20, hearts); k++) LV.heart(ctx, x + 36 + (k % 10) * 8, y + 16 + Math.floor(k / 10) * 7, LV.clamp(s.maxHp - k * 4, 0, 4));
-      LV.text(ctx, placeName(s).slice(0, 22), x + 36, y + 28, '#9a96b8');
+      for (let k = 0; k < Math.min(20, hearts); k++) LV.heart(ctx, x + 36 + (k % 10) * 8, y + 13 + Math.floor(k / 10) * 6, LV.clamp(s.maxHp - k * 4, 0, 4));
+      LV.text(ctx, placeName(s).slice(0, 22), x + 36, y + 28 + (hearts > 10 ? 1 : 0), '#9a96b8');
       PENDANTS.forEach(function (p, j) { gem(ctx, x + 182 + j * 12, y + 10, p[1], p[2], !!(s.items && s.items[p[0]])); });
       const tm = Math.floor((s.time || 0) / 60); ctx.textAlign = 'right'; LV.text(ctx, Math.floor(tm / 60) + 'h ' + ('0' + tm % 60).slice(-2) + 'm', x + 216, y + 24, '#c8b890'); ctx.textAlign = 'left';
       if (T.confirm === i) { ctx.fillStyle = 'rgba(120,10,10,.75)'; ctx.fillRect(x + 4, y + 4, 216, 30); ctx.textAlign = 'center'; LV.text(ctx, 'PRESS ENTER AGAIN TO ERASE', x + 112, y + 15, '#ffd0c8'); ctx.textAlign = 'left'; }
     }
-    // erase toggle and the key hints
-    const ey = 176, sel = T.sel === 3;
-    LV.drawPanel(ctx, 80, ey, 96, 18, 'panelbg');
-    if (sel) { ctx.globalAlpha = 0.55 + 0.45 * Math.sin(T.t * 6); ctx.strokeStyle = '#f8d048'; ctx.strokeRect(80.5, ey + 0.5, 95, 17); ctx.globalAlpha = 1; }
-    ctx.textAlign = 'center'; LV.text(ctx, T.erase ? 'CANCEL' : 'ERASE A FILE', 128, ey + 5, sel ? '#ffffff' : '#b0b0c8');
-    LV.text(ctx, 'Up/Down choose   Enter start   Esc close', 128, 204, '#8a86a8'); ctx.textAlign = 'left';
+    // copy and erase, a message line, and the key hints
+    [[3, 46, T.mode === 'copyFrom' || T.mode === 'copyTo' ? 'CANCEL' : 'COPY A FILE'], [4, 134, T.mode === 'erase' ? 'CANCEL' : 'ERASE A FILE']].forEach(function (b) {
+      const bs = T.sel === b[0]; LV.uiPanel(ctx, b[1], 176, 76, 18, bs ? { border: '#c8a040', fill: '#1a2240' } : null);
+      if (bs) { ctx.globalAlpha = 0.55 + 0.45 * Math.sin(T.t * 6); ctx.strokeStyle = '#f8d048'; ctx.strokeRect(b[1] + 0.5, 176.5, 75, 17); ctx.globalAlpha = 1; }
+      ctx.textAlign = 'center'; LV.text(ctx, b[2], b[1] + 38, 181, bs ? '#ffffff' : '#b0b0c8'); ctx.textAlign = 'left';
+    });
+    ctx.textAlign = 'center';
+    if (T.msgT > 0) LV.text(ctx, T.msg, 128, 200, '#ffd27a');
+    LV.text(ctx, 'Arrows choose   Enter select   Esc close', 128, 210, '#8a86a8'); ctx.textAlign = 'left';
   }
 })();
