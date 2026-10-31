@@ -35,8 +35,8 @@ LV.drawDialog = (function (orig) {
 /* ---------- the shop: talk to the trader ---------- */
 LV.SHOP = [
   { label: 'First Aid Kit (3 hearts)', price: 20, buy: function (g) { const h = g.hero; if (h.hp >= h.maxHp) return 'You are already in good shape.'; h.hp = Math.min(h.maxHp, h.hp + 12); g.sfx('heart'); } },
-  { label: '10 Arrows', price: 30, buy: function (g) { const s = g.save; if (!s.items.bow) return 'You have no bow to shoot them with.'; if (s.arrows >= 30) return 'Your quiver is full.'; s.arrows = Math.min(30, s.arrows + 10); } },
-  { label: '5 Bombs', price: 50, buy: function (g) { const s = g.save; if (!s.items.bombbag) return 'You need a bomb bag first.'; if (s.bombs >= 10) return 'Your bomb bag is full.'; s.bombs = Math.min(10, s.bombs + 5); } }
+  { label: '10 Arrows', price: 30, buy: function (g) { const s = g.save; if (!s.items.bow) return 'You have no bow to shoot them with.'; if (s.arrows >= LV.capA(s)) return 'Your quiver is full.'; s.arrows = Math.min(LV.capA(s), s.arrows + 10); } },
+  { label: '5 Bombs', price: 50, buy: function (g) { const s = g.save; if (!s.items.bombbag) return 'You need a bomb bag first.'; if (s.bombs >= LV.capB(s)) return 'Your bomb bag is full.'; s.bombs = Math.min(LV.capB(s), s.bombs + 5); } }
 ];
 LV.Game.prototype.openShop = function () {
   const self = this, opts = LV.SHOP.map(function (it) { return it.label + '  $' + it.price; }).concat(['Nothing, thanks']);

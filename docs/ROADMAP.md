@@ -44,13 +44,15 @@ Status key: [x] done  [~] in progress  [ ] to do
 | 12 | Shadow Keep (needs all 7 Crystals) | shadow | Sunfire Arrows | [x] (gate to change to 7) |
 | + | Bonus: the Arcade Vault (optional, hard) | light | Golden Blade | [ ] |
 
-## Items still to add
+## Items
 
-Done: Running Shoes (dash, bonk), tempered blade (Durn quest), Book of Old Script (library bonk), Shovel (dig spots, dig field), Bottles (Red/Green Potion, fairy revive; more bottles still to place).
-To do: Sledgehammer (pegs), Kazoo (call the bird: fast travel), Bug Net,
-4 Bottles (potions, fairies), Book of Old Script, Frost Rod, three Medals (Quake, Flame, Storm), Brick Wand,
-Riot Shield cane, Invisibility Cloak, Boxing Gloves (dark rocks), sword upgrades (smith, then the golden blade),
-Blue and Red Mail, bomb and quiver upgrades, the energy meter used by rods, wands, medals and the cloak.
+Done: Running Shoes, tempered blade, Book of Old Script (reads desert script), Shovel, 4 Bottles (Bellamy, Vale Mill, Southshore dig, desert grotto),
+Red/Green Potions, fairies (Bug Net from the Eastvale collector; fairies in the Whisperwood glade), Kazoo + the bird (fast travel to visited regions),
+Frost Rod (Icemere cave, freeze and shatter), Quake Medal (desert dig named by the old script), Flame Medal (Eagle Crag, behind pegs),
+Storm Medal (graveyard, ringed by dark boulders), Invisibility Cloak (the Duke's crypt: dash into his gravestone), Riot Shield (Skyridge, behind pegs),
+energy meter + energy jars, half energy (frost spirit), wishing wells (bomb bag and quiver upgrades, mine and desert tent).
+Placed in dungeons still to build: Sledgehammer (Bonehollow), Boxing Gloves (Thieves' Den), Blue Mail (Frostmere), Brick Wand (Mirefen), Red Mail (Turtleback),
+Golden Blade (the Arcade Vault).
 
 ## Secrets (~150)
 

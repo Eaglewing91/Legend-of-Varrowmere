@@ -1,5 +1,7 @@
 /* ================= Items: the menu, bombs, the Bow, the Ricochet Dice, the Lantern =================
    Item use works as in the original: pick one in the menu, press the item button to use it. */
+LV.capB = function (s) { return 10 + 5 * (s.bombUp || 0); };
+LV.capA = function (s) { return 30 + 10 * (s.arrowUp || 0); };
 LV.C.CRACK = 9; LV.C.TORCH = 10; LV.C.TORCH_LIT = 11;
 (function () {
   const blocks = LV.World.prototype.blocks;
@@ -150,10 +152,10 @@ LV.Dice.prototype.draw = function (ctx, ox, oy) {
   const open = LV.Game.prototype.openChest;
   LV.Game.prototype.openChest = function (mapId, key, tx, ty, ch) {
     const s = this.save, it = ch.item;
-    if (it === 'bombs') { s.items.bombbag = 1; s.bombs = Math.min(10, s.bombs + 10); }
-    else if (it === 'bow') { s.items.bow = 1; s.arrows = Math.min(30, s.arrows + 20); }
+    if (it === 'bombs') { s.items.bombbag = 1; s.bombs = Math.min(LV.capB(s), s.bombs + 10); }
+    else if (it === 'bow') { s.items.bow = 1; s.arrows = Math.min(LV.capA(s), s.arrows + 20); }
     else if (it === 'dice') s.items.dice = 1;
-    else if (it === 'arrows') s.arrows = Math.min(30, s.arrows + 10);
+    else if (it === 'arrows') s.arrows = Math.min(LV.capA(s), s.arrows + 10);
     if (['bombs', 'bow', 'dice', 'arrows'].indexOf(it) >= 0) {
       s.opened[mapId + ':' + key] = 1; this.world.layers.deco[ty * this.world.w + tx] = LV.CHEST_OPEN; this.sfx('chest');
       if (!s.equip && it !== 'arrows') s.equip = it;

@@ -12,7 +12,7 @@ Collision codes: 0 open, 1 solid, 2 deep water, 3 pit, 4 ledge (jump south), 5 l
 import json, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 OW, IN, CV, OB = 0, 1, 2, 3
-OPEN, SOLID, DEEP, PIT, LEDGE, LOW, BUSH, ROCK, SHALLOW, CRACK, TORCH, TORCH_LIT, LOCKED, BIGLOCK, BLOCK, PLATE, SHUTTER, BIGCHEST, LEVER, SWITCH, POST, _21, PEDESTAL, BARRIER = range(24)
+OPEN, SOLID, DEEP, PIT, LEDGE, LOW, BUSH, ROCK, SHALLOW, CRACK, TORCH, TORCH_LIT, LOCKED, BIGLOCK, BLOCK, PLATE, SHUTTER, BIGCHEST, LEVER, SWITCH, POST, _21, PEDESTAL, BARRIER, PEG, DARKROCK = range(26)
 
 
 
@@ -1105,6 +1105,10 @@ def marrowgate():
     ]
     for (x, y, look, roam, talk) in people:
         m.spawn('villager', x, y, look=look, roam=roam, talk=talk, digfield=(look == 'fisher'))
+    for (x, y) in [(50, 23), (52, 23), (51, 24), (50, 25), (52, 25), (50, 24), (52, 24)]:
+        m.col[y * m.w + x] = DARKROCK
+        m.layers['deco'][y * m.w + x] = -1
+    m.chest(51, 23, 'heart_shard')
     m.spawn('log', 58, 24)
     m.spawn('soldier', 36, 22)
     m.entry = [23, 4]
@@ -1194,6 +1198,8 @@ def whisperwood():
     m.sign(36, 6, 'A crude sign: KEEP OWT. THIS MEENS YOU. ALSO YOU.')
     m.chest(7, 4, 'heart_shard')
     m.spawn('villager', 10, 18, look='baker', roam=0, dir=2, heal=True, ghost=True, talk=[[None, ['I am the spirit of this glade. Rest a moment.', 'The Tangle to the east turns travellers round. Keep heading north and the trees will let you pass.']]])
+    m.spawn('fairy', 5, 18)
+    m.spawn('fairy', 11, 20)
     m.sign(22, 33, 'An overturned ore cart. Fresh scratches on the side: "DURN WOZ ERE". Tracks lead north into the trees.')
     m.extra['digs'] = {'40,35': 'heart_shard', '25,32': 'cash20', '5,33': 'cash5'}
     secret_cave(m, 40, 31, 'grotto6', ['cash100'], 'A bandit stash. Someone has written IOU on every coin.')
@@ -1561,7 +1567,7 @@ def outer_regions():
     # Frostspire Peaks (5-9, 0-1)
     m = R('frostspire', 'Frostspire Peaks', 5, 0, 5, 2, 'mountain', [('w', 8, 9), ('e', 6, 7), ('s', 20, 21)], 23,
           ['West Slope', 'Hermit Ledge', 'The Saddle', 'Eagle Crag', 'East Slope', 'Scree Fields', 'Old Mine', 'Frost Gate', 'Lower Crags', 'Ridge Road'],
-          hub=(40, 14), keep=[(18, 3, 22, 6), (54, 3, 58, 6), (38, 4, 41, 6)])
+          hub=(40, 14), keep=[(18, 3, 22, 6), (54, 3, 58, 6), (37, 3, 43, 8)])
     m.stamp(OW, 10, 31, 18, 3, 4, 3, col=SOLID)
     m.warp(19, 5, 'fs_hermit', 7, 12, 0)
     m.warp(20, 5, 'fs_hermit', 8, 12, 0)
@@ -1571,25 +1577,44 @@ def outer_regions():
     m.warp(56, 5, 'fs_mine', 8, 12, 0)
     m.sign(58, 7, 'OLD MINE|Closed. The ore ran out. Then the miners ran out.')
     m.chest(39, 4, 'heart_shard')
-    m.sign(41, 7, 'EAGLE CRAG|A great nest sits on the peak. The bird is away. A note: BACK SOON, GONE FISHING.')
+    m.chest(41, 4, 'flame')
+    for x in range(38, 43):
+        m.solid(x, 6, 1, 1, PEG)
+    m.sign(37, 8, 'EAGLE CRAG|A great nest sits on the peak. The bird is away. A note: BACK SOON, GONE FISHING.')
     m.extra['digs'] = {'70,20': 'cash50', '12,22': 'heart_shard'}
     secret_cave(m, 64, 20, 'grotto7', ['heart_shard'], 'Frost-cold air. Someone left a heart shard and a very sad snowman.')
     for (k, x, y) in [('soldierBlue', 30, 12), ('archer', 50, 8), ('captain', 60, 16), ('log', 14, 18), ('wisp', 44, 20), ('soldier', 70, 10), ('archer', 25, 22)]:
         m.spawn(k, x, y)
     out.append(interior('fs_hermit', "Hollis's Cave", ('frostspire', 20, 6), 'house', npcs=[
-        (7, 7, dict(look='scholar', roam=4, talk=[[None, ['Hollis. Hermit. I came up here to get away from people, and the people keep coming up here.', 'The bird on Eagle Crag? It carries travellers anywhere they have been. You would need a tune to call it.']]]))]))
-    mine = interior('fs_mine', 'Old Mine', ('frostspire', 56, 6), 'house', chests=[(5, 4, 'cash100'), (7, 4, 'bombs')])
+        (7, 7, dict(look='scholar', roam=4, gives='kazoo', got=['Hollis: Here. My kazoo. Play it on Eagle Crag and the bird will come.', 'You got the Kazoo! Play it high on Frostspire to call the great bird.'], talk=[[None, ['Hollis. Hermit. I came up here to get away from people, and the people keep coming up here.', 'The bird on Eagle Crag? It carries travellers anywhere they have been. You would need a tune to call it.']]]))]))
+    mine = interior('fs_mine', 'Old Mine', ('frostspire', 56, 6), 'house', chests=[(5, 4, 'cash100'), (7, 4, 'bombs')], npcs=[
+        (10, 9, dict(look='scholar', roam=0, dir=2, ghost=True, well=True, talk=[[None, ['A wishing well, deep in the mine. A voice echoes up: "Throw in a hundred, I will make it worth your while."']]]))])
     mine.music = 'cave'
     out.append(mine)
     # Skyridge (10-11, 0)
     m = R('skyridge', 'Skyridge', 10, 0, 2, 1, 'mountain', [('w', 6, 7), ('s', 8, 9)], 31, ['Skyridge West', 'Skyridge East'], hub=(16, 7))
-    m.chest(28, 3, 'cash50')
+    m.chest(28, 3, 'riot')
+    for x in (27, 28, 29):
+        m.solid(x, 4, 1, 1, PEG)
+    m.solid(27, 3, 1, 1, PEG)
+    m.solid(29, 3, 1, 1, PEG)
     m.spawn('archer', 20, 4)
     m.spawn('soldierBlue', 10, 9)
     # Icemere (10-11, 1-3): a cold lake with islands
     m = R('icemere', 'Icemere', 10, 1, 2, 3, 'lake', [('n', 8, 9), ('w', 18, 19), ('w', 32, 33)], 41,
           ['North Shore', 'Frost Bay', 'Mid Isles', 'East Isles', 'South Shore', 'Thaw Point'], hub=(4, 20))
+    cave = interior('im_cave', 'Frost Cave', ('icemere', 24, 13), 'house', chests=[(7, 4, 'frost')], npcs=[
+        (11, 9, dict(look='scholar', roam=0, dir=3, ghost=True, gives='halfEnergy', got=['A frost spirit breathes on you. You feel lighter.', 'Your energy use is halved!'], talk=[[None, ['The cold is mine. Take the rod. And take this blessing: you will tire half as fast.']]]))])
+    cave.music = 'cave'
+    out.append(cave)
     m.sign(6, 4, 'ICEMERE|The water never thaws. The fish never complain.')
+    m.stamp(OW, 10, 31, 23, 10, 4, 3, col=SOLID)
+    m.warp(24, 12, 'im_cave', 7, 12, 0)
+    m.warp(25, 12, 'im_cave', 8, 12, 0)
+    for y in (13, 14):
+        for x in range(22, 28):
+            m.put('ground', OW, (x + y) % 2, 9, x, y)
+            m.col[y * m.w + x] = OPEN
     m.chest(28, 38, 'heart_shard')
     m.spawn('villager', 5, 36, look='fisher', roam=8, talk=[[None, ['Ice fishing! Well, lake fishing. The ice gave up years ago.', 'There is a cave across the water where the cold comes from. Nobody goes in. Nobody can swim that far.']]])
     for (k, x, y) in [('snapjaw', 12, 14), ('snapjaw', 20, 28), ('snapjaw', 15, 22), ('soldier', 5, 28)]:
@@ -1599,12 +1624,13 @@ def outer_regions():
           ['Vale West', 'Millfield', 'Vale Cross', 'Long Acre', 'Vale East'], hub=(40, 7), keep=[(34, 2, 38, 6)])
     house(m, 34, 2, ('ev_mill', 7, 12, 0))
     signboard(m, 41, 8, 'EASTVALE|Turnips, more turnips, and on special occasions, turnips.')
+    m.spawn('villager', 52, 9, look='baker', roam=8, gives='net', got=['Here, take my old Bug Net. I am too old for bugs. I am into rocks now.', 'You got the Bug Net! Catch fairies in empty bottles.'], talk=[[None, ['I collect bugs. And fairies, if you can catch them. Try the glade in Whisperwood.']]])
     m.spawn('villager', 44, 9, look='farmer', roam=12, talk=[[None, ['The Chancellor taxes turnips now. So we grow them under other turnips. Hidden turnips. Tax-free.']]])
     m.extra['digs'] = {'64,10': 'heart_shard', '12,9': 'cash20'}
     for (k, x, y) in [('log', 20, 8), ('log', 56, 6), ('soldier', 30, 10), ('soldier', 70, 8)]:
         m.spawn(k, x, y)
     out.append(interior('ev_mill', 'Vale Mill', ('eastvale', 36, 7), 'house', npcs=[
-        (7, 7, dict(look='baker', roam=4, talk=[[None, ['Flour, flour everywhere. I sneeze in the shape of bread now.']]]))], chests=[(6, 4, 'cash50')]))
+        (7, 7, dict(look='baker', roam=4, talk=[[None, ['Flour, flour everywhere. I sneeze in the shape of bread now.']]]))], chests=[(6, 4, 'bottle')]))
     # Riverlands (8-9, 3)
     m = R('riverlands', 'Riverlands', 8, 3, 2, 1, 'fields', [('n', 12, 13), ('e', 4, 5), ('s', 8, 9)], 61, ['Ford', 'Reedbank'], hub=(14, 7))
     signboard(m, 16, 9, 'SOUTH: the Sunscar Desert. Bring water. Bring more water than that.')
@@ -1616,9 +1642,17 @@ def outer_regions():
     for (x, y) in [(5, 31), (8, 31), (11, 31), (5, 34), (8, 34), (11, 34), (5, 37), (11, 37)]:
         m.put('deco', OW, 36, 5, x, y)
         m.col[y * m.w + x] = SOLID
+    m.extra['bonk'] = {'11,37': ['sm_crypt', 7, 12]}
+    m.chest(13, 32, 'storm')
+    for (x, y) in [(12, 32), (14, 32), (12, 33), (13, 33), (14, 33)]:
+        m.col[y * m.w + x] = DARKROCK
+    m.sign(10, 38, 'THE DUKE OF SALTMARSH|He took his secrets to the grave. Also his cloak. He was very attached to it.')
     m.sign(8, 37, 'Here lies Grimsby. He borrowed money from the wrong man. And the right man. And several others.')
     m.extra['digs'] = {'8, 36'.replace(' ', ''): 'heart_shard', '20,20': 'cash20', '25,40': 'cash50'}
     m.spawn('villager', 16, 33, look='scholar', roam=6, talk=[[None, ['I tend the graves. Quiet work. The residents never complain about the hours.', 'There is a cloak buried with the old Duke, they say. A cloak that hides you from sight.']]])
+    crypt = interior('sm_crypt', "The Duke's Crypt", ('saltmarsh', 11, 38), 'house', chests=[(7, 4, 'cloak')])
+    crypt.music = 'cave'
+    out.append(crypt)
     secret_cave(m, 22, 14, 'grotto8', ['heart_shard', 'arrows'], 'A smugglers\' nook, smelling of salt and bad decisions.')
     for (k, x, y) in [('log', 20, 10), ('soldier', 24, 22), ('wisp', 10, 28), ('archer', 26, 34), ('snapjaw', 15, 51)]:
         m.spawn(k, x, y)
@@ -1630,19 +1664,20 @@ def outer_regions():
     m.stamp(OW, 4, 31, 37, 4, 4, 3, col=SOLID)
     m.sign(36, 8, 'Old script is carved into the stone: [you cannot read it]')
     m.extra['oldscript'] = {'36,8': 'The sun temple keeps its gift for those who read. Stand where the shadow of the third pillar falls at noon, and dig.'}
-    m.extra['digs'] = {'44,10': 'heart_shard', '10,40': 'cash50', '60,52': 'cash100', '28,48': 'bombs'}
+    m.extra['digs'] = {'44,10': 'heart_shard', '40,9': 'quake', '10,40': 'cash50', '60,52': 'cash100', '28,48': 'bombs'}
     house(m, 20, 22, ('ds_camp', 7, 12, 0))
     m.spawn('villager', 27, 28, look='trader', roam=6, talk=[[None, ['Welcome to the nomad camp! We move every day. Today we moved zero metres. Tomorrow, who knows?']]])
-    secret_cave(m, 48, 44, 'grotto9', ['heart_shard', 'cash50'], 'A cool cellar under the sand. Somebody has been storing ice here. Somebody very optimistic.')
+    secret_cave(m, 48, 44, 'grotto9', ['heart_shard', 'bottle'], 'A cool cellar under the sand. Somebody has been storing ice here. Somebody very optimistic.')
     for (k, x, y) in [('captain', 30, 12), ('archer', 50, 16), ('wisp', 14, 30), ('wisp', 44, 34), ('soldierBlue', 56, 26), ('log', 12, 14), ('captain', 36, 46), ('archer', 20, 50)]:
         m.spawn(k, x, y)
     out.append(interior('ds_camp', 'Nomad Tent', ('desert', 22, 27), 'house', npcs=[
+        (11, 9, dict(look='scholar', roam=0, dir=3, ghost=True, well=True, talk=[[None, ['A well in the tent. Do not ask. Throw in a hundred and wish.']]])),
         (7, 7, dict(look='trader', roam=4, talk=[[None, ['The ruins north of here are covered in old script. My grandmother could read it. She read it to me as bedtime stories.', 'They were mostly about taxes.']]]))], chests=[(6, 4, 'arrows')]))
     # Southshore (0-5, 7): the south coast below the towns
     m = R('southshore', 'Southshore', 0, 7, 6, 1, 'coast', [('n', 14, 15), ('n', 35, 39)], 97,
           ['Fen Beach', 'Shell Cove', 'Marrow Sands', 'Pier Point', 'Long Beach', 'Smugglers\' Bay'], sea='s', hub=(48, 5))
     m.spawn('villager', 40, 6, look='fisher', roam=10, talk=[[None, ['Best beach in Varrowmere. Only beach in Varrowmere. Both true.']]])
-    m.extra['digs'] = {'70,6': 'heart_shard', '20,5': 'cash20', '88,6': 'cash50'}
+    m.extra['digs'] = {'70,6': 'heart_shard', '30,6': 'bottle', '20,5': 'cash20', '88,6': 'cash50'}
     for (k, x, y) in [('log', 26, 5), ('soldier', 60, 5), ('snapjaw', 50, 11)]:
         m.spawn(k, x, y)
     return out

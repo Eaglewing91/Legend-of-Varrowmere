@@ -13,12 +13,12 @@ const STAGES = [
   { name: 'Shadow Highlands and the Hollow Quarry', maps: ['s_highlands', 'quarry', 'grotto4'], items: ['lantern', 'bombbag', 'bow', 'grapple', 'rod', 'dawnblade', 'mirror', 'fins', 'glove'], flags: { sluice: 1, pendant_shrine: 1, barrier: 1 } },
   { name: 'The Shadow Keep', maps: ['keep'], items: ['lantern', 'bombbag', 'bow', 'grapple', 'rod', 'dawnblade', 'mirror', 'fins', 'glove', 'shield2'], flags: { sluice: 1, pendant_shrine: 1, barrier: 1, crystals: 1 } },
   // with everything in hand, every chest in the game (secrets included) must be reachable
-  { name: 'Clean-up (all items)', all: true, items: ['lantern', 'bombbag', 'bow', 'grapple', 'rod', 'dawnblade', 'mirror', 'fins', 'glove', 'shield2'], flags: { sluice: 1, pendant_shrine: 1, barrier: 1, crystals: 1 } }
+  { name: 'Clean-up (all items)', all: true, items: ['lantern', 'bombbag', 'bow', 'grapple', 'rod', 'dawnblade', 'mirror', 'fins', 'glove', 'shield2', 'hammer', 'gloves', 'shovel', 'wand'], flags: { sluice: 1, pendant_shrine: 1, barrier: 1, crystals: 1 } }
 ];
 // secrets meant for a return visit with a later item
 // reached only by crossing with the Twin Mirror (checked by mech test 'mirror secret')
 const MIRROR = { grove: ['13,7'] };
-const LATER = { willowfen_s: ['21,20'], grove: ['13,7'], shrine: ['8,20'], s_meadow: ['1,9'], s_riverhead: ['13,11'] };
+const LATER = { marrowgate: ['51,23'], skyridge: ['28,3'], saltmarsh: ['13,32'], frostspire: ['39,4', '41,4'], willowfen_s: ['21,20'], grove: ['13,7'], shrine: ['8,20'], s_meadow: ['1,9'], s_riverhead: ['13,11'] };
 (async () => {
   const b = await chromium.launch(); const p = await b.newPage();
   await p.goto('file://' + process.cwd() + '/build/dev.html#mute'); await p.waitForFunction(() => window.ready);
@@ -35,7 +35,7 @@ const LATER = { willowfen_s: ['21,20'], grove: ['13,7'], shrine: ['8,20'], s_mea
           // revealed chests count as present
           g.enter(id, 0, 0, 0); const w = g.world;
           Object.keys(w.def.reveal || {}).forEach(k => g.openShutters(k, true));
-          const walk = c => [C.OPEN, C.LOCKED, C.BIGLOCK, C.SHUTTER, C.PLATE, C.SHALLOW, C.CRACK, C.BUSH].includes(c) || (c === C.DEEP && it.fins) || (c === C.ROCK && it.glove);
+          const walk = c => [C.OPEN, C.LOCKED, C.BIGLOCK, C.SHUTTER, C.PLATE, C.SHALLOW, C.CRACK, C.BUSH].includes(c) || (c === C.DEEP && it.fins) || (c === C.ROCK && it.glove) || (c === C.PEG && it.hammer) || (c === C.DARKROCK && it.gloves);
           // start from every warp tile (map entrances) and the entry point
           const starts = (w.warps || []).map(x => [x.x, x.y]).concat([LV.MAPS[id].entry]).concat(carry.filter(t => walk(w.c(t[0], t[1]))));
           const seen = new Set(); const q = [];

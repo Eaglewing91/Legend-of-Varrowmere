@@ -65,8 +65,8 @@ LV.Game.prototype.openChest = (function (orig) {
       const m = /^cash(\d+)$/.exec(it);
       if (m) { s.cash = Math.min(999, s.cash + +m[1]); this.sfx('cash'); this.say(['You dug up ' + m[1] + ' cash!']); return; }
       if (it === 'heart_shard') { s.shards++; if (s.shards % 4 === 0) { s.maxHp += 4; this.hero.maxHp = s.maxHp; this.hero.hp = s.maxHp; } this.sfx('chest'); this.say(['You dug up a Heart Shard!', 'Shards collected: ' + (s.shards % 4) + '/4.']); return; }
-      if (it === 'bombs') { s.bombs = Math.min(10, s.bombs + 5); this.sfx('cash'); this.say(['You dug up some bombs. Probably still good.']); return; }
-      if (it === 'arrows') { s.arrows = Math.min(30, s.arrows + 10); this.sfx('cash'); this.say(['You dug up a bundle of arrows.']); return; }
+      if (it === 'bombs') { s.bombs = Math.min(LV.capB(s), s.bombs + 5); this.sfx('cash'); this.say(['You dug up some bombs. Probably still good.']); return; }
+      if (it === 'arrows') { s.arrows = Math.min(LV.capA(s), s.arrows + 10); this.sfx('cash'); this.say(['You dug up a bundle of arrows.']); return; }
       void keepDeco;
     }
     return orig.call(this, mapId, key, tx, ty, ch);
