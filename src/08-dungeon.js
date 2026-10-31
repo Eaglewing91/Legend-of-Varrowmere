@@ -62,9 +62,16 @@ LV.Game.prototype.tryPush = function (h, dt) {
 LV.Game.prototype.openDoorAt = function (tx, ty, code) {
   // doors are two tiles wide: open the matching neighbour too
   const w = this.world, self = this;
-  [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (o) {
-    const x = tx + o[0], y = ty + o[1];
-    if (w.c(x, y) === code) { w.setC(x, y, LV.C.OPEN); self.setDflag('door:' + x + ',' + y); }
+  const open = function (cx, cy) {
+    [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (o) {
+      const x = cx + o[0], y = cy + o[1];
+      if (w.c(x, y) === code) { w.setC(x, y, LV.C.OPEN); self.setDflag('door:' + x + ',' + y); }
+    });
+  };
+  open(tx, ty);
+  // the same door's other half, across the doorway (a door between two rooms is one door: one key)
+  [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (d) {
+    for (let n = 1; n <= 4; n++) { const c = w.c(tx + d[0] * n, ty + d[1] * n); if (c === code) { open(tx + d[0] * n, ty + d[1] * n); open(tx + d[0] * n + (d[1] ? 1 : 0), ty + d[1] * n + (d[0] ? 1 : 0)); open(tx + d[0] * n - (d[1] ? 1 : 0), ty + d[1] * n - (d[0] ? 1 : 0)); break; } if (c !== LV.C.OPEN) break; }
   });
 };
 

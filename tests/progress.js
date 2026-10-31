@@ -25,7 +25,7 @@ const LATER = { marrowgate: ['51,23'], skyridge: ['28,3'], saltmarsh: ['13,32'],
   const res = await p.evaluate(([STAGES, LATER, MIRROR]) => {
     LV.loop.stop(); const g = LV.game, C = LV.C, out = []; let fails = 0;
     STAGES.forEach(st => {
-      (st.all ? Object.keys(LV.MAPS) : st.maps).forEach(id => {
+      (st.all ? Object.keys(LV.MAPS) : st.maps.concat(Object.keys(LV.MAPS).filter(k => st.maps.includes(LV.MAPS[k].wingOf)))).forEach(id => {
         const it = {}; st.items.forEach(k => { it[k] = 1; });
         const missing = new Set(Object.keys(LV.MAPS[id].chests || {}));
         // switch the water level back and forth: tiles reached at one level are where you stand at the next
@@ -61,7 +61,7 @@ const LATER = { marrowgate: ['51,23'], skyridge: ['28,3'], saltmarsh: ['13,32'],
           for (const k of Array.from(missing)) { const [x, y] = k.split(',').map(Number); if (seen.has(x + ',' + (y + 1))) missing.delete(k); }
         });
         const left = Array.from(missing);
-        const secretLater = left.filter(k => (st.all ? MIRROR[id] || [] : LATER[id] || []).indexOf(k) >= 0);
+        const secretLater = left.filter(k => (st.all ? MIRROR[id] || [] : (LATER[id] || []).concat(LV.MAPS[id].later || [])).indexOf(k) >= 0);
         const real = left.filter(k => secretLater.indexOf(k) < 0);
         if (real.length) { fails++; out.push('FAIL ' + st.name + ' / ' + id + ': ' + real.map(k => k + ' (' + LV.MAPS[id].chests[k].item + ')').join(', ')); }
         else out.push('PASS ' + st.name + ' / ' + id + (secretLater.length ? '  (later: ' + secretLater.join(', ') + ')' : ''));

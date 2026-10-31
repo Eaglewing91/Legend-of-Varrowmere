@@ -90,7 +90,7 @@ LV.Grapple.prototype.update = function (g, dt) {
       if (a.onGrapple && a.onGrapple(g, this)) { this.phase = 'back'; return; }
       a.stun = 2; g.sfx('clink'); this.phase = 'back'; return;
     }
-    const tx = Math.floor(this.x / 16), ty = Math.floor((this.y + 6) / 16), c = g.world.c(tx, ty), w = g.world;
+    const tx = Math.floor((this.x + d.x * 4) / 16), ty = Math.floor((this.y + 6) / 16), c = g.world.c(tx, ty), w = g.world;   // the hook's leading edge
     const chest = w.chests[tx + ',' + ty] && c === LV.C.SOLID;
     if (LV.GRAB.indexOf(c) >= 0 || chest) {
       if (c === LV.C.SWITCH) g.toggleWater();

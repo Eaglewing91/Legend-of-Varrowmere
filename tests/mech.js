@@ -209,7 +209,7 @@ const { chromium } = require('playwright');
   // 46. The barrier: only the Dawnblade cuts it, and it stays cut
   r = await p.evaluate(() => { const g = LV.game; delete g.save.flags.barrier; place('grove', 23, 7, 0); g.actors = []; const sealed = g.world.c(23, 6) === 23; step(16, [], ['attack']); g.dialog = null; const cut = g.world.c(23, 6) === 0;
     step(60, ['up']); step(30, []); return { sealed, cut, inside: g.world.id }; });
-  check('barrier cut by the Dawnblade, castle opens', r.sealed && r.cut && r.inside === 'castle', r);
+  check('barrier cut by the Dawnblade, castle opens', r.sealed && r.cut && /^castle/.test(r.inside), r);
   // 47. Vex: blade can't touch him; a returned orb wounds him; beating him rolls the ending
   r = await p.evaluate(() => { const g = LV.game; delete g.save.flags.won; place('castle', 40, 11, 0); g.area = g.world.areaAt(40 * 16, 8 * 16); g.actors = g.actors.filter(a => a.kind === 'vex'); const v = g.actors[0];
     step(2, []); const intro = !!g.dialog; g.dialog = null; v.state = 'wait'; v.st = 0; v.x = 40 * 16 + 8; v.y = 9 * 16 + 12; H().x = v.x; H().y = v.y + 20; H().dir = 0; H().inv = 0;
@@ -250,7 +250,7 @@ const { chromium } = require('playwright');
   // 55. Shadow Keep gate opens with both Crystals
   r = await p.evaluate(() => { const g = LV.game; delete g.save.flags.crystals; delete g.save.items.crystal_vault; delete g.save.items.crystal_quarry; place('s_grove', 23, 8, 0); g.actors = []; const shut = g.world.c(23, 6);
     ['vault', 'quarry', 'bonehollow', 'thievesden', 'frostmere', 'mirefen', 'turtleback'].forEach(k => { g.save.items['crystal_' + k] = 1; }); place('s_grove', 23, 8, 0); g.actors = []; step(60, ['up']); step(30, []); return { shut, map: g.world.id }; });
-  check('Shadow Keep opens with both Crystals', r.shut === 1 && r.map === 'keep', r);
+  check('Shadow Keep opens with both Crystals', r.shut === 1 && /^keep/.test(r.map), r);
   // 56. Mirror secret: the gateless pen's heart piece, reached by mirroring in from the shadow side
   r = await p.evaluate(() => { const g = LV.game; g.save.items.mirror = 1; g.save.equip = 'mirror'; delete g.save.opened['grove:13,7']; place('s_grove', 13, 8, 0); g.actors = []; step(1, [], ['item']); step(20, []);
     const inPen = g.world.id === 'grove'; step(1, [], ['action']); const got = !!g.save.opened['grove:13,7']; g.dialog = null; return { inPen, got }; });
@@ -267,7 +267,7 @@ const { chromium } = require('playwright');
   r = await p.evaluate(() => { const g = LV.game; g.mode = 'play'; return 1; });
   // 58. The world joins up: off the end of Thistledown's jetty and onto Marrowgate's bridge, and back
   r = await p.evaluate(() => { const g = LV.game; place('meadow', 7, 12, 2); g.actors = []; step(50, ['down']); step(30, []); const a = g.world.id, x = Math.floor(H().x / 16);
-    step(10, []); step(60, ['up']); step(30, []); return { a, x, back: g.world.id }; });
+    g.actors = []; step(10, []); step(60, ['up']); step(30, []); return { a, x, back: g.world.id }; });
   check('regions join: Thistledown jetty to Thistle Fields and back', r.a === 'thistlefields' && ['meadow', 'kingsmeadow'].includes(r.back), r);
   // 59. Lucky Lids: pay 20, two picks, prizes paid out
   r = await p.evaluate(() => { const g = LV.game; g.save.cash = 100; place('mg_chests', 7, 7, 0); step(1, [], ['action']); let n = 0; while (g.dialog && !g.dialog.choices && n++ < 5) step(1, [], ['action']);
@@ -349,6 +349,37 @@ const { chromium } = require('playwright');
     Object.keys(LV.CRITTERS).forEach(k => { const e = LV.ENEMIES[k](22 * 16 + 8, 9 * 16 + 12); g.actors = [e]; step(30, []); if (k === 'butterfly') { if (!e.invuln) bad.push(k); return; } e.inv = 0; e.hp = 1; LV.applyHit(g, new LV.Hit({ team: 'hero', kind: 'blade', power: 2, from: { x: H().x, y: H().y }, box: { x: 0, y: 0, w: 1, h: 1 } }), e); if (!e.dead) bad.push(k); });
     return bad; });
   check('new monsters move and can be killed', r.length === 0, r);
+  // 71. Every dungeon's last corridor can be crossed with its tool: Hammer, Gloves, Brick Wand, bombs, Grapple
+  r = await p.evaluate(() => { const g = LV.game, S = g.save, out = {};
+    const go = (n, held, press) => { step(n, held, press); g.dialog = null; };
+    Object.values(LV.MAPS).filter(d => d.barrier).forEach(d => {
+      const [X, Y, ax, tool] = d.barrier, v = ax === 'v';
+      Object.assign(S.items, { hammer: 1, gloves: 1, glove: 1, bombs: 1, grapple: 1, wand: 1, bombbag: 1, lantern: 1 }); S.bombs = 10; S.energy = 1; S.flags = {};
+      const sx = v ? X + 8 : (tool === 'gap' ? X + 4 : X + 6), sy = v ? (tool === 'gap' ? Y + 10 : Y + 9) : Y + 7, fwd = v ? 'up' : 'right', back = v ? 'down' : 'left';
+      place(d.id, sx, sy, v ? 0 : 1); g.actors = []; H().hp = 99;
+      if (tool === 'wand') { place(d.id, X + 5, Y + 8, 0); g.actors = []; S.equip = 'wand'; go(30, [], ['item']); H().x = (X + 10) * 16 + 8; H().y = (Y + 7) * 16 + 12; go(10); out[d.id] = Object.keys(S.flags).some(k => /:open:r/.test(k)); return; }
+      if (tool === 'gap') { S.equip = 'grapple'; go(80, [], ['item']); }
+      else for (let k = 0; k < 2; k++) {
+        if (tool === 'gate' && d.dungeon === 'bonehollow') { S.equip = 'hammer'; go(30, [], ['item']); }
+        else if (tool === 'gate') { go(20, [], ['action']); go(20, [], ['action']); }
+        else { S.equip = 'bombs'; go(2, [], ['item']); go(25, [back]); H().inv = 9; go(200); }
+        go(16, [fwd]);
+      }
+      H().inv = 9; go(60, [fwd]);
+      const hx = Math.floor(H().x / 16), hy = Math.floor((H().y - 3) / 16);
+      out[d.id] = v ? hy < Y + 7 : hx > X + 8;
+    });
+    return out; });
+  check('dungeon corridors: Hammer, Gloves, Brick Wand, bombs and Grapple each get you across', Object.values(r).length >= 19 && Object.values(r).every(Boolean), r);
+  // 72. Quest rewards: the Sea Lantern, Biscuit's Collar and the Star Compass
+  r = await p.evaluate(() => { const g = LV.game, S = g.save, out = {};
+    const talk = (flag, set) => { const m = Object.values(LV.MAPS).find(d => d.spawns.some(s => s.quest && s.quest.set === set)); const sp = m.spawns.find(s => s.quest && s.quest.set === set);
+      delete S.flags[set]; if (flag) S.flags[flag] = 1; place(m.id, sp.x, sp.y + 1, 0); const v = g.actors.find(a => a.npc && Math.abs(a.x - (sp.x * 16 + 8)) < 20 && Math.abs(a.y - (sp.y * 16 + 14)) < 20); if (v) v.onTalk(g); g.dialog = null; };
+    talk('pie', 'tradedone'); out.lantern = !!S.items.sealantern;
+    talk('dogfound', 'dogdone'); out.collar = !!S.items.collar;
+    talk('starchart', 'starsdone'); out.compass = !!S.items.starcompass;
+    return out; });
+  check('quest rewards: Sea Lantern, Biscuit\'s Collar, Star Compass', Object.values(r).every(Boolean), r);
   console.log(results.join('\n')); console.log('errors', errs);
   await b.close();
   process.exit(results.some(x => x.startsWith('FAIL')) || errs.length ? 1 : 0);

@@ -163,3 +163,39 @@ LV.C.CBLUE = 26; LV.C.CORANGE = 27; LV.C.CRYSTAL = 28;
     }
   };
 })();
+
+/* ================= Quest rewards: the Sea Lantern, Biscuit's Collar, the Star Compass ================= */
+Object.assign(LV.GEAR_TEXT, {
+  sealantern: ['You got the Sea Lantern!', 'The lighthouse keeper\'s own lamp. Dark rooms light up much further around you.'],
+  collar: ['You got Biscuit\'s Collar!', 'You can smell buried treasure now. Glints show where to dig. Best not to think about it.'],
+  starcompass: ['You got the Star Compass!', 'In every dungeon, the map shows every room and every chest, as if you had its Map and Compass.']
+});
+(function () {
+  // the Sea Lantern: a much wider glow in the dark
+  const dark = LV.Game.prototype.drawDark;
+  LV.Game.prototype.drawDark = function (ctx, ox, oy) {
+    if (!this.save.items.sealantern) return dark.call(this, ctx, ox, oy);
+    const h = this.hero, w = this.world, lights = [[h.x - ox, h.y - oy - 10, 108]];
+    for (let i = 0; i < w.col.length; i++) if (w.col[i] === LV.C.TORCH_LIT) lights.push([(i % w.w) * 16 + 8 - ox, Math.floor(i / w.w) * 16 + 4 - oy, 56]);
+    if (!this.darkCv) { this.darkCv = document.createElement('canvas'); this.darkCv.width = LV.VIEW_W; this.darkCv.height = LV.VIEW_H; }
+    const d = this.darkCv.getContext('2d'); d.globalCompositeOperation = 'source-over'; d.clearRect(0, 0, LV.VIEW_W, LV.VIEW_H);
+    d.fillStyle = 'rgba(8,4,16,.88)'; d.fillRect(0, 0, LV.VIEW_W, LV.VIEW_H); d.globalCompositeOperation = 'destination-out';
+    for (const L of lights) { const gr = d.createRadialGradient(L[0], L[1], L[2] * 0.3, L[0], L[1], L[2]); gr.addColorStop(0, 'rgba(0,0,0,1)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); d.fillStyle = gr; d.fillRect(L[0] - L[2], L[1] - L[2], L[2] * 2, L[2] * 2); }
+    ctx.drawImage(this.darkCv, 0, 0);
+  };
+  // Biscuit's Collar: buried treasure glints where it lies
+  const special = LV.drawSpecialTiles;
+  LV.drawSpecialTiles = function (ctx, g, ox, oy) {
+    special(ctx, g, ox, oy);
+    const w = g.world, digs = w.def.digs; if (!digs || !g.save.items.collar) return;
+    const t = g.t || 0;
+    Object.keys(digs).forEach(function (k) {
+      if (g.save.opened[w.id + ':dig:' + k]) return;
+      const p = k.split(',').map(Number), X = p[0] * 16 - ox, Y = p[1] * 16 - oy; if (X < -16 || Y < -16 || X > LV.VIEW_W || Y > LV.VIEW_H) return;
+      const ph = (t * 2 + p[0] * 0.37) % 1, a = Math.sin(ph * Math.PI);
+      ctx.globalAlpha = 0.35 + a * 0.65; ctx.fillStyle = '#fff6c0';
+      ctx.fillRect(X + 7, Y + 4, 2, 8); ctx.fillRect(X + 4, Y + 7, 8, 2); ctx.fillStyle = '#ffffff'; ctx.fillRect(X + 7, Y + 7, 2, 2);
+      ctx.globalAlpha = 1;
+    });
+  };
+})();

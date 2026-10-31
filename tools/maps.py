@@ -2334,6 +2334,22 @@ if __name__ == '__main__':
         for f in getattr(m, 'floors', []):
             f.extra['shadow'] = m.extra.get('shadow', True)
             built.append(f)
+    import dungeons as DG                                    # the story dungeons grow new floors in front of their old halls
+    byid0 = {m.id: m for m in built}
+    for cid, P in DG.WINGS.items():
+        core = byid0[cid]
+        out = [w for w in core.warps if w['y'] == core.h - 1]
+        back = (out[0]['to'], out[0]['tx'], out[0]['ty'])
+        wing = DG.build_full(sys.modules[__name__], core.extra.get('dungeon', cid), P['name'], back, P['theme'], None, None, None, None,
+                             getattr(sys.modules[__name__], P['gate']), plan=P, core_map=core)
+        for m in built + GROTTOS:
+            if m is core or m in wing:
+                continue
+            for w in m.warps:
+                if w['to'] == cid:
+                    w['to'] = wing[0].id
+                    w['tx'], w['ty'] = wing[0].entry[0], wing[0].entry[1]
+        built += wing
     entries = {m.id: m.entry for m in built if m.id in DUNGEON_STYLE}
     for m in built + GROTTOS:
         for w in m.warps:

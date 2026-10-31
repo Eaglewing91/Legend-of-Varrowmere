@@ -18,6 +18,7 @@ LV.makeVillager = (function (orig) {
       f[q.set] = 1; if (q.need) f[q.need + '_used'] = 1;
       const m = q.reward && /^cash(\d+)$/.exec(q.reward);
       if (m) { g.save.cash = Math.min(999, g.save.cash + +m[1]); g.sfx('cash'); g.say(['You got ' + m[1] + ' cash!']); }
+      else if (q.reward && LV.GEAR_TEXT[q.reward]) { g.save.items[q.reward] = 1; g.sfx('chest'); g.say(LV.GEAR_TEXT[q.reward]); }
       else g.sfx('chest');
     };
     return e;

@@ -2059,6 +2059,15 @@ PLANS = {
 # what bars the way into the last part of each dungeon (ALttP: the dungeon's own item is needed further in)
 TOOL = {'bonehollow': 'gate', 'thievesden': 'gate', 'mirefen': 'wand', 'olddepths': 'bombs', 'barrow': 'bombs', 'brambletemple': 'bombs'}
 CBLUE, CORANGE, CRYSTAL = 26, 27, 28
+WINGS = {
+    'ruins1': dict(floors=['1F', 'B1'], core='B2', rooms=22, grid=(5, 4), keys=2, theme='forest', gate='PEG', tool='bombs', name='Meadow Ruins'),
+    'shrine': dict(floors=['1F', '2F'], core='B1', rooms=28, grid=(5, 4), keys=3, theme='swamp', gate='DARKROCK', tool='bombs', name='Sunken Shrine'),
+    'forge':  dict(floors=['1F', '2F', '3F'], core='4F', rooms=34, grid=(5, 4), keys=3, theme='turtle', gate='PEG', tool='gap', name='Ember Forge'),
+    'castle': dict(floors=['1F', '2F', '3F'], core='4F', rooms=40, grid=(5, 5), keys=4, theme='thieves', gate='DARKROCK', tool='gap', name='Ashford Castle'),
+    'vault':  dict(floors=['1F', 'B1', 'B2'], core='B3', rooms=40, grid=(5, 5), keys=4, theme='swamp', gate='PEG', tool='gap', name='Drowned Vault'),
+    'quarry': dict(floors=['1F', 'B1', 'B2'], core='B3', rooms=44, grid=(6, 4), keys=4, theme='forest', gate='DARKROCK', tool='gap', name='Hollow Quarry'),
+    'keep':   dict(floors=['1F', '2F', '3F', '4F', '5F', '6F'], core='7F', rooms=92, grid=(6, 5), keys=8, theme='thieves', gate='PEG', tool='gap', name='Shadow Keep'),
+}
 FLOOR_NO = lambda f: (-int(f[1:]) if f[0] == 'B' else int(f[:-1]))
 WALK_T = set('.eMX?s=PK')
 
@@ -2102,10 +2111,13 @@ def fits(t, sides, theme, need_stairs=False):
     return True
 
 
-def generate(mid, theme, gate_code):
-    """Lay out a full-size dungeon as rooms on floors with their roles and doors (no tiles yet)."""
+def generate(mid, theme, gate_code, plan=None):
+    """Lay out a full-size dungeon as rooms on floors with their roles and doors (no tiles yet). With a wing plan
+    there is no boss here: the last section ends at the stairs down (or up) into the story dungeon's own floor."""
     import random
-    P = PLANS[mid]
+    P = plan or PLANS[mid]
+    wing = plan is not None
+    tool = P.get('tool') or TOOL.get(mid, 'gap')
     R = random.Random('lv-' + mid)
     floors = P['floors']
     gw, gh = P['grid']
@@ -2180,7 +2192,7 @@ def generate(mid, theme, gate_code):
             edges.append((i, j, 'locked'))
             dx, dy = x - rooms[i]['x'], y - rooms[i]['y']
             nx, ny = x + dx, y + dy
-            if locks == NK and 0 <= nx < gw and 0 <= ny < gh and (fl, nx, ny) not in at:
+            if locks == NK and tool and 0 <= nx < gw and 0 <= ny < gh and (fl, nx, ny) not in at:
                 # the last lock opens on a corridor the dungeon's tool must get you across
                 rooms[j]['role'] = 'barrier'; rooms[j]['axis'] = 'v' if dy else 'h'
                 j2 = add(fl, nx, ny, zone, j)
@@ -2190,8 +2202,10 @@ def generate(mid, theme, gate_code):
             j = add(fl, x, y, rooms[i]['zone'], i)
             edges.append((i, j, 'open'))
         count[fl] += 1
-    # the boss: past the Big Key door, on the last floor, off a room of the last zone
     last = len(floors) - 1
+    if wing:
+        return finish_wing(locals())
+    # the boss: past the Big Key door, on the last floor, off a room of the last zone
     cands = [i for i, r in enumerate(rooms) if r['f'] == last and r['zone'] == zone and free_nb(i) and r['role'] != 'entry']
     if not cands:
         cands = [i for i, r in enumerate(rooms) if r['f'] == last and free_nb(i)]
@@ -2312,19 +2326,104 @@ def generate(mid, theme, gate_code):
     return dict(rooms=rooms, edges=edges, floors=floors, grid=(gw, gh), entry=entry, stairs=stair_rooms, zones=zone)
 
 
-def build_full(M, mid, name, back, theme, item, crystal, mini, boss, gate):
+def finish_wing(v):
+    """A wing's roles: keys off the path, the stairs into the story floor at the far end, vaults, puzzles, crystals, dark rooms."""
+    rooms, edges, R, entry, floors, locks, zone, stair_rooms, at = v['rooms'], v['edges'], v['R'], v['entry'], v['floors'], v['locks'], v['zone'], v['stair_rooms'], v['at']
+    free_nb, add, gate_code, N, theme, last = v['free_nb'], v['add'], v['gate_code'], v['N'], v['theme'], v['last']
+    gw, gh = v['gw'], v['gh']
+    nbr = {}
+    for (a, b, k) in edges:
+        nbr.setdefault(a, []).append(b); nbr.setdefault(b, []).append(a)
+
+    def dist_from(src):
+        d = {src: 0}
+        q = [src]
+        while q:
+            u = q.pop(0)
+            for w in nbr.get(u, []):
+                if w not in d:
+                    d[w] = d[u] + 1; q.append(w)
+        return d
+    plain = lambda i: i not in stair_rooms and rooms[i]['role'] is None
+    zone_start = {0: entry}
+    for (a, b, k) in edges:
+        if k == 'locked':
+            zone_start[rooms[b]['zone']] = b
+    # the way on into the story floor: as far into the last section as it goes, on the last floor
+    d = dist_from(zone_start.get(zone, entry))
+    c = [i for i in range(len(rooms)) if rooms[i]['zone'] == zone and rooms[i]['f'] == last and plain(i)] or \
+        [i for i in range(len(rooms)) if rooms[i]['f'] == last and plain(i)]
+    core = max(c, key=lambda i: d.get(i, 0))
+    rooms[core]['role'] = 'core'
+    stair_rooms.add(core)
+    for z in range(locks):
+        d = dist_from(zone_start.get(z, entry))
+        c = [i for i in range(len(rooms)) if rooms[i]['zone'] == z and plain(i)] or [i for i in range(len(rooms)) if rooms[i]['zone'] == z and rooms[i]['role'] is None]
+        assert c, ('no room for key', z)
+        far = max(d.get(i, 0) for i in c)
+        rooms[R.choice([i for i in c if d.get(i, 0) >= far - 1])]['role'] = 'key'
+    if theme == 'swamp':
+        c = [i for i in range(len(rooms)) if rooms[i]['zone'] == 0 and plain(i)]
+        if c:
+            rooms[R.choice(c)]['role'] = 'switch'
+    extras = [('secret', 'crack')] * (2 + N // 25) + ([('gate', 'open')] if gate_code is not None else [])
+    for role, kind in extras:
+        c = [i for i, r in enumerate(rooms) if free_nb(i) and r['role'] not in ('barrier', 'core') and i != entry]
+        if not c:
+            continue
+        i = R.choice(c)
+        x, y = R.choice(free_nb(i))
+        j = add(rooms[i]['f'], x, y, rooms[i]['zone'], i)
+        rooms[j]['role'] = role
+        edges.append((i, j, kind))
+    linked = {(min(a, b), max(a, b)) for (a, b, k) in edges}
+    for i, r in enumerate(rooms):
+        for dx, dy in ((1, 0), (0, 1)):
+            j = at.get((r['f'], r['x'] + dx, r['y'] + dy))
+            if j is None or (min(i, j), max(i, j)) in linked or rooms[j]['zone'] != r['zone']:
+                continue
+            if r['role'] in ('gate', 'secret', 'barrier') or rooms[j]['role'] in ('gate', 'secret', 'barrier') or R.random() > 0.3:
+                continue
+            edges.append((i, j, 'open')); linked.add((min(i, j), max(i, j)))
+    secrets = [i for i, r in enumerate(rooms) if r['role'] == 'secret']
+    if N >= 40 and secrets:
+        rooms[secrets[0]]['spare'] = True
+    for i, r in enumerate(rooms):
+        if r['role'] is None and i not in stair_rooms and R.random() < 0.12:
+            r['role'] = 'crystal'
+    for i, r in enumerate(rooms):
+        if r['role'] in (None, 'key', 'crystal', 'puzzle') and R.random() < (0.22 if theme in ('forest', 'thieves') else 0.12):
+            r['dark'] = True
+    for n, (a, b, k) in enumerate(edges):
+        if k == 'open' and rooms[a]['role'] is None and a not in stair_rooms and rooms[b]['role'] not in ('gate', 'barrier') and R.random() < 0.28:
+            edges[n] = (a, b, 'shut')
+            rooms[a]['role'] = 'puzzle'
+    for i, r in enumerate(rooms):
+        if r['role'] is None and i not in stair_rooms and r['f'] > 0:
+            below = [j for j, s2 in enumerate(rooms) if FLOOR_NO(floors[s2['f']]) == FLOOR_NO(floors[r['f']]) - 1 and (s2['x'], s2['y']) == (r['x'], r['y'])]
+            if below and rooms[below[0]]['zone'] <= r['zone'] and rooms[below[0]]['role'] not in ('gate', 'secret', 'barrier', 'core') and R.random() < 0.45:
+                r['role'] = 'hole'
+                r['hole'] = below[0]
+    return dict(rooms=rooms, edges=edges, floors=floors, grid=(gw, gh), entry=entry, stairs=stair_rooms, zones=zone, core=core)
+
+
+def build_full(M, mid, name, back, theme, item, crystal, mini, boss, gate, plan=None, core_map=None):
     import random
-    S = SPECS[mid]
-    L = generate(mid, theme, gate)
+    S = SPECS.get(mid, {'rooms': {}})
+    L = generate(mid, theme, gate, plan)
+    wing = plan is not None
     R = random.Random('lv-rooms-' + mid)
     rooms, edges, floors = L['rooms'], L['edges'], L['floors']
     gw, gh = L['grid']
-    ids = [mid if f == floors[0] else mid + '_' + f.lower() for f in floors]
+    ids = [mid + '_' + f.lower() if (wing or f != floors[0]) else mid for f in floors]
+    tool = (plan or {}).get('tool') or TOOL.get(mid, 'gap')
     maps = []
     for fi, f in enumerate(floors):
         m = M.Map(ids[fi], gw * 16, gh * 14, name, indoor=True, music='dungeon')
         m.extra.update({'dungeon': mid, 'exit': [back[0], back[1], back[2]], 'boss': True, 'pendant': crystal, 'shadow': True, 'lava': [], 'flood': [], 'spill': [],
-                        'floorName': f, 'floors': floors, 'floorIds': ids, 'stairs': [], 'drops': []})
+                        'floorName': f, 'floors': floors + ([plan['core']] if wing else []), 'floorIds': ids, 'stairs': [], 'drops': []})
+        if wing:
+            m.extra['boss'] = False; m.extra['wingOf'] = core_map.id; m.extra['shadow'] = core_map.extra.get('shadow', False)
         m.extra['triggers'] = []
         for y in range(m.h):
             for x in range(m.w):
@@ -2378,7 +2477,7 @@ def build_full(M, mid, name, back, theme, item, crystal, mini, boss, gate):
         elif role == 'secret':
             cands = [LIB_SECRET_KEY if r.get('spare') else LIB_SECRET]
         elif role == 'barrier':
-            return BAR[(TOOL.get(mid, 'gap'), r['axis'])]
+            return BAR[(tool, r['axis'])]
         elif role == 'crystal':
             lib = LIB_CRYSTAL + [mirror(t) for t in LIB_CRYSTAL]
             R.shuffle(lib)
@@ -2481,6 +2580,8 @@ def build_full(M, mid, name, back, theme, item, crystal, mini, boss, gate):
                     if i in L['stairs']:
                         mk['stair'] = (x, y)
                 elif ch in 'kmp$yab':
+                    if r['role'] == 'gate':
+                        m.extra.setdefault('later', []).append('%d,%d' % (x, y))
                     it = {'k': 'key', 'm': 'map', 'p': 'compass', '$': 'cash100', 'y': 'cash50', 'b': 'bombs', 'a': 'arrows'}[ch]
                     if ch == 'a' and plush[0]:
                         it = 'plushie'; plush[0] = False
@@ -2531,7 +2632,7 @@ def build_full(M, mid, name, back, theme, item, crystal, mini, boss, gate):
             for (x, y) in {'n': [(X + 7, Y + 2), (X + 8, Y + 2)], 's': [(X + 7, Y + 13), (X + 8, Y + 13)], 'w': [(X, Y + 7), (X, Y + 8)], 'e': [(X + 15, Y + 7), (X + 15, Y + 8)]}[sa]:
                 m.solid(x, y, 1, 1, M.CRACK)
     shut_from = {a for (a, b, k) in edges if k == 'shut'}
-    if TOOL.get(mid) == 'wand':
+    if tool == 'wand':
         for n, (a, b, k) in enumerate(edges):
             if rooms[a]['role'] == 'barrier' and k == 'open':
                 A, B = rooms[a], rooms[b]
@@ -2568,6 +2669,8 @@ def build_full(M, mid, name, back, theme, item, crystal, mini, boss, gate):
             m.extra['triggers'].append({'type': 'clear', 'area': r['area'], 'open': 'mini'})
         if r.get('dark'):
             m.extra.setdefault('darkAreas', []).append(r['area'])
+        if r['role'] == 'barrier':
+            m.extra['barrier'] = [r['x'] * 16, r['y'] * 14, r['axis'], tool]
         if r['role'] == 'hole':
             B = rooms[r['hole']]
             mb = maps[B['f']]
@@ -2587,11 +2690,11 @@ def build_full(M, mid, name, back, theme, item, crystal, mini, boss, gate):
     if any(k == 'crack' for (_, _, k) in edges):
         used.add('crack')
     tool_hint = {'gate': 'The way to the master is barred to all but the treasure of this place.', 'wand': 'The last door answers to weight. Bring your own.',
-                 'bombs': 'The last passage was walled up in a hurry. Bombs disagree.', None: 'The last chasm is crossed by hook, not by foot.'}[TOOL.get(mid)]
+                 'bombs': 'The last passage was walled up in a hurry. Bombs disagree.', 'gap': 'The last chasm is crossed by hook, not by foot.'}[tool]
     hints = dict(HINTS, stairs='Stairs lead up and down; holes in the floor lead down, and only down.', crystal='Strike a crystal and the blue and orange blocks trade places.',
                  dark='Some rooms are black as pitch. Bring a light.', tool=tool_hint)
     sx, sy = marks[L['entry']]['sign']
-    M.signboard(m0, sx, sy, name.upper() + '|' + ' '.join(hints[p] for p in ('stairs', 'dark', 'torches', 'plate', 'crystal', 'clear', 'switch', 'crack', 'tool') if p in used) + ' The Big Key opens the way to the master of this place.')
+    M.signboard(m0, sx, sy, name.upper() + '|' + ' '.join(hints[p] for p in ('stairs', 'dark', 'torches', 'plate', 'crystal', 'clear', 'switch', 'crack', 'tool') if p in used) + (' The way down to the old halls lies at the far end.' if wing else ' The Big Key opens the way to the master of this place.'))
     import blend as _B
     for m in maps:
         for y in range(m.h):
@@ -2604,10 +2707,25 @@ def build_full(M, mid, name, back, theme, item, crystal, mini, boss, gate):
         m.entry = m.entry if m is m0 else None
         if not m.spawns or m.entry is None:
             pass
+    if wing:
+        # the far end: stairs into the story dungeon's own floor, and its old door out leads back up these stairs
+        C = rooms[L['core']]
+        mc = maps[C['f']]
+        sx, sy = marks[L['core']]['stair']
+        down = FLOOR_NO(plan['core']) < FLOOR_NO(floors[C['f']])
+        mc.warp(sx, sy, core_map.id, core_map.entry[0], core_map.entry[1], 0)
+        mc.extra['stairs'].append([sx, sy, 0 if down else 1])
+        mc.extra['coreStairs'] = [sx, sy]
+        for w in core_map.warps:
+            if w['y'] == core_map.h - 1:
+                w['to'], w['tx'], w['ty'], w['dir'] = mc.id, sx, sy + 1, 2
+        core_map.extra.update({'floorName': plan['core'], 'floors': floors + [plan['core']], 'floorIds': ids + [core_map.id]})
     for m in maps[1:]:
         st = m.extra['stairs'][0]
         m.entry = [st[0], st[1] + 1]
     check_full(M, maps, m0)
+    if wing:
+        return maps
     m0.floors = maps[1:]
     m0.extra['rooms'] = len(rooms)
     return m0
@@ -2670,6 +2788,6 @@ def check_full(M, maps, m0):
                 if c in (M.BLOCK, M.SWITCH, M.TORCH, CRYSTAL) and not any(S(x + a, y + b) for a, b in ((0, -1), (0, 1), (1, 0), (-1, 0))):
                     bad.append((m.id, 'thing', x, y))
         for w in m.warps:
-            if w['to'] in byid and not S(w['x'], w['y']):
+            if not S(w['x'], w['y']):
                 bad.append((m.id, 'stairs', w['x'], w['y']))
     assert not bad, bad[:12]

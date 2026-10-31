@@ -70,7 +70,7 @@ LV.Game.prototype.drawMap = function () {
   LV.text(ctx, (def.name || w.id).toUpperCase(), 16, 14, '#f8d040');
   if (def.dungeon) {
     // room grid
-    const it = this.save.items, dg = def.dungeon, hasMap = !!it['map_' + dg], hasComp = !!it['compass_' + dg];
+    const it = this.save.items, dg = def.dungeon, hasMap = !!it['map_' + dg] || !!it.starcompass, hasComp = !!it['compass_' + dg] || !!it.starcompass;
     const seen = (this.save.seen || {})[w.id] || [], A = w.areas;
     const cols = Math.max.apply(null, A.map(function (a) { return (a[0] + a[2]) / 16; })), rows = Math.max.apply(null, A.map(function (a) { return (a[1] + a[3]) / 14; }));
     const cw = Math.min(48, Math.floor(200 / cols)), ch = Math.min(40, Math.floor(150 / rows)), X0 = 128 - cols * cw / 2, Y0 = 40;
