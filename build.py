@@ -10,6 +10,8 @@ os.makedirs('build', exist_ok=True)
 subprocess.run(['python3', 'tools/maps.py'], check=True)
 
 ART = {'overworld': 'pack-armm1998/Overworld.png', 'inner': 'pack-armm1998/Inner.png', 'cave': 'pack-armm1998/cave.png', 'objects': 'pack-armm1998/objects.png', 'hero': 'pack-armm1998/character.png', 'log': 'pack-armm1998/log.png', 'na': 'ninja-adventure/monsters.png'}
+for f in sorted(glob.glob('art/ninja-adventure/bosses/*.png')):
+    ART['b_' + os.path.basename(f)[:-4]] = f[4:]
 art = {k: base64.b64encode(open('art/' + f, 'rb').read()).decode() for k, f in ART.items()}
 
 src = '\n'.join(open(f).read() for f in sorted(glob.glob('src/*.js')))

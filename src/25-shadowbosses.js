@@ -91,7 +91,7 @@ LV.ENEMIES.bogmaw = function (x, y) {
 
 /* ---------- Shellback (Turtleback): a lumbering stone turtle. Only boulders or bombs crack its shell. ---------- */
 LV.ENEMIES.shellback = function (x, y) {
-  const e = LV.ENEMIES.colossus(x, y); e.name = 'Shellback'; e.hp = 16; e.immune = ['blade', 'spin', 'arrow', 'fire', 'dice', 'beam', 'frost'];
+  const e = LV.ENEMIES.colossus(x, y); e.name = 'Shellback';  // drawn as the pack's giant toad e.hp = 16; e.immune = ['blade', 'spin', 'arrow', 'fire', 'dice', 'beam', 'frost'];
   e.draw = function (ctx, ox, oy) {
     if (this.inv > 0 && Math.floor(this.inv * 30) % 2) return;
     const X = Math.round(this.x - ox), Y = Math.round(this.y - oy), bob = this.stomp > 0 ? Math.round(Math.sin((0.5 - this.stomp) / 0.5 * Math.PI) * 4) : 0;
