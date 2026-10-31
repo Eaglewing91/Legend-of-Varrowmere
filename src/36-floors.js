@@ -82,3 +82,84 @@
     }
   };
 })();
+
+/* ================= Crystal switches: strike one and the blue and orange blocks trade places (the whole dungeon) ================= */
+LV.C.CBLUE = 26; LV.C.CORANGE = 27; LV.C.CRYSTAL = 28;
+(function () {
+  const C = LV.C;
+  const blocks = LV.World.prototype.blocks;
+  LV.World.prototype.blocks = function (code, mode) {
+    if (code === C.CRYSTAL) return true;
+    if (code === C.CBLUE) return !this.crys;
+    if (code === C.CORANGE) return !!this.crys;
+    return blocks.call(this, code, mode);
+  };
+  const enter = LV.Game.prototype.enter;
+  LV.Game.prototype.enter = function (mapId, x, y, dir, first) {
+    enter.call(this, mapId, x, y, dir, first);
+    const d = this.world.def; this.world.crys = !!(d.dungeon && this.save.flags[d.dungeon + ':crys']);
+    this.applyDark();
+  };
+  LV.Game.prototype.toggleCrystal = function () {
+    if (this.crysCool > 0) return; this.crysCool = 0.5;
+    const d = this.world.def, k = d.dungeon + ':crys';
+    if (this.save.flags[k]) delete this.save.flags[k]; else this.save.flags[k] = 1;
+    this.world.crys = !!this.save.flags[k]; this.sfx('clink'); this.shake = 0.15;
+    // anyone standing where a block just rose is lifted onto the nearest free floor
+    const h = this.hero, w = this.world, tx = Math.floor(h.x / 16), ty = Math.floor((h.y - 3) / 16);
+    if (w.blocks(w.c(tx, ty), 'hero')) {
+      for (let r = 1; r < 4; r++) for (let j = -r; j <= r; j++) for (let i = -r; i <= r; i++) {
+        const c = w.c(tx + i, ty + j);
+        if ((c === C.OPEN || c === C.PLATE) && !w.blocks(c, 'hero')) { h.x = (tx + i) * 16 + 8; h.y = (ty + j) * 16 + 12; return; }
+      }
+    }
+  };
+  const resolve = LV.Game.prototype.resolveHit;
+  LV.Game.prototype.resolveHit = function (hit, fromHero, poke) {
+    resolve.call(this, hit, fromHero, poke);
+    if (!fromHero || !hit.box) return;
+    const T = 16, b = hit.box, w = this.world;
+    for (let ty = Math.floor(b.y / T); ty <= Math.floor((b.y + b.h - 1) / T); ty++) for (let tx = Math.floor(b.x / T); tx <= Math.floor((b.x + b.w - 1) / T); tx++) if (w.c(tx, ty) === C.CRYSTAL) { this.toggleCrystal(); return; }
+  };
+  const aup = LV.Arrow.prototype.update;
+  LV.Arrow.prototype.update = function (g, dt) {
+    const was = this.stuck; aup.call(this, g, dt);
+    if (!was && this.stuck && this.team === 'hero' && g.world.cAt(this.x, this.y + 5) === C.CRYSTAL) g.toggleCrystal();
+  };
+  // rooms that are dark: the lantern's glow and lit torches are all the light there is
+  LV.Game.prototype.applyDark = function () {
+    const w = this.world, d = w.def; if (!d.darkAreas) return;
+    w.dark = !!d.dark || d.darkAreas.indexOf(w.areas.indexOf(this.area)) >= 0;
+  };
+  const upd = LV.Game.prototype.update;
+  LV.Game.prototype.update = function (dt) { upd.call(this, dt); if (this.crysCool > 0) this.crysCool -= dt; if (this.world) this.applyDark(); };
+  const special = LV.drawSpecialTiles;
+  LV.drawSpecialTiles = function (ctx, g, ox, oy) {
+    special(ctx, g, ox, oy);
+    const w = g.world; if (!w.def.dungeon) return;
+    const x0 = Math.max(0, Math.floor(ox / 16)), y0 = Math.max(0, Math.floor(oy / 16)), x1 = Math.min(w.w - 1, x0 + 17), y1 = Math.min(w.h - 1, y0 + 15);
+    for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) {
+      const c = w.c(tx, ty); if (c !== C.CBLUE && c !== C.CORANGE && c !== C.CRYSTAL) continue;
+      const X = tx * 16 - ox, Y = ty * 16 - oy;
+      if (c === C.CRYSTAL) {
+        const t = g.t || 0, glow = 0.7 + Math.sin(t * 5) * 0.3, col = w.crys ? ['#c85a10', '#f89838', '#ffd8a0'] : ['#1a4ab0', '#4a90f0', '#c8e8ff'];
+        ctx.fillStyle = '#2a2430'; ctx.fillRect(X + 3, Y + 12, 10, 4);
+        ctx.fillStyle = '#0c0a14'; ctx.beginPath(); ctx.moveTo(X + 8, Y); ctx.lineTo(X + 15, Y + 7); ctx.lineTo(X + 8, Y + 14); ctx.lineTo(X + 1, Y + 7); ctx.fill();
+        ctx.fillStyle = col[0]; ctx.beginPath(); ctx.moveTo(X + 8, Y + 1); ctx.lineTo(X + 14, Y + 7); ctx.lineTo(X + 8, Y + 13); ctx.lineTo(X + 2, Y + 7); ctx.fill();
+        ctx.fillStyle = col[1]; ctx.beginPath(); ctx.moveTo(X + 8, Y + 1); ctx.lineTo(X + 14, Y + 7); ctx.lineTo(X + 8, Y + 7); ctx.fill();
+        ctx.globalAlpha = glow; ctx.fillStyle = col[2]; ctx.fillRect(X + 6, Y + 4, 2, 2); ctx.globalAlpha = 1;
+        continue;
+      }
+      const up = c === C.CBLUE ? !w.crys : !!w.crys, base = c === C.CBLUE ? ['#123a8a', '#3a78e0', '#8ac0ff'] : ['#8a3a08', '#e07a20', '#ffc070'];
+      if (up) {
+        ctx.fillStyle = '#0c0a10'; ctx.fillRect(X, Y, 16, 16);
+        ctx.fillStyle = base[0]; ctx.fillRect(X + 1, Y + 1, 14, 14);
+        ctx.fillStyle = base[1]; ctx.fillRect(X + 1, Y + 1, 14, 10);
+        ctx.fillStyle = base[2]; ctx.fillRect(X + 2, Y + 2, 12, 2); ctx.fillRect(X + 2, Y + 2, 2, 8);
+      } else {
+        ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(X + 1, Y + 1, 14, 14);
+        ctx.fillStyle = base[0]; ctx.fillRect(X + 2, Y + 2, 12, 1); ctx.fillRect(X + 2, Y + 13, 12, 1); ctx.fillRect(X + 2, Y + 2, 1, 12); ctx.fillRect(X + 13, Y + 2, 1, 12);
+      }
+    }
+  };
+})();

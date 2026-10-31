@@ -1937,6 +1937,110 @@ gggggggggggggg
 ..............
 ..............""")
 
+# the corridor at the last lock: across it only with the dungeon's tool
+BAR = {
+    ('gap', 'v'): T("""
+.L..........L.
+.......L......
+..............
+______________
+______________
+______________
+______________
+..............
+......L.......
+.............."""),
+    ('gap', 'h'): T("""
+.L...____...L.
+.....____.....
+.....____.....
+.....____.....
+.....____.L...
+...L.____.....
+.....____.....
+.....____.....
+.....____.....
+.....____....."""),
+    ('gate', 'v'): T("""
+.L..........L.
+..............
+..#........#..
+..............
+gggggggggggggg
+gggggggggggggg
+..#........#..
+..............
+..e........e..
+.............."""),
+    ('gate', 'h'): T("""
+.L....gg....L.
+......gg......
+..#...gg...#..
+......gg......
+......gg......
+......gg......
+..#...gg...#..
+......gg......
+..e...gg...e..
+......gg......"""),
+    ('wand', 'v'): T("""
+.L..........L.
+..............
+..#........#..
+..............
+....P....P....
+..............
+..#........#..
+..............
+..............
+.............."""),
+}
+BAR[('wand', 'h')] = BAR[('wand', 'v')]
+BAR[('bombs', 'v')] = [r.replace('g', 'c') for r in BAR[('gate', 'v')]]
+BAR[('bombs', 'h')] = [r.replace('g', 'c') for r in BAR[('gate', 'h')]]
+LIB_CRYSTAL = [T(s) for s in ("""
+.L..........L.
+.#?#......#?#.
+.#.#......#.#.
+.#u#......#v#.
+..............
+......*.......
+..............
+..............
+..e........e..
+..............""", """
+.L..........L.
+..............
+..uuuu..vvvv..
+..u?.u..v..v..
+..u..u..v..v..
+..............
+..............
+..*...........
+...........e..
+..............""", """
+.L..........L.
+..............
+..#vvv..uuu#..
+..#?.v..u..#..
+..#..v..u..#..
+..............
+.......*......
+..............
+..e...........
+..............""")]
+LIB_SECRET_KEY = T("""
+..............
+..y........k..
+..............
+...#......#...
+..............
+..............
+...#......#...
+..............
+..............
+..............""")
+
 # floors in the order you go through them, the floor you come in on first; rooms; grid of one floor; Small Keys
 PLANS = {
     'barrow':        dict(floors=['1F', 'B1', 'B2'], rooms=26, grid=(5, 4), keys=3),
@@ -1952,6 +2056,9 @@ PLANS = {
     'turtleback':    dict(floors=['1F', '2F', '3F', '4F'], rooms=60, grid=(6, 5), keys=6),
     'arcadevault':   dict(floors=['B1', 'B2', 'B3', 'B4', 'B5'], rooms=70, grid=(6, 5), keys=7),
 }
+# what bars the way into the last part of each dungeon (ALttP: the dungeon's own item is needed further in)
+TOOL = {'bonehollow': 'gate', 'thievesden': 'gate', 'mirefen': 'wand', 'olddepths': 'bombs', 'barrow': 'bombs', 'brambletemple': 'bombs'}
+CBLUE, CORANGE, CRYSTAL = 26, 27, 28
 FLOOR_NO = lambda f: (-int(f[1:]) if f[0] == 'B' else int(f[:-1]))
 WALK_T = set('.eMX?s=PK')
 
@@ -1960,7 +2067,7 @@ def fits(t, sides, theme, need_stairs=False):
     """A room drawing fits a set of doorways if every doorway can reach every other, and every chest and the stairs
     can be reached, on foot (hazards impassable; swamp water counted when the room has its own switch)."""
     wet = theme == 'swamp' and any('w' in r for r in t)
-    ok = lambda c, r, gate=False: 0 <= r < 10 and 0 <= c < 14 and (t[r][c] in WALK_T or (wet and t[r][c] == '~') or (gate and t[r][c] == 'g'))
+    ok = lambda c, r, gate=False: 0 <= r < 10 and 0 <= c < 14 and (t[r][c] in WALK_T or (wet and t[r][c] == '~') or (gate and t[r][c] in 'guv'))
     app = {'n': [(6, 0), (7, 0)], 's': [(6, 9), (7, 9)], 'w': [(0, 4), (0, 5)], 'e': [(13, 4), (13, 5)]}
     starts = [p for sd in sides for p in app[sd]]
     if not starts or not all(ok(*p) for p in starts):
@@ -1984,7 +2091,7 @@ def fits(t, sides, theme, need_stairs=False):
                         return False
                     if ch == 'C' and (c == 0 or t[r][c - 1] != 'C') and (c, r + 1) not in seen:
                         return False
-                    if ch in 'tw' and not any((c + a, r + b) in seen for a, b in ((1, 0), (-1, 0), (0, 1), (0, -1))):
+                    if ch in 'tw*' and not any((c + a, r + b) in seen for a, b in ((1, 0), (-1, 0), (0, 1), (0, -1))):
                         return False
                     if ch == 'B' and (c, r - 1) not in seen:
                         return False
@@ -2047,7 +2154,7 @@ def generate(mid, theme, gate_code):
             count[fl] += 1
             continue
         # grow: mostly from the newest rooms (long winding routes), sometimes from anywhere (side branches)
-        pool = [i for i, r in enumerate(rooms) if r['f'] == fl and free_nb(i) and (r['zone'] == zone or not want_lock)]
+        pool = [i for i, r in enumerate(rooms) if r['f'] == fl and free_nb(i) and (r['zone'] == zone or not want_lock) and r['role'] != 'barrier']
         if want_lock:
             pool = [i for i in pool if rooms[i]['zone'] == zone and rooms[i]['role'] != 'entry']
         if not pool:
@@ -2058,10 +2165,27 @@ def generate(mid, theme, gate_code):
                 raise RuntimeError('dungeon %s: floor %d is full' % (mid, fl))
         i = pool[-1] if R.random() < 0.55 else R.choice(pool[-6:]) if R.random() < 0.6 else R.choice(pool)
         x, y = R.choice(free_nb(i))
+        if want_lock and locks + 1 == NK:
+            # the last lock needs room for a straight corridor beyond it
+            straight = [(a, (bx, by)) for a in pool for (bx, by) in free_nb(a)
+                        if 0 <= 2 * bx - rooms[a]['x'] < gw and 0 <= 2 * by - rooms[a]['y'] < gh and (fl, 2 * bx - rooms[a]['x'], 2 * by - rooms[a]['y']) not in at
+                        and not (fl == 0 and (2 * bx - rooms[a]['x'], 2 * by - rooms[a]['y']) == (gw // 2, gh - 1))]
+            if straight:
+                i, (x, y) = straight[-1] if R.random() < 0.5 else R.choice(straight)
+            elif len(rooms) < N - 6:
+                want_lock = False             # try again a little later
         if want_lock:
             zone += 1; locks += 1
             j = add(fl, x, y, zone, i)
             edges.append((i, j, 'locked'))
+            dx, dy = x - rooms[i]['x'], y - rooms[i]['y']
+            nx, ny = x + dx, y + dy
+            if locks == NK and 0 <= nx < gw and 0 <= ny < gh and (fl, nx, ny) not in at:
+                # the last lock opens on a corridor the dungeon's tool must get you across
+                rooms[j]['role'] = 'barrier'; rooms[j]['axis'] = 'v' if dy else 'h'
+                j2 = add(fl, nx, ny, zone, j)
+                edges.append((j, j2, 'open'))
+                count[fl] += 1
         else:
             j = add(fl, x, y, rooms[i]['zone'], i)
             edges.append((i, j, 'open'))
@@ -2088,18 +2212,37 @@ def generate(mid, theme, gate_code):
         if not c and prefer_leaf:
             c = [i for i in range(len(rooms)) if cond(i) and plain(i)]
         return R.choice(c) if c else None
-    # roles: the mini-boss (Big Key) and the Big Chest in the last zones, a key in each zone before its lock
+    # distances through the dungeon, to put keys off the beaten path (far from where their section starts)
+    nbr = {}
+    for (a, b, k) in edges:
+        nbr.setdefault(a, []).append(b); nbr.setdefault(b, []).append(a)
+
+    def dist_from(src):
+        d = {src: 0}
+        q = [src]
+        while q:
+            u = q.pop(0)
+            for v in nbr.get(u, []):
+                if v not in d:
+                    d[v] = d[u] + 1; q.append(v)
+        return d
+    zone_start = {0: entry}
+    for (a, b, k) in edges:
+        if k == 'locked':
+            zone_start[rooms[b]['zone']] = b
     for z in range(locks):
-        k = pick(lambda i: rooms[i]['zone'] == z, prefer_leaf=False)
-        if k is None:
+        d = dist_from(zone_start.get(z, entry))
+        c = [i for i in range(len(rooms)) if rooms[i]['zone'] == z and plain(i)]
+        if not c:
             c = [i for i in range(len(rooms)) if rooms[i]['zone'] == z and rooms[i]['role'] is None]
-            k = R.choice(c) if c else None
-        assert k is not None, (mid, 'no room for key', z)
+        assert c, (mid, 'no room for key', z)
+        far = max(d.get(i, 0) for i in c)
+        k = R.choice([i for i in c if d.get(i, 0) >= far - 1])
         rooms[k]['role'] = 'key'
-    mz = zone
+    mz = max(0, zone - 1) if mid in TOOL or zone >= 2 else zone
     mini = pick(lambda i: rooms[i]['zone'] == mz) or pick(lambda i: rooms[i]['zone'] >= mz - 1)
     rooms[mini]['role'] = 'mini'
-    big = pick(lambda i: rooms[i]['zone'] >= max(0, mz - 1)) or pick(lambda i: True)
+    big = pick(lambda i: rooms[i]['zone'] == mz) or pick(lambda i: rooms[i]['zone'] <= mz) or pick(lambda i: True)
     rooms[big]['role'] = 'big'
     mp = pick(lambda i: rooms[i]['zone'] <= 1, prefer_leaf=False)
     if mp is not None:
@@ -2114,7 +2257,7 @@ def generate(mid, theme, gate_code):
     # side rooms: vaults behind cracked walls and behind the item gate
     extras = [('secret', 'crack')] * (2 + N // 25) + ([('gate', 'open')] if gate_code is not None else [])
     for role, kind in extras:
-        c = [i for i, r in enumerate(rooms) if free_nb(i) and r['role'] not in ('boss',) and i != entry]
+        c = [i for i, r in enumerate(rooms) if free_nb(i) and r['role'] not in ('boss', 'barrier') and i != entry]
         if not c:
             continue
         i = R.choice(c)
@@ -2122,9 +2265,41 @@ def generate(mid, theme, gate_code):
         j = add(rooms[i]['f'], x, y, rooms[i]['zone'], i)
         rooms[j]['role'] = role
         edges.append((i, j, kind))
+    # loops: extra doors between neighbouring rooms of the same section, so routes cross and double back
+    linked = {(min(a, b), max(a, b)) for (a, b, k) in edges}
+    nolink = ('boss', 'gate', 'secret', 'barrier')
+    for i, r in enumerate(rooms):
+        for dx, dy in ((1, 0), (0, 1)):
+            j = at.get((r['f'], r['x'] + dx, r['y'] + dy))
+            if j is None or (min(i, j), max(i, j)) in linked or rooms[j]['zone'] != r['zone']:
+                continue
+            if r['role'] in nolink or rooms[j]['role'] in nolink or R.random() > 0.3:
+                continue
+            edges.append((i, j, 'open')); linked.add((min(i, j), max(i, j)))
+    # a second staircase between floors where two rooms of the same section sit one above the other
+    for i, r in enumerate(rooms):
+        if i in stair_rooms or r['role'] is not None:
+            continue
+        for j, s2 in enumerate(rooms):
+            if j <= i or j in stair_rooms or s2['role'] is not None or (s2['x'], s2['y']) != (r['x'], r['y']) or s2['zone'] != r['zone']:
+                continue
+            if abs(FLOOR_NO(floors[s2['f']]) - FLOOR_NO(floors[r['f']])) == 1 and R.random() < 0.5:
+                edges.append((i, j, 'stairs')); stair_rooms.update((i, j))
+                break
+    # spare keys tucked in a side vault in the bigger dungeons (more keys than locks, as in ALttP's later palaces)
+    secrets = [i for i, r in enumerate(rooms) if r['role'] == 'secret']
+    if N >= 40 and secrets:
+        rooms[secrets[0]]['spare'] = True
+    # crystal-switch rooms (blue and orange blocks), dark rooms
+    for i, r in enumerate(rooms):
+        if r['role'] is None and i not in stair_rooms and R.random() < 0.12:
+            r['role'] = 'crystal'
+    for i, r in enumerate(rooms):
+        if r['role'] in (None, 'key', 'map', 'compass', 'crystal', 'puzzle') and R.random() < (0.22 if theme in ('forest', 'thieves') or mid in ('olddepths', 'barrow') else 0.12):
+            r['dark'] = True
     # puzzle shutters on some ordinary doors: solve the room to go on
     for n, (a, b, k) in enumerate(edges):
-        if k == 'open' and rooms[a]['role'] is None and a not in stair_rooms and rooms[b]['role'] not in ('gate',) and R.random() < 0.28:
+        if k == 'open' and rooms[a]['role'] is None and a not in stair_rooms and rooms[b]['role'] not in ('gate', 'barrier') and R.random() < 0.28:
             edges[n] = (a, b, 'shut')
             rooms[a]['role'] = 'puzzle'
     # holes: from a plain room down to the room right below it, when that room is no further into the dungeon
@@ -2201,7 +2376,13 @@ def build_full(M, mid, name, back, theme, item, crystal, mini, boss, gate):
         elif role == 'gate':
             cands = [LIB_GATE[list(sd)[0]]]
         elif role == 'secret':
-            cands = [LIB_SECRET]
+            cands = [LIB_SECRET_KEY if r.get('spare') else LIB_SECRET]
+        elif role == 'barrier':
+            return BAR[(TOOL.get(mid, 'gap'), r['axis'])]
+        elif role == 'crystal':
+            lib = LIB_CRYSTAL + [mirror(t) for t in LIB_CRYSTAL]
+            R.shuffle(lib)
+            cands = lib
         elif role == 'switch':
             cands = [LIB_SWITCH]
         elif role == 'puzzle':
@@ -2268,8 +2449,14 @@ def build_full(M, mid, name, back, theme, item, crystal, mini, boss, gate):
                         m.col[idx] = M.DEEP
                     else:
                         m.col[idx] = M.PIT; m.put('ground', M.CV, 1, 1, x, y)
-                elif ch == 'o':
+                elif ch in 'o_':
                     m.col[idx] = M.PIT; m.put('ground', M.CV, 1, 1, x, y)
+                elif ch == 'u':
+                    m.col[idx] = CBLUE
+                elif ch == 'v':
+                    m.col[idx] = CORANGE
+                elif ch == '*':
+                    m.col[idx] = CRYSTAL
                 elif ch == '=':
                     m.extra['spill'].append(idx)
                 elif ch == 'w':
@@ -2344,6 +2531,13 @@ def build_full(M, mid, name, back, theme, item, crystal, mini, boss, gate):
             for (x, y) in {'n': [(X + 7, Y + 2), (X + 8, Y + 2)], 's': [(X + 7, Y + 13), (X + 8, Y + 13)], 'w': [(X, Y + 7), (X, Y + 8)], 'e': [(X + 15, Y + 7), (X + 15, Y + 8)]}[sa]:
                 m.solid(x, y, 1, 1, M.CRACK)
     shut_from = {a for (a, b, k) in edges if k == 'shut'}
+    if TOOL.get(mid) == 'wand':
+        for n, (a, b, k) in enumerate(edges):
+            if rooms[a]['role'] == 'barrier' and k == 'open':
+                A, B = rooms[a], rooms[b]
+                m = maps[A['f']]
+                M.door(m, A['x'], A['y'], side(A, B), M.SHUTTER, 'r%d' % a)
+                shut_from.add(a)
     # the way in
     E = rooms[L['entry']]
     m0 = maps[E['f']]
@@ -2372,6 +2566,8 @@ def build_full(M, mid, name, back, theme, item, crystal, mini, boss, gate):
                 m.extra['triggers'].append({'type': 'clear', 'area': r['area'], 'open': g}); used.add('clear')
         if r['role'] == 'mini':
             m.extra['triggers'].append({'type': 'clear', 'area': r['area'], 'open': 'mini'})
+        if r.get('dark'):
+            m.extra.setdefault('darkAreas', []).append(r['area'])
         if r['role'] == 'hole':
             B = rooms[r['hole']]
             mb = maps[B['f']]
@@ -2381,13 +2577,21 @@ def build_full(M, mid, name, back, theme, item, crystal, mini, boss, gate):
                         if B['t'][y - B['y'] * 14 - 3][x - B['x'] * 16 - 1] == '.'))
             m.extra['drops'].append([r['x'] * 16, r['y'] * 14, 16, 14, mb.id, best[1], best[2]])
     used.add('stairs')
+    if any(r['role'] == 'crystal' for r in rooms):
+        used.add('crystal')
+    if any(r.get('dark') for r in rooms):
+        used.add('dark')
+    used.add('tool')
     if any(m.extra['flood'] for m in maps):
         used.add('switch')
     if any(k == 'crack' for (_, _, k) in edges):
         used.add('crack')
-    hints = dict(HINTS, stairs='Stairs lead up and down; holes in the floor lead down, and only down.')
+    tool_hint = {'gate': 'The way to the master is barred to all but the treasure of this place.', 'wand': 'The last door answers to weight. Bring your own.',
+                 'bombs': 'The last passage was walled up in a hurry. Bombs disagree.', None: 'The last chasm is crossed by hook, not by foot.'}[TOOL.get(mid)]
+    hints = dict(HINTS, stairs='Stairs lead up and down; holes in the floor lead down, and only down.', crystal='Strike a crystal and the blue and orange blocks trade places.',
+                 dark='Some rooms are black as pitch. Bring a light.', tool=tool_hint)
     sx, sy = marks[L['entry']]['sign']
-    M.signboard(m0, sx, sy, name.upper() + '|' + ' '.join(hints[p] for p in ('stairs', 'torches', 'plate', 'clear', 'switch', 'crack') if p in used) + ' The Big Key opens the way to the master of this place.')
+    M.signboard(m0, sx, sy, name.upper() + '|' + ' '.join(hints[p] for p in ('stairs', 'dark', 'torches', 'plate', 'crystal', 'clear', 'switch', 'crack', 'tool') if p in used) + ' The Big Key opens the way to the master of this place.')
     import blend as _B
     for m in maps:
         for y in range(m.h):
@@ -2413,7 +2617,8 @@ def check_full(M, maps, m0):
     """Every chest, door, torch, block and switch on every floor is reachable from the way in (stairs and holes
     followed; doors, gates and both water levels counted as passable), and the boss is there."""
     byid = {m.id: m for m in maps}
-    walk = {M.OPEN, M.PLATE, M.SHUTTER, M.LOCKED, M.BIGLOCK, M.CRACK, M.PEG, M.DARKROCK}
+    walk = {M.OPEN, M.PLATE, M.SHUTTER, M.LOCKED, M.BIGLOCK, M.CRACK, M.PEG, M.DARKROCK, CBLUE, CORANGE}
+    targets = {M.TORCH, M.TORCH_LIT, M.BLOCK, M.BIGCHEST, M.SWITCH, M.POST}
     seen = set()
     q = [(m0.id, m0.entry[0], m0.entry[1])]
     seen.add(q[0])
@@ -2433,6 +2638,19 @@ def check_full(M, maps, m0):
                         if p not in seen:
                             seen.add(p); q.append(p)
         wet = set(m.extra['flood']) | set(m.extra['spill'])
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):        # the Grapple: up to 7 tiles over gaps to a hook target
+            for n in range(1, 8):
+                X, Y = x + dx * n, y + dy * n
+                if not m.ok(X, Y):
+                    break
+                c = m.col[Y * m.w + X]
+                if c in targets or ('%d,%d' % (X, Y)) in m.chests:
+                    p = (mid, X - dx, Y - dy)
+                    if n > 1 and p not in seen and m.col[(Y - dy) * m.w + X - dx] == M.OPEN:
+                        seen.add(p); q.append(p)
+                    break
+                if c not in (M.PIT, M.DEEP, M.OPEN, M.PLATE):
+                    break
         for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
             X, Y = x + dx, y + dy
             if m.ok(X, Y) and (m.col[Y * m.w + X] in walk or Y * m.w + X in wet) and (mid, X, Y) not in seen:
@@ -2449,7 +2667,7 @@ def check_full(M, maps, m0):
                 c = m.col[y * m.w + x]
                 if c in (M.LOCKED, M.BIGLOCK, M.SHUTTER, M.CRACK) and not S(x, y):
                     bad.append((m.id, 'door', x, y))
-                if c in (M.BLOCK, M.SWITCH, M.TORCH) and not any(S(x + a, y + b) for a, b in ((0, -1), (0, 1), (1, 0), (-1, 0))):
+                if c in (M.BLOCK, M.SWITCH, M.TORCH, CRYSTAL) and not any(S(x + a, y + b) for a, b in ((0, -1), (0, 1), (1, 0), (-1, 0))):
                     bad.append((m.id, 'thing', x, y))
         for w in m.warps:
             if w['to'] in byid and not S(w['x'], w['y']):

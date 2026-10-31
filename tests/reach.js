@@ -10,9 +10,17 @@ const { chromium } = require('playwright');
       flagsets.forEach(fs => {
         g.save.flags = Object.assign({}, fs, { barrier: 1 }); g.save.items = { pendant_shrine: 1 };
         g.enter(id, LV.MAPS[id].entry[0] * 16 + 8, LV.MAPS[id].entry[1] * 16 + 12, 0); const w = g.world, C = LV.C;
-        const ok = c => [C.OPEN, C.LOCKED, C.BIGLOCK, C.SHUTTER, C.PLATE, C.SHALLOW, C.CRACK, C.BUSH, C.ROCK, C.DEEP, C.PEG, C.DARKROCK].includes(c);
+        const ok = c => [C.OPEN, C.LOCKED, C.BIGLOCK, C.SHUTTER, C.PLATE, C.SHALLOW, C.CRACK, C.BUSH, C.ROCK, C.DEEP, C.PEG, C.DARKROCK, 26, 27].includes(c);
         const seen = new Set(), q = []; const edges = []; if (LV.MAPS[id].world) for (let x = 0; x < w.w; x++) for (let y = 0; y < w.h; y++) if ((x === 0 || y === 0 || x === w.w - 1 || y === w.h - 1) && [C.OPEN, C.SHALLOW, C.BUSH].includes(w.c(x, y))) edges.push([x, y]); [LV.MAPS[id].entry].concat(edges, (w.warps || []).map(x => [x.x, x.y])).forEach(st => { const k = st.join(); if (!seen.has(k)) { seen.add(k); q.push(st.slice()); } });
-        while (q.length) { const [x, y] = q.pop(); for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) { const nx = x + dx, ny = y + dy, k = nx + ',' + ny; if (seen.has(k) || nx < 0 || ny < 0 || nx >= w.w || ny >= w.h) continue; if (!ok(w.c(nx, ny))) continue; seen.add(k); q.push([nx, ny]); } }
+        const flood = () => { while (q.length) { const [x, y] = q.pop(); for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) { const nx = x + dx, ny = y + dy, k = nx + ',' + ny; if (seen.has(k) || nx < 0 || ny < 0 || nx >= w.w || ny >= w.h) continue; if (!ok(w.c(nx, ny))) continue; seen.add(k); q.push([nx, ny]); } } };
+        flood();
+        // in dungeons the Grapple is part of the route (hook across a chasm to a torch)
+        if (w.def.floorName) for (let grew = true; grew;) { grew = false;
+          for (const s of Array.from(seen)) { const [x, y] = s.split(',').map(Number);
+            for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) for (let n = 1; n <= 7; n++) { const tx = x + dx * n, ty = y + dy * n, c = w.c(tx, ty);
+              if ([C.TORCH, C.TORCH_LIT, C.BLOCK, C.BIGCHEST, C.SWITCH, C.POST].includes(c)) { const k = (tx - dx) + ',' + (ty - dy); if (n > 1 && !seen.has(k) && w.c(tx - dx, ty - dy) === C.OPEN) { seen.add(k); q.push([tx - dx, ty - dy]); grew = true; } break; }
+              if (![C.PIT, C.DEEP, C.OPEN, C.PLATE].includes(c)) break; } }
+          flood(); }
         Object.keys(w.chests).forEach(k => { const [x, y] = k.split(',').map(Number); if (seen.has(x + ',' + (y + 1))) res['chest ' + k] = 1; else res['chest ' + k] = res['chest ' + k] || 0; });
         w.warps.forEach(wp => { const k = 'warp ' + wp.x + ',' + wp.y + '>' + wp.to; if (seen.has(wp.x + ',' + wp.y)) res[k] = 1; else res[k] = res[k] || 0; });
         w.areas.forEach((a, i) => { const k = 'room ' + i; let any = false; for (const s of seen) { const [x, y] = s.split(',').map(Number); if (x >= a[0] && x < a[0] + a[2] && y >= a[1] && y < a[1] + a[3]) { any = true; break; } } res[k] = res[k] || (any ? 1 : 0); });
