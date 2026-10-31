@@ -87,7 +87,7 @@ LV.Game.prototype.drawMap = function () {
       }
       if (a === self.area && blink) { ctx.fillStyle = '#ffffff'; ctx.fillRect(x + (self.hero.x / 16 - a[0]) / a[2] * rw - 2, y + ((self.hero.y - 8) / 16 - a[1]) / a[3] * rh - 2, 4, 4); }
     });
-    LV.text(ctx, (hasMap ? 'MAP ' : '') + (hasComp ? 'COMPASS ' : '') + 'KEYS ' + (this.save.keys[w.id] || 0), 16, 198, '#a0a0c0');
+    LV.text(ctx, (hasMap ? 'MAP ' : '') + (hasComp ? 'COMPASS ' : '') + 'KEYS ' + (this.save.keys[dg] || 0), 16, 198, '#a0a0c0');
     return;
   }
   // overworld: shrink the map's ground and deco layers into the frame once, then draw it

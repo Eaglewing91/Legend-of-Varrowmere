@@ -326,7 +326,7 @@ const { chromium } = require('playwright');
   // 68. The five new Shadow bosses each fall and give their Crystal; seven Crystals open the Keep and the Arcade Vault
   r = await p.evaluate(() => { const g = LV.game, S = g.save, out = {};
     [['bonehollow', 'hollowking'], ['thievesden', 'banditqueen'], ['frostmere', 'frostwyrm'], ['mirefen', 'bogmaw'], ['turtleback', 'shellback']].forEach(([d, k]) => {
-      delete S.items['crystal_' + d]; delete S.flags[d + ':boss']; const sp = LV.MAPS[d].spawns.find(q => q.kind === k); place(d, sp.x, sp.y + 3, 0); g.area = g.world.areaAt(sp.x * 16, sp.y * 16);
+      delete S.items['crystal_' + d]; delete S.flags[d + ':boss']; const fm = Object.values(LV.MAPS).find(q => q.dungeon === d && q.spawns.some(z => z.kind === k)); const sp = fm.spawns.find(q => q.kind === k); place(fm.id, sp.x, sp.y + 3, 0); g.area = g.world.areaAt(sp.x * 16, sp.y * 16);
       const b = g.actors.find(a => a.boss); if (!b) { out[d] = 'no boss'; return; }
       g.actors = [b]; step(2, []); g.dialog = null; b.hp = 1; b.inv = 0; b.immune = null; b.bubbles && b.bubbles.forEach(x => { x.dead = true; }); b.phase = 'bound'; b.state = b.state === 'fade' ? 'wait' : b.state; if (b.kind === 'brute') b.state = 'dazed';
       LV.applyHit(g, new LV.Hit({ team: 'hero', kind: b.name === 'Shellback' ? 'bomb' : 'blade', power: 4, from: { x: H().x, y: H().y }, box: b.tailBox ? b.tailBox() : b.hurtBox() }), b); step(2, []);

@@ -445,7 +445,7 @@ WALLMATS = [w[0] for w in BLEND.WALL_MATS]
 
 def dungeon_walls(m):
     """Dungeon rooms get the generated pack-style walls (rounded, outlined, brick faces) and a matching floor."""
-    mat = next((k for k, ids in WALLMAT.items() if m.id in ids), None)
+    mat = next((k for k, ids in WALLMAT.items() if m.extra.get('dungeon', m.id) in ids), None)
     if mat is None:
         return
     p = WALLMATS.index(mat)
@@ -2152,6 +2152,8 @@ def hazard_cells(look, k):
 def make_dungeon(mid, name, back, theme, item, crystal, mini, boss, gate):
     """A dungeon laid out by its own layout (LAYOUTS / DUNGEON_STYLE): its own room arrangement, key puzzles, hazards and secrets."""
     import dungeons
+    if mid in dungeons.PLANS:          # full size, several floors (tools/dungeons.py)
+        return dungeons.build_full(sys.modules[__name__], mid, name, back, theme, item, crystal, mini, boss, gate)
     if mid in dungeons.SPECS:          # hand-designed (tools/dungeons.py)
         return dungeons.build(sys.modules[__name__], mid, name, back, theme, item, crystal, mini, boss, gate)
     lay, puzzles, look = DUNGEON_STYLE.get(mid, ('cross', ['torches'], 'pillars'))
@@ -2328,6 +2330,10 @@ if __name__ == '__main__':
     built = [thistledown(), home(), cave1(), meadow_ruins(), riverhead(), sunken_shrine(), highlands(), ember_forge(), grove(), ashford_castle(), *shadow_world(), drowned_vault(), hollow_quarry(), shadow_keep(), marrowgate(), *marrowgate_interiors(), *willowfen(), *whisperwood(), *outer_regions(), *shadow_regions(), *shadow_dungeons(), arcade_vault()]
     import world as WORLD
     built = WORLD.rebuild(built, sys.modules[__name__])      # lay the overworld out to tools/worldplan.py
+    for m in list(built):                                    # a dungeon's other floors
+        for f in getattr(m, 'floors', []):
+            f.extra['shadow'] = m.extra.get('shadow', True)
+            built.append(f)
     entries = {m.id: m.entry for m in built if m.id in DUNGEON_STYLE}
     for m in built + GROTTOS:
         for w in m.warps:
