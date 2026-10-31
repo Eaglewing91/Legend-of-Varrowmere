@@ -215,11 +215,38 @@ const { chromium } = require('playwright');
     step(2, []); const intro = !!g.dialog; g.dialog = null; v.state = 'wait'; v.st = 0; v.x = 40 * 16 + 8; v.y = 9 * 16 + 12; H().x = v.x; H().y = v.y + 20; H().dir = 0; H().inv = 0;
     const r1 = LV.applyHit(g, new LV.Hit({ team: 'hero', kind: 'blade', power: 2, from: { x: H().x, y: H().y }, box: { x: 0, y: 0, w: 1, h: 1 } }), v);
     const o = new LV.Orb(v, H()); o.x = H().x; o.y = H().y - 40; o.aim(H().x, H().y - 8, 105); g.shots.push(o); g.rng = () => 0.9; step(1, [], ['attack']); let n = 0; while (!o.dead && n++ < 120) step(1, []); const reflected = o.volleys > 0;
-    const hp = v.hp; v.hp = 1; v.inv = 0; v.state = 'wait'; const o2 = new LV.Orb(v, H()); o2.reflect(g); o2.x = v.x; o2.y = v.y - 14; g.shots.push(o2); step(2, []); g.dialog && (g.dialog = { lines: [''], i: 0, then: g.dialog.then }); step(1, [], ['action']);
-    return { intro, immune: r1, reflected, hp, won: !!g.save.flags.won, mode: g.mode }; });
-  check('Vex: immune to the blade, hurt by his own orb, ending rolls', r.intro && r.immune === 'immune' && r.reflected && r.hp === 7 && r.won && r.mode === 'ending', r);
-  r = await p.evaluate(() => { const g = LV.game; g.endT = 5; step(1, [], ['menu']); const m = g.mode; g.mode = 'play'; g.title = null; return m; });
+    const hp = v.hp; v.hp = 1; v.inv = 0; v.state = 'wait'; const o2 = new LV.Orb(v, H()); o2.reflect(g); o2.x = v.x; o2.y = v.y - 14; g.shots.push(o2); step(2, []); g.dialog && (g.dialog = { lines: [''], i: 0, then: g.dialog.then }); step(1, [], ['action']); step(20, []);
+    return { intro, immune: r1, reflected, hp, mirror: !!g.save.items.mirror, map: g.world.id }; });
+  check('Vex: immune to the blade, hurt by his own orb, flees through the mirror', r.intro && r.immune === 'immune' && r.reflected && r.hp === 7 && r.mirror && r.map === 's_grove', r);
+  r = await p.evaluate(() => { const g = LV.game; g.startEnding(); g.endT = 5; step(1, [], ['menu']); const m = g.mode; g.mode = 'play'; g.title = null; return m; });
   check('ending returns to the title', r === 'title', r);
+  // 49. Twin Mirror: crosses to the shadow at the same spot, refuses when blocked, not indoors
+  r = await p.evaluate(() => { const g = LV.game; g.save.items.mirror = 1; g.save.equip = 'mirror'; place('meadow', 8, 8, 2); g.actors = []; step(1, [], ['item']); step(20, []); const a = g.world.id, x = Math.floor(H().x / 16);
+    step(1, [], ['item']); step(20, []); const back = g.world.id; place('meadow', 3, 5, 2); g.actors = []; H().y = 7 * 16 + 4; step(1, [], ['item']); step(20, []); const ok2 = g.world.id; g.dialog = null;
+    place('home', 7, 10, 0); step(1, [], ['item']); const indoor = !!g.dialog; g.dialog = null; return { a, x, back, ok2, indoor }; });
+  check('twin mirror crosses worlds at the same spot', r.a === 's_meadow' && r.x === 8 && r.back === 'meadow' && r.indoor, r);
+  // 50. Flippers: swim in deep water (no falling); without them you fall in
+  r = await p.evaluate(() => { const g = LV.game; delete g.save.items.fins; place('s_meadow', 36, 8, 1); g.actors = []; H().hp = 12; step(40, ['right']); step(60, []); const fell = H().hp < 12;
+    g.save.items.fins = 1; place('s_meadow', 36, 8, 1); g.actors = []; step(80, ['right']); return { fell, swim: H().swimming, x: Math.floor(H().x / 16) }; });
+  check('flippers let you swim', r.fell && r.swim && r.x >= 39, r);
+  // 51. Power Glove: boulders refuse bare hands, lift and throw with the glove
+  r = await p.evaluate(() => { const g = LV.game; delete g.save.items.glove; place('quarry', 20, 20, 0); g.actors = []; step(1, [], ['action']); const refused = !!g.dialog && g.world.c(20, 19) === 7; g.dialog = null;
+    g.save.items.glove = 1; step(1, [], ['action']); const carry = H().carry; step(1, [], ['action']); step(30, []); return { refused, carry, cleared: g.world.c(20, 19) }; });
+  check('power glove lifts boulders', r.refused && r.carry === 'rock' && r.cleared === 0, r);
+  // 52. Stone Colossus: blade rings off; a thrown boulder hurts for double
+  r = await p.evaluate(() => { const g = LV.game; place('quarry', 40, 11, 0); g.area = g.world.areaAt(40 * 16, 8 * 16); g.actors = g.actors.filter(a => a.kind === 'colossus'); const c = g.actors[0]; c.x = 40 * 16 + 8; c.y = 8 * 16 + 12; c.inv = 0;
+    const r1 = LV.applyHit(g, new LV.Hit({ team: 'hero', kind: 'blade', power: 2, from: { x: H().x, y: H().y }, box: { x: 0, y: 0, w: 1, h: 1 } }), c);
+    g.world.setC(40, 10, 7); H().x = 40 * 16 + 8; H().y = 11 * 16 + 12; H().dir = 0; step(1, [], ['action']); step(1, [], ['action']); let n = 0; while (c.hp === 12 && n++ < 40) step(1, []); return { r1, hp: c.hp }; });
+  check('colossus: only boulders hurt it', r.r1 === 'immune' && r.hp === 8, r);
+  // 53. River Spirit sells Flippers for 100
+  r = await p.evaluate(() => { const g = LV.game; delete g.save.items.fins; g.save.cash = 120; place('s_riverhead', 10, 9, 3); const v = g.actors.find(a => a.npc); v.x = 9 * 16 + 8; v.y = 9 * 16 + 14;
+    step(1, [], ['action']); let n = 0; while (g.dialog && !g.dialog.choices && n++ < 5) step(1, [], ['action']); step(1, [], ['action']); g.dialog = null; return { fins: !!g.save.items.fins, cash: g.save.cash }; });
+  check('river spirit sells flippers', r.fins && r.cash === 20, r);
+  // 54. Twin Maws and the Crystal of the Deep
+  r = await p.evaluate(() => { const g = LV.game; delete g.save.flags['vault:boss']; place('vault', 40, 12, 0); g.area = g.world.areaAt(40 * 16, 8 * 16); const maws = g.actors.filter(a => a.kind === 'maw'); g.actors = maws.slice();
+    maws.forEach(m => { m.hp = 1; m.state = 'up'; m.inv = 0; LV.applyHit(g, new LV.Hit({ team: 'hero', kind: 'arrow', power: 2, from: { x: H().x, y: H().y }, box: { x: 0, y: 0, w: 1, h: 1 } }), m); }); step(2, []);
+    const cont = g.pickups.find(p => p.kind === 'container'); if (cont) g.collect(cont); const line = g.dialog && g.dialog.lines[1]; g.dialog = null; return { n: maws.length, line, crystal: !!g.save.items.crystal_vault }; });
+  check('twin maws give the Crystal of the Deep', r.n === 2 && r.crystal && /Deep/.test(r.line), r);
   console.log(results.join('\n')); console.log('errors', errs);
   await b.close();
   process.exit(results.some(x => x.startsWith('FAIL')) || errs.length ? 1 : 0);

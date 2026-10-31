@@ -863,8 +863,222 @@ def ashford_castle():
     return m
 
 
+def shadowize(m, name):
+    """Copy an overworld map into Shadow Varrowmere: same ground, darker palette, no people, new enemies."""
+    import copy
+    s = copy.deepcopy(m)
+    s.id, s.name, s.music = 's_' + m.id, name, 'shadow'
+    s.extra['shadow'] = True
+    s.extra.pop('variants', None)
+    s.spawns, s.chests, s.signs = [], {}, {}
+    s.warps = [dict(w, to='s_' + w['to']) for w in m.warps if w['to'] in ('meadow', 'highlands', 'grove', 'riverhead')]
+    # chests from the light world are gone in the shadow: put the floor back where they stood
+    for k in m.chests:
+        x, y = map(int, k.split(','))
+        s.layers['deco'][y * s.w + x] = -1
+        s.col[y * s.w + x] = OPEN
+    return s
+
+
+def rocks(m, pts):
+    for (x, y) in pts:
+        m.put('deco', CV, 5, 4, x, y)
+        m.col[y * m.w + x] = ROCK
+
+
+def shadow_world():
+    out = []
+    # Shadow Thistledown and Reedwater: the pool never drained here; the Drowned Vault sits on an island
+    m = shadowize(thistledown(), 'Shadow Thistledown')
+    m.extra['names'] = ['Hollowdown', 'Weeping Meadow', 'Blackwater']
+    for x in range(6, 10):
+        m.layers['deco'][2 * m.w + x] = -1
+        m.col[2 * m.w + x] = OPEN
+    m.warp(7, 0, 's_highlands', 7, 26, 0)
+    m.warp(8, 0, 's_highlands', 8, 26, 0)
+    for y in (7, 8):
+        for x in range(41, 47):
+            m.put('ground', OW, (x + y) % 2, 9, x, y)
+            m.col[y * m.w + x] = OPEN
+    m.stamp(OW, 4, 31, 42, 4, 4, 3, col=SOLID)
+    m.warp(43, 6, 'vault', 23, 25, 0)
+    m.warp(44, 6, 'vault', 24, 25, 0)
+    rocks(m, [(0, 9), (1, 8), (2, 9), (1, 10), (0, 10), (2, 10)])
+    m.chest(1, 9, 'heart_shard')
+    m.sign(5, 9, 'A sign, half rotted:|"HOLLOWDOWN. Population: fewer every year."')
+    for (k, x, y) in [('captain', 5, 8), ('wisp', 12, 11), ('soldierBlue', 21, 9), ('archer', 26, 4), ('wisp', 24, 7), ('captain', 34, 7), ('snapjaw', 40, 6), ('snapjaw', 45, 9)]:
+        m.spawn(k, x, y)
+    out.append(m)
+    # Shadow Riverhead: the River Spirit sells Flippers
+    m = shadowize(riverhead(), 'Shadow Riverhead')
+    m.spawn('villager', 9, 9, look='fisher', roam=0, dir=3, ghost=True, sells='fins', price=100, talk=[
+        [None, ['I am the spirit of this river. Or what is left of it since the Chancellor started bottling it.']]])
+    m.chest(13, 11, 'cash50')
+    rocks(m, [(12, 11), (14, 11), (13, 12)])
+    m.spawn('snapjaw', 5, 9)
+    m.spawn('wisp', 11, 4)
+    out.append(m)
+    # Shadow Highlands: boulders choke the path to the Hollow Quarry
+    m = shadowize(highlands(), 'Shadow Highlands')
+    m.extra['names'] = ['Ashen Path', 'Quarry Gate', 'Cinderhollow', 'Grey Overlook']
+    m.warps = [w for w in m.warps if w['to'] != 's_forge']
+    m.warp(23, 5, 'quarry', 23, 25, 0)
+    m.warp(24, 5, 'quarry', 24, 25, 0)
+    rocks(m, [(21, 6), (22, 6), (23, 6), (24, 6), (25, 6), (26, 6), (21, 7), (26, 7)])
+    m.sign(20, 6, 'HOLLOW QUARRY|Abandoned. The rocks are too heavy for anyone without a good glove.')
+    m.spawn('villager', 4, 25, look='elder', roam=8, ghost=True, talk=[
+        [None, ['You are from the other side, are you not? Your colours are too bright.', 'Vex built this place in his own image. Two of his vaults hold what you will need: one under the black water, one in the quarry.']]])
+    for (k, x, y) in [('captain', 8, 20), ('wisp', 12, 25), ('soldierBlue', 6, 7), ('archer', 12, 5), ('captain', 21, 9), ('wisp', 27, 10), ('log', 24, 19), ('soldierBlue', 19, 24)]:
+        m.spawn(k, x, y)
+    rocks(m, [(20, 20), (21, 21), (22, 20)])
+    m.chest(21, 20, 'bombs')
+    out.append(m)
+    # Shadow Grove: where the Twin Mirror drops you; the shadow castle's gate is sealed (for now)
+    m = shadowize(grove(), 'Shadow Grove')
+    m.extra['names'] = ['Withered Grove', 'Shadow Keep']
+    for i, c in enumerate(m.col):
+        if c == BARRIER:
+            m.col[i] = SOLID
+    m.sign(8, 9, 'Your own footprints lead away from the empty pedestal... but you have never been here.')
+    m.spawn('captain', 20, 9)
+    m.spawn('wisp', 12, 9)
+    out.append(m)
+    return out
+
+
+def drowned_vault():
+    """Shadow dungeon 1: the Drowned Vault. Swim between platforms.
+       (0,0) secret room (bomb the cracked wall)   (1,0) Big Chest (Power Glove)   (2,0) BOSS: the Twin Maws
+       (0,1) Small Key, compass                    (1,1) entrance, swim north       (2,1) Drowned Knight, Big Key"""
+    m = Map('vault', 48, 28, 'Drowned Vault', indoor=True, music='dungeon')
+    for ry in range(2):
+        for rx in range(3):
+            room(m, rx, ry)
+    m.extra.update({'dungeon': 'vault', 'exit': ['s_meadow', 43, 8], 'boss': True, 'pendant': 'Crystal of the Deep', 'shadow': True})
+    def pool(x0, y0, x1, y1):
+        for y in range(y0, y1 + 1):
+            for x in range(x0, x1 + 1):
+                m.col[y * m.w + x] = DEEP
+    m.extra['flood'] = []
+    door(m, 1, 1, 's')
+    m.warp(23, 27, 's_meadow', 43, 8, 2)
+    m.warp(24, 27, 's_meadow', 44, 8, 2)
+    pool(17, 18, 30, 22)
+    m.spawn('snapjaw', 20, 20)
+    m.spawn('snapjaw', 27, 21)
+    door(m, 1, 1, 'n')
+    door(m, 1, 0, 's')
+    m.chest(29, 24, 'map')
+    door(m, 1, 1, 'w')
+    door(m, 0, 1, 'e')
+    door(m, 1, 1, 'e', LOCKED)
+    door(m, 2, 1, 'w', LOCKED)
+    # west room (0,1): key across a pool; a cracked wall to the north hides a secret room
+    pool(2, 19, 13, 21)
+    m.chest(7, 17, 'key')
+    m.chest(12, 25, 'compass')
+    door(m, 0, 1, 'n', CRACK)
+    door(m, 0, 0, 's')
+    m.spawn('snapjaw', 6, 20)
+    m.spawn('wisp', 3, 24)
+    # secret room (0,0)
+    m.chest(5, 5, 'heart_shard')
+    m.chest(10, 5, 'cash50')
+    # east room (2,1): the Drowned Knight; the Big Key appears when he falls
+    m.spawn('drowned', 40, 21)
+    m.chests['43,17'] = {'item': 'bigkey', 'big': False}
+    m.extra.setdefault('reveal', {})['knight'] = [[43, 17]]
+    m.extra.setdefault('triggers', []).append({'type': 'clear', 'area': 5, 'open': 'knight'})
+    # north room (1,0): islands in a lake; the Big Chest on the far one; the boss door east
+    pool(17, 3, 30, 12)
+    for (x0, y0, x1, y1) in [(22, 10, 25, 12), (17, 3, 19, 5), (22, 3, 25, 6), (28, 6, 30, 9)]:
+        for y in range(y0, y1 + 1):
+            for x in range(x0, x1 + 1):
+                m.col[y * m.w + x] = OPEN
+    bigchest(m, 23, 4, 'glove')
+    door(m, 1, 0, 'e', BIGLOCK)
+    door(m, 2, 0, 'w', BIGLOCK)
+    m.spawn('snapjaw', 20, 8)
+    m.spawn('snapjaw', 27, 4)
+    # boss room (2,0): a deep pool ringed by walkway
+    pool(35, 5, 44, 10)
+    m.spawn('maw0', 37, 7)
+    m.spawn('maw1', 42, 8)
+    m.entry = [23, 25]
+    return m
+
+
+def hollow_quarry():
+    """Shadow dungeon 2: the Hollow Quarry. Lift boulders, mind the pits.
+       (0,0) the Quarry Boss guards the Big Key   (1,0) Big Chest (Mirror Shield)   (2,0) BOSS: the Stone Colossus
+       (0,1) two blocks, two switches, the key     (1,1) entrance, boulder wall      (2,1) map, compass, fire bars"""
+    m = Map('quarry', 48, 28, 'Hollow Quarry', indoor=True, music='dungeon')
+    for ry in range(2):
+        for rx in range(3):
+            room(m, rx, ry)
+    m.extra.update({'dungeon': 'quarry', 'exit': ['s_highlands', 23, 7], 'boss': True, 'pendant': 'Crystal of Stone', 'shadow': True})
+    def pit(x0, y0, x1, y1):
+        for y in range(y0, y1 + 1):
+            for x in range(x0, x1 + 1):
+                m.col[y * m.w + x] = PIT
+                m.put('ground', CV, 1, 1, x, y)
+    door(m, 1, 1, 's')
+    m.warp(23, 27, 's_highlands', 23, 7, 2)
+    m.warp(24, 27, 's_highlands', 24, 7, 2)
+    rocks(m, [(x, 19) for x in range(17, 31)])
+    door(m, 1, 1, 'n')
+    door(m, 1, 0, 's')
+    door(m, 1, 1, 'w')
+    door(m, 0, 1, 'e')
+    door(m, 1, 1, 'e', LOCKED)
+    door(m, 2, 1, 'w', LOCKED)
+    m.spawn('captain', 21, 23)
+    m.spawn('wisp', 27, 17)
+    # west room (0,1): two blocks onto two switches open the shutter to the key
+    for (x, y) in [(4, 21), (10, 21)]:
+        m.solid(x, y, 1, 1, BLOCK)
+    m.extra['plates'] = [[4, 24], [10, 24]]
+    for (x, y) in m.extra['plates']:
+        m.solid(x, y, 1, 1, PLATE)
+    m.extra.setdefault('triggers', []).append({'type': 'plate', 'at': [[4, 24], [10, 24]], 'open': 'qkey'})
+    for (x, y) in [(6, 17), (6, 18), (9, 17), (9, 18), (6, 19), (9, 19)]:
+        m.solid(x, y, 1, 1, SOLID)
+        m.put('deco', IN, 6, 7, x, y)
+    m.solid(7, 19, 2, 1, SHUTTER)
+    m.extra.setdefault('shutters', {})['qkey'] = [[7, 19], [8, 19]]
+    m.chest(7, 17, 'key')
+    pit(1, 22, 2, 25)
+    pit(12, 22, 14, 25)
+    # east room (2,1): map and compass among fire bars
+    m.chest(35, 17, 'map')
+    m.chest(44, 25, 'compass')
+    m.spawn('firebar', 38, 21, len=4, sp=2.0)
+    m.spawn('firebar', 43, 20, len=3, sp=-2.4)
+    pit(39, 24, 41, 26)
+    # north room (1,0): the Big Chest behind boulders, fire bar, pits; the boss door east
+    bigchest(m, 23, 4, 'shield2')
+    rocks(m, [(22, 6), (23, 6), (24, 6), (25, 6), (21, 5), (26, 5)])
+    pit(17, 8, 19, 12)
+    pit(28, 8, 30, 12)
+    m.spawn('firebar', 23, 10, len=4, sp=1.6)
+    door(m, 1, 0, 'w')
+    door(m, 0, 0, 'e')
+    door(m, 1, 0, 'e', BIGLOCK)
+    door(m, 2, 0, 'w', BIGLOCK)
+    # north-west room (0,0): the Quarry Boss
+    m.spawn('quarryboss', 8, 8)
+    m.chests['7,4'] = {'item': 'bigkey', 'big': False}
+    m.extra.setdefault('reveal', {})['qb'] = [[7, 4]]
+    m.extra['triggers'].append({'type': 'clear', 'area': 0, 'open': 'qb'})
+    # boss room (2,0): boulders to throw at the Stone Colossus
+    rocks(m, [(35, 5), (44, 5), (35, 11), (44, 11)])
+    m.spawn('colossus', 40, 7)
+    m.entry = [23, 25]
+    return m
+
+
 if __name__ == '__main__':
-    out = {m.id: m.json() for m in (thistledown(), home(), cave1(), meadow_ruins(), riverhead(), sunken_shrine(), highlands(), ember_forge(), grove(), ashford_castle())}
+    out = {m.id: m.json() for m in (thistledown(), home(), cave1(), meadow_ruins(), riverhead(), sunken_shrine(), highlands(), ember_forge(), grove(), ashford_castle(), *shadow_world(), drowned_vault(), hollow_quarry())}
     os.makedirs('src/data', exist_ok=True)
     json.dump(out, open('src/data/maps.json', 'w'), separators=(',', ':'))
     print('maps', {k: (v['w'], v['h']) for k, v in out.items()})

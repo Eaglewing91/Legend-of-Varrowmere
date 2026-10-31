@@ -10,7 +10,7 @@ const { chromium } = require('playwright');
       flagsets.forEach(fs => {
         g.save.flags = Object.assign({}, fs, { barrier: 1 }); g.save.items = { pendant_shrine: 1 };
         g.enter(id, LV.MAPS[id].entry[0] * 16 + 8, LV.MAPS[id].entry[1] * 16 + 12, 0); const w = g.world, C = LV.C;
-        const ok = c => [C.OPEN, C.LOCKED, C.BIGLOCK, C.SHUTTER, C.PLATE, C.SHALLOW, C.CRACK, C.BUSH].includes(c);
+        const ok = c => [C.OPEN, C.LOCKED, C.BIGLOCK, C.SHUTTER, C.PLATE, C.SHALLOW, C.CRACK, C.BUSH, C.ROCK, C.DEEP].includes(c);
         const seen = new Set(), q = [[...LV.MAPS[id].entry]]; seen.add(q[0].join());
         while (q.length) { const [x, y] = q.pop(); for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) { const nx = x + dx, ny = y + dy, k = nx + ',' + ny; if (seen.has(k) || nx < 0 || ny < 0 || nx >= w.w || ny >= w.h) continue; if (!ok(w.c(nx, ny))) continue; seen.add(k); q.push([nx, ny]); } }
         Object.keys(w.chests).forEach(k => { const [x, y] = k.split(',').map(Number); if (seen.has(x + ',' + (y + 1))) res['chest ' + k] = 1; else res['chest ' + k] = res['chest ' + k] || 0; });

@@ -151,9 +151,12 @@ LV.ENEMIES.snapjaw = function (x, y) {
     if (this.state === 'beached') { this.contact = 2; if (w.cAt(this.x, this.y - 4) === LV.C.DEEP) { this.state = 'under'; this.st = 1; } return; }      // stranded when the water drains: easy prey
     if (this.state === 'under') {
       this.contact = 0;
+      if (!this.room) this.room = w.areaAt(this.x, this.y - 4);
+      const rm = this.room, inRoom = function (tx, ty) { return tx >= rm[0] && ty >= rm[1] && tx < rm[0] + rm[2] && ty < rm[1] + rm[3]; };
+      if (g.area !== rm) { this.st = Math.max(this.st, 0.5); return; }
       if (this.st <= 0) {
-        // pick a water tile near the hero to come up at
-        for (let k = 0; k < 12; k++) { const a = g.rng() * 6.28, r = 24 + g.rng() * 40, tx = Math.floor((h.x + Math.cos(a) * r) / 16), ty = Math.floor((h.y + Math.sin(a) * r) / 16); if (w.c(tx, ty) === LV.C.DEEP) { this.x = tx * 16 + 8; this.y = ty * 16 + 12; break; } }
+        // pick a water tile near the hero (in its own room) to come up at
+        for (let k = 0; k < 12; k++) { const a = g.rng() * 6.28, r = 24 + g.rng() * 40, tx = Math.floor((h.x + Math.cos(a) * r) / 16), ty = Math.floor((h.y + Math.sin(a) * r) / 16); if (w.c(tx, ty) === LV.C.DEEP && inRoom(tx, ty)) { this.x = tx * 16 + 8; this.y = ty * 16 + 12; break; } }
         this.state = 'up'; this.st = 1.6; g.sfx('splash'); this.spat = false;
       }
     } else if (this.state === 'up') {
