@@ -1,11 +1,19 @@
 # Legend of Varrowmere: roadmap to the full plan
 
-The aim: a world 50% larger than the 1991 original, its full dungeon count, around 150 secrets, a full item set,
+The aim: a world 50% larger than the 1991 original (its overworld is 4096 x 4096 px, about 290 screens; ours is 20 x 22 = 440 screens per world), its full dungeon count, around 150 secrets, a full item set,
 towns, side quests and minigames, with Torn-flavoured items and jokes. Light world first, then the Shadow side of each new region.
 
 Status key: [x] done  [~] in progress  [ ] to do
 
-## World (light side ~96 screens on a 12 x 8 grid; the Shadow world mirrors it)
+## World (light side 440 screens on a 20 x 22 grid, laid out in tools/worldplan.py; the Shadow world mirrors it)
+
+- [x] One continuous land: no walls between areas, a river from the Frostspire snows round Ashford Castle's moat to Mirror Lake
+  and the sea, roads with plank bridges, mountains along the north, blended biomes, Icemere's basin, the Sunscar Desert, the coast.
+- [x] 36 areas (8 hand-built, 28 generated) with 160+ named places; towns: Marrowgate (city), Thistledown, Cinderfold, Brookhaven, Dunmere.
+- [x] 11 new homes and shops, 22 fairy fountains (13 light, 9 shadow), 6 bottles, 24 heart pieces.
+- [x] Six new dungeons: Old Mine Depths, Standing Stones Barrow, Bramble Temple (light); Stormspire, Mirror Temple, Glass Spire (shadow).
+
+Old 12 x 8 layout, for reference:
 
 | Screens (x, y) | Region | Status |
 |---|---|---|

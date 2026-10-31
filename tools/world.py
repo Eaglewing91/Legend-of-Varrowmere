@@ -7,7 +7,7 @@ New areas are generated from the plan. The Shadow world is the light world's mir
 """
 import math
 import random
-from worldplan import GW, GH, SW, SH, BIOME, SETPIECES, REGIONS, RIVERS, ROADS, TOWNS_BUILT, TOWN_HOUSES, HOMES, FOUNTAINS
+from worldplan import GW, GH, SW, SH, BIOME, SETPIECES, REGIONS, RIVERS, ROADS, TOWNS_BUILT, TOWN_HOUSES, HOMES, FOUNTAINS, DUNGEONS_NEW
 
 W, H = GW * SW, GH * SH
 WALK = set('.:sw-=*bhX')          # chars the hero can walk on (bushes can be cut)
@@ -360,6 +360,8 @@ def rebuild(maps, M):
         anchors.append(spot(h[3], 5, 5))
     for f in FOUNTAINS:
         anchors.append(spot(f[1], 4, 3))
+    for d in DUNGEONS_NEW:
+        anchors.append(spot(d[3], 4, 3))
     wet = []
     for k, (sx, sy) in SETPIECES.items():
         m = idx[k]
@@ -526,6 +528,15 @@ def place_features(new, shadows, M):
     for (hid, name, reg, at, kind, look, lines) in HOMES:
         m, x, y = local(new, reg, at)
         out.append(build_house(M, m, x, y, hid, name, kind, look, lines, 'bottles' if hid == 'wf_witch' else None))
+    for (did, name, reg, at, theme, item, reward, mini, boss, gate) in DUNGEONS_NEW:
+        m, x, y = local(every, reg, at)
+        m.stamp(M.OW, 4, 31, x, y, 4, 3, col=M.SOLID)
+        m.warp(x + 1, y + 2, did, 23, 25, 0)
+        m.warp(x + 2, y + 2, did, 24, 25, 0)
+        d = M.make_dungeon(did, name, (m.id, x + 1, y + 3), theme, item, reward, mini, boss, getattr(M, gate))
+        if not reg.startswith('s_'):
+            d.extra['shadow'] = False
+        out.append(d)
     for i, (reg, at, shadow) in enumerate(FOUNTAINS):
         m, x, y = local(every, reg, at)
         out.append(fountain_cave(M, m, x, y, 'fairy%d' % (i + 1)))

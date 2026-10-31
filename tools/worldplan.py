@@ -202,3 +202,13 @@ FOUNTAINS = [   # fairy fountains: (region, at, shadow?)
     ('s_greenmarch', (12.6, 15.6), True), ('s_desert', (17.0, 19.0), True), ('s_oakshire', (6.6, 18.6), True), ('s_eastgate', (13.2, 8.4), True),
     ('s_westfold', (7.0, 5.6), True),
 ]
+
+# the six new dungeons: (id, name, region, at, theme, big-chest item, reward name, mini-boss, boss, gate)
+DUNGEONS_NEW = [
+    ('olddepths', 'Old Mine Depths', 'northreach', (4.2, 0.9), 'turtle', 'bombbag2', 'Pendant of Stone', 'quarryboss', 'colossus', 'DARKROCK'),
+    ('barrow', 'Standing Stones Barrow', 'stoneheath', (9.4, 3.3), 'forest', 'quiver2', 'Pendant of Ages', 'garrow', 'sentinels', 'PEG'),
+    ('brambletemple', 'Bramble Temple', 'bramble', (0.5, 13.4), 'swamp', 'charm', 'Pendant of Thorns', 'hald', 'kraken', 'DARKROCK'),
+    ('stormspire', 'Stormspire', 's_skyridge', (16.6, 1.0), 'ice', 'speedcharm', 'Crystal of Storms', 'drowned', 'frostwyrm', 'PEG'),
+    ('mirrortemple', 'Mirror Temple', 's_mirrorlake', (13.0, 18.0), 'swamp', 'guardring', 'Crystal of Reflections', 'brask2', 'bogmaw', 'DARKROCK'),
+    ('glassspire', 'Glass Spire', 's_desert', (17.6, 18.6), 'thieves', 'powerring', 'Crystal of Glass', 'hald', 'pyrewyrm', 'PEG'),
+]
