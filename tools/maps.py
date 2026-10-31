@@ -207,6 +207,11 @@ def paint(m, rows, ox=0, oy=0, base='.'):
                             m.put('ground', NF, *((0, 4) if r == 0 else (1, 4) if r == 1 else (1, 1)), X, Y)
                         else:
                             m.put('ground', NF, *((0, 18) if r in (0, 5) else (1, 18) if r in (1, 9, 14) else (1, 15)), X, Y)
+    band = set()
+    for y in range(H_):
+        for x in range(W_):
+            if g[y][x] == 'O' and (x < 2 or y < 2 or x >= W_ - 2 or y >= H_ - 2):
+                band.update({(ox + x + i, oy + y + j) for i in (0, 1) for j in (0, 1)})
     for y in range(H_):
         for x in range(W_):
             c, X, Y = g[y][x], ox + x, oy + y
@@ -238,10 +243,14 @@ def paint(m, rows, ox=0, oy=0, base='.'):
             elif c == 'g':
                 m.stamp(OW, 35, 5, X, Y, 2, 2, col=SOLID)
     paint_forest(m, g, ox, oy)
+    if band:
+        dress_border(m, g, ox, oy, base, band)
     for y in range(H_):
         for x in range(W_):
             c, X, Y = g[y][x], ox + x, oy + y
-            if c == 'O':
+            if c == 'O' and (X, Y) in band:
+                pass
+            elif c == 'O':
                 if base == 's':
                     m.stamp(NN, 12, 6, X, Y, 2, 2, col=SOLID)
                 elif base in (':', 'w'):
@@ -270,6 +279,73 @@ def paint(m, rows, ox=0, oy=0, base='.'):
                 fence(m, X, ox + x1, Y)
             elif c == '|':
                 m.stamp(OW, 0, 17, X, Y, col=LOW)
+
+
+# Pack sprites for dressing a rocky border: (tx, ty, w, h, is_tree). Rocks sit on the ground; a tree's top row is its crown.
+_ROCKS_B = [(17, 10, 4, 3, 0), (21, 10, 2, 3, 0), (15, 10, 2, 2, 0), (15, 12, 2, 2, 0), (12, 5, 4, 3, 0), (13, 8, 2, 2, 0)]
+_ROCKS_G = [(17, 14, 4, 3, 0), (21, 14, 2, 3, 0), (15, 14, 2, 2, 0), (15, 16, 2, 2, 0), (16, 5, 4, 3, 0), (16, 8, 2, 2, 0)]
+BORDER_KITS = {
+    '.': (_ROCKS_B + [(0, 2, 4, 3, 1), (4, 2, 4, 3, 1), (16, 2, 4, 3, 1), (3, 18, 3, 3, 1), (2, 0, 2, 2, 1), (0, 0, 2, 2, 1), (16, 0, 2, 2, 1)],
+          [(17, 13), (18, 13), (19, 13), (0, 10), (1, 10), (2, 10)]),
+    ':': (_ROCKS_G + [(0, 2, 4, 3, 1), (0, 5, 4, 3, 1), (4, 0, 2, 2, 1), (2, 0, 2, 2, 1)], [(17, 17), (18, 17), (19, 17)]),
+    'w': (_ROCKS_G + [(8, 2, 4, 3, 1), (4, 5, 4, 3, 1), (8, 5, 4, 3, 1), (6, 18, 3, 3, 1), (2, 12, 2, 2, 0), (8, 0, 2, 2, 1), (10, 0, 2, 2, 1)],
+          [(17, 17), (18, 17), (4, 12), (5, 12)]),
+    's': (_ROCKS_B + [(0, 5, 4, 3, 1), (4, 0, 2, 2, 1)], [(17, 13), (18, 13), (19, 13)]),
+}
+
+
+def dress_border(m, g, ox, oy, base, band):
+    """Fill a rocky border with a random mix of the pack's rocks and trees instead of a row of identical boulders.
+    Sprites may poke one row into the land where it is plain ground, so the edge is not a straight line."""
+    import random
+    rng = random.Random(sum(ord(c) for c in m.id) * 7 + 3)
+    big, small = BORDER_KITS.get(base, BORDER_KITS['.'])
+    H_, W_ = len(g), len(g[0])
+    occ = set()
+
+    def ok(X, Y):
+        if (X, Y) in occ:
+            return False
+        if (X, Y) in band:
+            return True
+        x, y = X - ox, Y - oy
+        if not (0 <= x < W_ and 0 <= y < H_) or g[y][x] != base:
+            return False
+        if not (x == 2 or y == 2 or x == W_ - 3 or y == H_ - 3):
+            return False
+        # only poke in beside a solid run of border, never next to an opening
+        return all((X + i, Y + j) in band or (X + i, Y + j) in occ or not (0 <= x + i < W_ and 0 <= y + j < H_) or not (x + i < 2 or y + j < 2 or x + i >= W_ - 2 or y + j >= H_ - 2)
+                   for i in (-2, -1, 0, 1, 2) for j in (-2, -1, 0, 1, 2))
+
+    for (X, Y) in sorted(band, key=lambda p: (p[1], p[0])):
+        if (X, Y) in occ:
+            continue
+        kit = big[:]
+        rng.shuffle(kit)
+        done = False
+        for (tx, ty, w, h, tree) in kit:
+            offs = [(i, j) for j in range(h) for i in range(w)]
+            rng.shuffle(offs)
+            for (i, j) in offs:
+                ax, ay = X - i, Y - j
+                cells = [(ax + a, ay + b) for b in range(h) for a in range(w)]
+                if all(ok(cx, cy) for cx, cy in cells):
+                    for b in range(h):
+                        for a in range(w):
+                            layer = 'over' if tree and b == 0 else 'deco'
+                            m.put(layer, NN, tx + a, ty + b, ax + a, ay + b)
+                            m.layers['deco' if layer == 'over' else 'over'][(ay + b) * m.w + ax + a] = -1
+                            m.col[(ay + b) * m.w + ax + a] = SOLID
+                            occ.add((ax + a, ay + b))
+                    done = True
+                    break
+            if done:
+                break
+        if not done:
+            tx, ty = rng.choice(small)
+            m.put('deco', NN, tx, ty, X, Y)
+            m.col[Y * m.w + X] = SOLID
+            occ.add((X, Y))
 
 
 def paint_forest(m, g, ox, oy):
