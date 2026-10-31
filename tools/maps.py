@@ -187,12 +187,17 @@ def signboard(m, x, y, text):
 # F  forest wall  b  bush            r  boulder (Glove) O  big boulder (2x2, top-left)   *  flowers
 # H  house (5x5, top-left; the door is the middle of its bottom row)   f  fence (ends joined)   |  fence post
 # S  market stall (5x6, top-left)   W  fountain (3x3, top-left)   B  barrels (2x2)   p  pit
-def paint(m, rows, ox=0, oy=0):
+def paint(m, rows, ox=0, oy=0, base='.'):
     H_ = len(rows)
     W_ = max(len(r) for r in rows)
     g = [r.ljust(W_, '.') for r in rows]
     at = lambda x, y: g[y][x] if 0 <= y < H_ and 0 <= x < W_ else None
     grass(m, ox, oy, ox + W_ - 1, oy + H_ - 1)
+    if base == ':':          # dry lands: everything that isn't grass, water or road sits on earth
+        for y in range(H_):
+            for x in range(W_):
+                if g[y][x] not in '.*b~-=':
+                    m.put('ground', OW, 12, 13, ox + x, oy + y)
     for y in range(H_):
         for x in range(W_):
             c, X, Y = g[y][x], ox + x, oy + y
@@ -222,8 +227,7 @@ def paint(m, rows, ox=0, oy=0):
             elif c == 'x':
                 m.put('deco', OW, 28, 2, X, Y)
             elif c == 'g':
-                m.put('deco', OW, 36, 5, X, Y)
-                m.col[Y * m.w + X] = SOLID
+                m.stamp(OW, 35, 5, X, Y, 2, 2, col=SOLID)
     paint_forest(m, g, ox, oy)
     for y in range(H_):
         for x in range(W_):
@@ -333,13 +337,13 @@ def interior(mid, name, back, kind='house', npcs=(), chests=(), signs=()):
     return m
 
 
-def region(mid, name, wx, wy, sw, sh, rows, music='village'):
+def region(mid, name, wx, wy, sw, sh, rows, music='village', base='.'):
     m = Map(mid, sw * 16, sh * 14, name, music=music)
     for j in range(sh):
         for i in range(sw):
             m.area(i * 16, j * 14)
     m.extra['world'] = [wx, wy]
-    paint(m, rows)
+    paint(m, rows, base=base)
     return m
 
 
@@ -1548,7 +1552,7 @@ def outer_regions():
 
     def R(mid, name, wx, wy, sw, sh, theme, openings, seed, names, hub=None, sea=None, keep=(), music='village'):
         rows = G.make(sw * 16, sh * 14, theme, openings, seed, hub=hub, sea_side=sea, keep=keep)
-        m = region(mid, name, wx, wy, sw, sh, rows, music=music)
+        m = region(mid, name, wx, wy, sw, sh, rows, music=music, base=G.THEMES[theme]['ground'])
         m.extra['names'] = names
         m.entry = list(hub or (sw * 8, sh * 7))
         out.append(m)
@@ -1643,9 +1647,10 @@ def outer_regions():
     # Saltmarsh (6-7, 4-7): coast, the old graveyard
     m = R('saltmarsh', 'Saltmarsh', 6, 4, 2, 4, 'coast', [('w', 11, 11), ('w', 23, 25), ('e', 28, 30)], 71,
           ['Salt Flats', 'Gull Rock', 'Old Graveyard', 'Mourner\'s Rest', 'Driftwood', 'Wreck Point', 'Low Tide', 'Sea Wall'], sea='s', hub=(14, 26), keep=[(4, 30, 14, 38)])
-    for (x, y) in [(5, 31), (8, 31), (11, 31), (5, 34), (8, 34), (11, 34), (5, 37), (11, 37)]:
-        m.put('deco', OW, 36, 5, x, y)
-        m.col[y * m.w + x] = SOLID
+    for (x, y) in [(5, 31), (8, 31), (5, 34), (8, 34), (5, 37)]:
+        m.stamp(OW, 35, 5, x, y, 2, 2, col=SOLID)
+    m.stamp(OW, 35, 5, 10, 36, 2, 2, col=SOLID)
+    m.col[37 * m.w + 11] = SOLID
     m.extra['bonk'] = {'11,37': ['sm_crypt', 7, 12]}
     m.chest(13, 32, 'storm')
     for (x, y) in [(12, 32), (14, 32), (12, 33), (13, 33), (14, 33)]:

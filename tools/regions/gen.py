@@ -130,5 +130,10 @@ def make(W, H, theme, openings, seed, hub=None, sea_side=None, keep=()):
                     clear(x, y)
                 put(x, y, T['ground'])
         walk(x0, y1 + 1, hub[0], hub[1])
+    if T['ground'] == ':':        # stray grass in dry lands only survives right next to water (oasis banks)
+        for y in range(H):
+            for x in range(W):
+                if g[y][x] == '.' and not any(0 <= y + j < H and 0 <= x + i < W and g[y + j][x + i] == '~' for j in (-1, 0, 1) for i in (-1, 0, 1)):
+                    g[y][x] = ':'
     rows = [''.join(r).replace('_', T['ground']) for r in g]
     return rows
