@@ -30,4 +30,5 @@ for (x, y) in [(4, 31), (12, 35), (20, 31), (26, 37), (36, 31), (43, 37), (3, 9)
     g[y][x] = 'b'
 for (x, y) in [(3, 17), (11, 23), (4, 23)]:
     g[y][x] = '*'
+carve(44, 6, 47, 7)            # east to the Northreach downs
 ROWS = [''.join(r) for r in g]

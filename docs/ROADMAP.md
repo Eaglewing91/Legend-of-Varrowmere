@@ -16,11 +16,15 @@ Status key: [x] done  [~] in progress  [ ] to do
 | 2-5, 5-6 | Marrowgate, the big town (shops, smith, tavern, library, games) | [x] town, 9 interiors, chest game, shooting gallery |
 | 0-2, 3-6 | Willowfen marsh (north 3x2, south 2x2), Old Mole, Bellamy's bottles | [x] |
 | 0-2, 0-2 | Whisperwood (the lost woods, the Tangle), the bandit hideout, Durn | [x] |
-| 5-8, 0-1 | Frostspire Peaks (the mountain) | [ ] |
-| 8-11, 4-7 | Sunscar Desert | [ ] |
-| 10-11, 1-3 | Icemere | [ ] |
-| 6-9, 6-7 | Saltmarsh coast and the old graveyard | [ ] |
-| gaps | roads, fields and ruins joining it all | [ ] |
+| 3-4, 0-1 | Northreach Downs, the shepherd | [x] |
+| 5-9, 0-1 | Frostspire Peaks: hermit Hollis, Eagle Crag, the old mine | [x] map (bird and pegs to come) |
+| 10-11, 0 | Skyridge | [x] |
+| 8-11, 4-7 | Sunscar Desert: ruins with old script, nomad camp | [x] map (Medal to come) |
+| 10-11, 1-3 | Icemere lake and isles | [x] map (Frost Rod cave to come) |
+| 6-7, 4-7 | Saltmarsh coast and the old graveyard | [x] map (Cloak to come) |
+| 5-9, 2 / 8-9, 3 | Eastvale fields and mill, the Riverlands ford | [x] |
+| 0-5, 7 | Southshore beach | [x] |
+| all | every screen of the 12 x 8 light world filled and joined; Shadow copies of every region | [x] |
 
 ## Dungeons (12, as in the original, plus a bonus)
 

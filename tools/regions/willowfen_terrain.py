@@ -42,6 +42,9 @@ def south():
             for x in (30, 31): g[y][x] = 'F'
     for y in (26, 27):
         for x in range(W): g[y][x] = 'F'
+    for y in (26, 27):
+        for x in (14, 15): g[y][x] = '.'
+    for y in range(12, 26): g[y][14] = g[y][14] if g[y][14] != 'F' else '.'
     for (a, b, c, d) in [(4, 11, 13, 19), (17, 25, 17, 23), (20, 27, 2, 6)]:
         blob(g, a, c, b, d, '~')
     for (a, b, c, d) in [(14, 19, 9, 12), (3, 8, 21, 24)]:

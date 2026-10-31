@@ -23,6 +23,8 @@ LV.Game.prototype.checkEdges = (function (orig) {
         const inside = nx >= 0 && ny - 3 >= 0 && nx < this.world.w * T && ny - 3 < this.world.h * T && !(dir === 0 && atT) && !(dir === 2 && atB) && !(dir === 1 && atR) && !(dir === 3 && atL);
         if (!inside) {
           const wx = def.world[0] * 256 + nx, wy = def.world[1] * 224 + ny + (dir === 0 ? -8 : 0), to = LV.regionAt(wx, wy - 3, def.shadow);
+          // only cross where the ground on the far side is open (otherwise the border is just a wall)
+          if (to) { const tc = to.col[Math.floor((wy - 3 - to.world[1] * 224 + d.y * 8) / 16) * to.w + Math.floor((wx - to.world[0] * 256 + d.x * 8) / 16)]; if ([LV.C.OPEN, LV.C.SHALLOW, LV.C.PLATE].indexOf(tc) < 0 && !(tc === LV.C.DEEP && this.save.items.fins)) return orig.call(this); }
           if (to) {
             const lx = wx - to.world[0] * 256 + d.x * 8, ly = wy - to.world[1] * 224 + d.y * 8, self = this, keepDir = h.dir;
             if (!this.fadeTo) this.fadeTo = function () { self.enter(to.id, lx, ly, keepDir); self.fade = 1; };

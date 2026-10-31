@@ -19,4 +19,7 @@ for (x, y) in [(27, 10), (28, 10), (29, 10), (27, 11), (29, 11), (13, 22), (14, 
 for y in range(9, 12):
     put(0, y, '.'); put(1, y, '.'); put(2, y, '.')
 for x in range(1, 5): put(x, 10, '-')
+for y in range(9, 12):
+    put(63, y, '.'); put(62, y, '.')
+put(59, 10, '.')
 ROWS = [''.join(r) for r in g]
