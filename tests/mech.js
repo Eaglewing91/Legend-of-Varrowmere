@@ -99,9 +99,9 @@ const { chromium } = require('playwright');
   // 24. Big Chest needs the Big Key
   r = await p.evaluate(() => { const g = LV.game; delete g.save.items.bigkey_ruins1; delete g.save.items.bow; place('ruins1', 39, 20, 0); g.actors = []; step(1, [], ['action']); const shut = !g.save.items.bow; g.dialog = null; g.save.items.bigkey_ruins1 = 1; step(1, [], ['action']); return { shut: shut, bow: !!g.save.items.bow }; });
   check('big chest needs big key', r.shut && r.bow, r);
-  // 25. Boss: beating all three Stone Sentinels gives a Life Container, then out to the meadow
+  // 25. Boss: beating all three Stone Sentinels gives a Life Container, then out to the Riverlands, where its gate now stands
   r = await p.evaluate(() => { const g = LV.game; delete g.save.flags['ruins1:boss']; place('ruins1', 40, 10, 0); g.area = g.world.areaAt(40 * 16, 10 * 16); const before = g.save.maxHp; g.actors.filter(a => a.boss).forEach(a => g.kill(a)); step(2, []); const pk = g.pickups.find(p => p.kind === 'container'); if (!pk) return { none: g.actors.map(a => a.kind), pk: g.pickups.map(p => p.kind) }; H().x = pk.x; H().y = pk.y + 4; step(2, []); for (let i = 0; i < 5; i++) step(1, [], ['action']); step(40, []); return { hp: g.save.maxHp - before, map: g.world.id, pendant: !!g.save.items.pendant_ruins1 }; });
-  check('boss gives life container and pendant, then exits', r.hp === 4 && r.pendant && r.map === 'meadow', r);
+  check('boss gives life container and pendant, then exits', r.hp === 4 && r.pendant && r.map === 'riverlands', r);
 
   // 28. Villagers: talk with the action button, they block the way and can't be hurt
   r = await p.evaluate(() => { const g = LV.game; delete g.save.items.pendant_ruins1; place('meadow', 13, 10, 1); const v = g.actors.find(a => a.npc && a.look === 'elder'); v.x = 14 * 16 + 8; v.y = 10 * 16 + 14; v.roam = 0; v.goal = null;
@@ -139,11 +139,11 @@ const { chromium } = require('playwright');
     b.hp = 1; b.inv = 0; b.state = 'dazed'; b.st = 0; step(16, [], ['attack']); step(5, []);
     return { hidden, hp1, dazed, hp2, dead: !g.actors.includes(b), shown: g.world.c(7, 4) === 1 }; });
   check('mini-boss: armoured until dazed, reveals the Big Key', r.hidden && r.hp1 === 12 && r.dazed && r.hp2 < 12 && r.dead && r.shown, r);
-  // 34. The sluice lever drains Reedwater and opens the way to the Sunken Shrine
+  // 34. The sluice lever (Riverhead) drains the Mirror Pool down the river and opens the way to the Sunken Shrine
   r = await p.evaluate(() => { const g = LV.game; delete g.save.flags.sluice; place('meadow', 43, 3, 0); step(70, ['up']); step(30, []); const there = g.world.id;
-    place('meadow', 43, 8, 0); const wetBefore = g.world.c(43, 8);
+    place('mirrorlake', 13, 10, 0); const wetBefore = g.world.c(13, 9);
     place('riverhead', 9, 6, 3); step(1, [], ['action']); const pulled = !!g.save.flags.sluice; g.dialog = null;
-    place('meadow', 43, 9, 0); const dry = g.world.c(43, 9); step(30, ['up']); step(30, []); return { there, wetBefore, pulled, dry, shrine: g.world.id }; });
+    place('mirrorlake', 13, 10, 0); const dry = g.world.c(13, 9); step(30, ['up']); step(30, []); return { there, wetBefore, pulled, dry, shrine: g.world.id }; });
   check('sluice lever drains the pool, shrine opens', r.wetBefore === 2 && r.pulled && r.dry === 0 && r.shrine === 'shrine', r);
   // 35. Water switch: the blade toggles the level; flood tiles dry out and spill tiles fill (and back)
   r = await p.evaluate(() => { const g = LV.game; delete g.save.flags['shrine:drained']; place('shrine', 43, 17, 1); g.actors = [];
@@ -207,7 +207,7 @@ const { chromium } = require('playwright');
     return { refused, got, beam, blade: H().blade }; });
   check('Dawnblade: needs three Pendants, beam at full health', r.refused && r.got && r.beam && r.blade === 2, r);
   // 46. The barrier: only the Dawnblade cuts it, and it stays cut
-  r = await p.evaluate(() => { const g = LV.game; delete g.save.flags.barrier; place('grove', 23, 7, 0); g.actors = []; const sealed = g.world.c(23, 6) === 23; step(16, [], ['attack']); g.dialog = null; const cut = g.world.c(23, 6) === 0;
+  r = await p.evaluate(() => { const g = LV.game; delete g.save.flags.barrier; const D = LV.MAPS.castlelawns.warps.find(w => /^castle/.test(w.to)); place('castlelawns', D.x, D.y + 2, 0); g.actors = []; const sealed = g.world.c(D.x, D.y + 1) === 23; step(16, [], ['attack']); g.dialog = null; const cut = g.world.c(D.x, D.y + 1) === 0;
     step(60, ['up']); step(30, []); return { sealed, cut, inside: g.world.id }; });
   check('barrier cut by the Dawnblade, castle opens', r.sealed && r.cut && /^castle/.test(r.inside), r);
   // 47. Vex: blade can't touch him; a returned orb wounds him; beating him rolls the ending
@@ -248,8 +248,8 @@ const { chromium } = require('playwright');
     const cont = g.pickups.find(p => p.kind === 'container'); if (cont) g.collect(cont); const line = g.dialog && g.dialog.lines[1]; g.dialog = null; return { n: maws.length, line, crystal: !!g.save.items.crystal_vault }; });
   check('twin maws give the Crystal of the Deep', r.n === 2 && r.crystal && /Deep/.test(r.line), r);
   // 55. Shadow Keep gate opens with both Crystals
-  r = await p.evaluate(() => { const g = LV.game; delete g.save.flags.crystals; delete g.save.items.crystal_vault; delete g.save.items.crystal_quarry; place('s_grove', 23, 8, 0); g.actors = []; const shut = g.world.c(23, 6);
-    ['vault', 'quarry', 'bonehollow', 'thievesden', 'frostmere', 'mirefen', 'turtleback'].forEach(k => { g.save.items['crystal_' + k] = 1; }); place('s_grove', 23, 8, 0); g.actors = []; step(60, ['up']); step(30, []); return { shut, map: g.world.id }; });
+  r = await p.evaluate(() => { const g = LV.game; delete g.save.flags.crystals; delete g.save.items.crystal_vault; delete g.save.items.crystal_quarry; const D = LV.MAPS.castlelawns.warps.find(w => /^castle/.test(w.to)); place('s_castlelawns', D.x, D.y + 2, 0); g.actors = []; const shut = g.world.c(D.x, D.y);
+    ['vault', 'quarry', 'bonehollow', 'thievesden', 'frostmere', 'mirefen', 'turtleback'].forEach(k => { g.save.items['crystal_' + k] = 1; }); place('s_castlelawns', D.x, D.y + 2, 0); g.actors = []; step(60, ['up']); step(30, []); return { shut, map: g.world.id }; });
   check('Shadow Keep opens with both Crystals', r.shut === 1 && /^keep/.test(r.map), r);
   // 56. Mirror secret: the gateless pen's heart piece, reached by mirroring in from the shadow side
   r = await p.evaluate(() => { const g = LV.game; g.save.items.mirror = 1; g.save.equip = 'mirror'; delete g.save.opened['grove:13,7']; place('s_grove', 13, 8, 0); g.actors = []; step(1, [], ['item']); step(20, []);

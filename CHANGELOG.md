@@ -12,6 +12,9 @@ Dates are in TCT (Torn City Time).
 - Every screen is joined to its neighbours (no screen is cut off), and almost every screen has at least two ways in or out.
 - Each screen now reads as one kind of land (woods, fields, snow, desert) instead of patches of everything.
 - No more one-tile squeezes between trees and rocks: paths are at least two tiles wide.
+- **Ashford Castle is now a proper castle.** It stands in its own lawns south of the Dawn Grove, inside a moat: a walled courtyard two screens across with towers at every corner, a gatehouse in the south wall, and the great keep in the middle (Vex's barrier still guards the door).
+- **The Shadow Keep is Ashford Castle's dark twin.** It stands in the same spot in the Shadow world, and its door opens once you hold all seven Crystals.
+- **The Meadow Ruins and the Sunken Shrine are no longer right next to Thistledown.** The ruins are now at the far side of the Riverlands, at the end of the east road. The shrine lies under a pool in Mirror Lake and is drained by the sluice as before. Signs and villagers point the new way.
 ### Fixed
 - **No more dead ends when you cross onto a new screen.** Every gap across a screen edge now leads somewhere: on into that screen, to another gap, or to something to find (a door, a cave, a chest, a dig spot, someone to talk to, a sign). Checked by a new test on every screen of both worlds.
 - Lookout towers have a sign to read when you reach the end of their road.

@@ -159,7 +159,7 @@ LV.Game.prototype.enter = (function (orig) {
         'Wren? Out in this weather?',
         'Brannoc went east a while ago, sword and all, towards the Meadow Ruins. Told me not to tell you.',
         'So I haven\'t told you. Off you go, then.',
-        'Past the cave, through the old gate. Mind the soldiers. And the logs. Especially the logs.']]] }));
+        'Follow the east road out to the Riverlands. The old gate is on the far side. Mind the soldiers. And the logs. Especially the logs.']]] }));
     }
     return r;
   };

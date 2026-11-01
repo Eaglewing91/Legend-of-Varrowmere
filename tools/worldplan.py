@@ -89,6 +89,8 @@ ROADS = [
     ((10.5, 12.5), (10.0, 10.9)),   # Thistledown -> castle bridge
     ((10.5, 12.5), (4.0, 15.5)),    # Thistledown -> Marrowgate
     ((10.5, 12.5), (13.5, 12.5)),   # Thistledown -> Riverlands
+    ((13.5, 12.5), (14.45, 11.7)), # -> the Meadow Ruins
+    ((10.0, 17.5), (12.75, 17.95)), # graveyard -> Mirror Lake (the Sunken Shrine)
     ((13.5, 12.5), (17.0, 13.5)),   # -> desert ruins
     ((13.5, 12.5), (16.5, 9.5)),    # -> Eastvale mill
     ((16.5, 9.5), (16.5, 6.0)),     # -> Icemere
@@ -212,6 +214,16 @@ DUNGEONS_NEW = [
     ('mirrortemple', 'Mirror Temple', 's_mirrorlake', (13.0, 18.0), 'swamp', 'guardring', 'Crystal of Reflections', 'twinsnake', 'mirrorshade', 'DARKROCK'),
     ('glassspire', 'Glass Spire', 's_desert', (17.6, 18.6), 'thieves', 'powerring', 'Crystal of Glass', 'glassslime', 'glasseye', 'PEG'),
 ]
+
+# the first two dungeons, moved out of Thistledown so each is a journey: (dungeon, region, at)
+#   Meadow Ruins: far east across the Riverlands. Sunken Shrine: down the river in Mirror Lake, flooded until the
+#   sluice upstream at Riverhead is shut.
+MOVED_DUNGEONS = [('ruins1', 'riverlands', (14.3, 11.4)), ('shrine', 'mirrorlake', (12.5, 17.4))]
+
+# Ashford Castle, Vex's seat, as big as Zelda 1991's: a walled compound across two by two screens inside the moat
+# (region, top-left at, width, height in tiles). Its keep's great door leads into the castle; the Dawnblade breaks the
+# barrier in front of it.
+CASTLE = ('castlelawns', (9.06, 9.07), 30, 20)
 
 # landmarks: (kind, region, at). stones: a ring of standing stones; mill: a windmill; wreck: a shipwreck on the sand;
 # tower: a ruined watchtower; ruin: a broken old building; maze: the Bramble hedge maze (fills its rect in screens).

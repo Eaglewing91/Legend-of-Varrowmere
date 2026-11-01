@@ -743,16 +743,13 @@ def thistledown():
     m.spawn('soldier', 22, 10)
     m.spawn('archer', 26, 4)
     m.chest(30, 4, 'bombs')
-    m.stamp(OW, 4, 31, 17, 3, 4, 3, col=SOLID)        # ruined gate to the Meadow Ruins
-    m.warp(18, 5, 'ruins1', 23, 25, 0)
-    m.warp(19, 5, 'ruins1', 24, 25, 0)
-    m.sign(21, 6, 'MEADOW RUINS|Keep out. By order of Chancellor Vex.')
+    signboard(m, 20, 5, 'EAST|Riverlands and the Meadow Ruins. Mind the logs.')
     for (x, y) in [(29, 4), (30, 5), (31, 4)]:
         bush(m, x, y)
     # villagers
     m.spawn('villager', 14, 10, look='elder', roam=10, talk=[
-        ['pendant_ruins1', ['You found the Pendant of Valor! I knew you had it in you.', 'Two more Pendants are hidden across Varrowmere. One, they say, lies beneath Reedwater.', 'Find them before Vex does.']],
-        [None, ['Wren! You look like you slept in a hedge.', 'East of here, past the cave, the old Meadow Ruins sit behind the gate.', 'Vex has soldiers guarding it. Cut the bushes for hearts, and mind the logs.']]])
+        ['pendant_ruins1', ['You found the Pendant of Valor! I knew you had it in you.', 'Two more Pendants are hidden across Varrowmere. One, they say, sleeps under Mirror Lake, far down the river to the south.', 'Find them before Vex does.']],
+        [None, ['Wren! You look like you slept in a hedge.', 'Take the road east, out past the cave and over the Riverlands. The old Meadow Ruins sit at the far end.', 'Vex has soldiers guarding it. Cut the bushes for hearts, and mind the logs.']]])
     m.spawn('villager', 12, 6, look='trader', roam=0, dir=2, shop=True, talk=[
         [None, ['Fresh goods! Prices go up every time you look at them. That is just how markets work.', 'Energy drinks? Sold out. Some fellow bought forty and ran off to train in the woods.']]])
     # screen 3: Reedwater, a pool hiding the Sunken Shrine (dungeon 2)
@@ -765,7 +762,7 @@ def thistledown():
     m.stamp(OW, 6, 6, 40, 3, 2, 3)              # jetty out onto the pool
     m.solid(40, 3, 2, 3, OPEN)
     m.spawn('villager', 40, 5, look='fisher', roam=0, dir=2, talk=[
-        [None, ['They say a shrine sits at the bottom of this pool.', 'My grandmother swore the water drops when the old sluice upstream is shut.', 'Me? I just rent out the boat. Well, I would, if anyone had stolen it back for me.']]])
+        [None, ['This river runs all the way down to Mirror Lake. There is a shrine under the lake shallows, they say.', 'My grandmother swore the water drops when the old sluice upstream is shut. The path up to it starts just north of here.', 'Me? I just rent out the boat. Well, I would, if anyone had stolen it back for me.']]])
     signboard(m, 36, 6, 'REEDWATER POOL|No swimming. No fishing. No asking why.')
     for (x, y) in [(32, 10), (34, 10), (33, 9), (35, 9)]:
         bush(m, x, y)
@@ -773,19 +770,7 @@ def thistledown():
     m.spawn('soldierBlue', 34, 6)
     m.spawn('archer', 35, 4)
     m.spawn('log', 33, 9)
-    # once the sluice upstream is shut, the pool drains and the Sunken Shrine's gate shows
-    before = m.snapshot()
-    grass(m, 37, 3, 47, 3)
-    for y in range(4, 11):
-        for x in range(37, 48):
-            m.put('ground', OW, 12, 13, x, y)
-            m.layers['deco'][y * m.w + x] = -1
-            m.col[y * m.w + x] = OPEN
-    m.stamp(OW, 6, 6, 40, 3, 2, 3)
-    m.stamp(OW, 4, 31, 42, 5, 4, 3, col=SOLID)
-    m.warp(43, 7, 'shrine', 23, 25, 0)
-    m.warp(44, 7, 'shrine', 24, 25, 0)
-    m.variant('sluice', before)
+    # (the Sunken Shrine used to lie under this pool; it is down the river in Mirror Lake now)
     m.spawn('villager', 7, 12, look='fisher', roam=0, dir=2, talk=[
         [None, ['Three days I have been fishing here.', 'So far: one boot, one cart wheel and somebody\'s crumpled receipt for a plushie.']]])
     m.spawn('villager', 3, 11, look='farmer', roam=24, talk=[
@@ -1215,7 +1200,7 @@ def highlands():
     for (x, y) in [(20, 19), (21, 19), (22, 20)]:
         bush(m, x, y)
     m.chest(21, 20, 'arrows')
-    signboard(m, 26, 20, 'OVERLOOK|East, past the mountains, the towers of Ashford Castle. West, a cow. Mostly the castle.')
+    signboard(m, 26, 20, 'OVERLOOK|South-east, past the mountains, the towers of Ashford Castle. West, a cow. Mostly the castle.')
     m.spawn('log', 24, 18)
     m.spawn('soldier', 19, 24)
     secret_cave(m, 22, 17, 'grotto2', ['cash50', 'arrows'], 'A miner\'s stash. A note says: DO NOT TELL THE TAXMAN.')
@@ -1321,7 +1306,7 @@ def grove():
     m.extra['world'] = [6, 3]
     m.area(0, 0)
     m.area(16, 0)
-    m.extra['names'] = ['Dawn Grove', 'Ashford Castle']
+    m.extra['names'] = ['Dawn Grove', 'Castle Woods']
     grass(m, 0, 0, 31, 13)
     for x0 in (-2, 2, 10, 14):
         forest(m, x0, -3)
@@ -1344,20 +1329,11 @@ def grove():
             m.stamp(OW, 0, 17, x, y, col=LOW)
     m.chest(13, 7, 'heart_shard')
     m.sign(10, 8, 'A pen with no gate. The farmer who built it swore it was "more secure that way".')
-    # Ashford Castle: towers, the gate, and Vex's barrier
-    road_ns(m, 23, 6, 13)
-    m.stamp(OW, 0, 22, 17, 0, 3, 6, col=SOLID)
-    m.stamp(OW, 0, 22, 28, 0, 3, 6, col=SOLID)
-    for x in range(20, 28):
-        for y in range(0, 3):
-            m.put('ground', OW, 8, 23, x, y)
-            m.solid(x, y, 1, 1, SOLID)
-    m.stamp(OW, 4, 31, 22, 3, 4, 3, col=SOLID)
-    m.warp(23, 5, 'castle', 23, 25, 0)
-    m.warp(24, 5, 'castle', 24, 25, 0)
-    for x in range(22, 26):
-        m.solid(x, 6, 1, 1, BARRIER)
-    m.spawn('captain', 20, 9)
+    # the woods behind Ashford Castle (the castle itself stands just south, inside the moat: tools/world.py build_castle)
+    forest(m, 18, -3)
+    forest(m, 26, -3)
+    flowers(m, [(20, 7), (24, 9), (28, 6), (22, 11)])
+    m.sign(23, 6, 'CASTLE WOODS|Ashford Castle lies just south of here. The front door is on the far side. It is always on the far side.')
     m.spawn('soldierBlue', 27, 10)
     m.spawn('archer', 29, 7)
     m.entry = [1, 7]
@@ -1613,6 +1589,7 @@ def shadowize(m, name):
         if (w['x'], w['y']) not in kept and not str(w['to']).startswith('grotto') and s.extra.get('world') and not s.indoor:
             if 0 < w['y'] < s.h - 1 and 0 < w['x'] < s.w - 1:
                 s.col[w['y'] * s.w + w['x']] = SOLID
+                s.signs['%d,%d' % (w['x'], w['y'])] = 'The door is boarded up. On a plank someone has scratched: "MOVED TO THE LIGHT. DO NOT FOLLOW."'
     for k in ('digs', 'oldscript'):
         s.extra.pop(k, None)
     # light-world secret caves don't exist here: their cracked boulders are gone (open ground, so no nook is left
@@ -1698,7 +1675,7 @@ def shadow_world():
     out.append(m)
     # Shadow Grove: where the Twin Mirror drops you; the shadow castle's gate is sealed (for now)
     m = shadowize(grove(), 'Shadow Grove')
-    m.extra['names'] = ['Withered Grove', 'Shadow Keep']
+    m.extra['names'] = ['Withered Grove', 'Withered Woods']
     for i, c in enumerate(m.col):
         if c == BARRIER:
             m.col[i] = SOLID
@@ -1711,14 +1688,7 @@ def shadow_world():
     m.signs.pop('10,8', None)
     m.spawn('captain', 20, 9)
     m.spawn('wisp', 12, 5)
-    # the Shadow Keep opens once both Crystals are held
-    before = m.snapshot()
-    for x in range(22, 26):
-        m.col[6 * m.w + x] = OPEN
-    m.warp(23, 5, 'keep', 23, 25, 0)
-    m.warp(24, 5, 'keep', 24, 25, 0)
-    m.variant('crystals', before)
-    m.sign(21, 7, 'SHADOW KEEP|Two crystal-shaped hollows are set into the gate.')
+    # the Shadow Keep moved to Ashford Castle's shadow twin (tools/world.py)
     out.append(m)
     return out
 
@@ -2434,6 +2404,18 @@ if __name__ == '__main__':
                 p = near(t, ex[1], ex[2], 4)
                 if p:
                     ex[1], ex[2] = p
+    # the moved dungeons (worldplan MOVED_DUNGEONS): every way out of them leads to where their gate now stands
+    old_spot = {('meadow', 19, 6): 'ruins1', ('meadow', 43, 11): 'shrine', ('meadow', 43, 8): 'shrine'}
+    old_spot.update({('grove', x, y): 'castle' for x in range(21, 27) for y in range(4, 10)})
+    old_spot.update({('s_grove', x, y): 'keep' for x in range(21, 27) for y in range(4, 10)})
+    for m in built:
+        ex = m.extra.get('exit')
+        if ex and tuple(ex) in old_spot and old_spot[tuple(ex)] in WORLD.MOVED_AT:
+            ex[0], ex[1], ex[2] = WORLD.MOVED_AT[old_spot[tuple(ex)]]
+        for w in m.warps:
+            k = (w['to'], w.get('tx'), w.get('ty'))
+            if k in old_spot and old_spot[k] in WORLD.MOVED_AT:
+                w['to'], w['tx'], w['ty'] = WORLD.MOVED_AT[old_spot[k]]
     # a shut shadow doorway that later got a door of its own (a shadow dungeon's entrance) opens again
     for m in built:
         if m.extra.get('shadow'):

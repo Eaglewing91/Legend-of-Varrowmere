@@ -8,7 +8,7 @@ New areas are generated from the plan. The Shadow world is the light world's mir
 import math
 import os
 import random
-from worldplan import SETPIECE_HALO, GW, GH, SW, SH, BIOME, SETPIECES, REGIONS, RIVERS, ROADS, TOWNS_BUILT, TOWN_HOUSES, HOMES, FOUNTAINS, DUNGEONS_NEW, LANDMARKS, CAVES, PEOPLE, QUESTS, SHADOW_QUESTS
+from worldplan import SETPIECE_HALO, GW, GH, SW, SH, BIOME, SETPIECES, REGIONS, RIVERS, ROADS, TOWNS_BUILT, TOWN_HOUSES, HOMES, FOUNTAINS, DUNGEONS_NEW, MOVED_DUNGEONS, CASTLE, LANDMARKS, CAVES, PEOPLE, QUESTS, SHADOW_QUESTS
 
 W, H = GW * SW, GH * SH
 WALK = set('.:sw-=*bhX')          # chars the hero can walk on (bushes can be cut)
@@ -858,6 +858,9 @@ def rebuild(maps, M):
         anchors.append(spot(f[1], 4, 3))
     for d in DUNGEONS_NEW:
         anchors.append(spot(d[3], 4, 3))
+    anchors.append(spot(CASTLE[1], CASTLE[2], CASTLE[3]))
+    for (did, reg, at) in MOVED_DUNGEONS:      # the shrine's pool needs room round its gate
+        anchors.append(spot(at, 4, 3) if did != 'shrine' else spot(at, 10, 7))
     LM_SIZE = {'stones': (12, 10), 'mill': (5, 5), 'wreck': (14, 5), 'tower': (2, 2), 'ruin': (4, 2)}
     for (kind, reg, at) in LANDMARKS:
         if kind != 'maze':
@@ -931,6 +934,14 @@ def rebuild(maps, M):
         sm.extra['tier'] = round(nm.extra.get('tier', 1) + 0.5, 2)
         sm.warps = []
         sm.spawns = []
+        sp2 = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'seals_shadow.json')
+        if os.path.exists(sp2):                 # Shadow-only dead ends (tools/seals.py): a rock wall in the Shadow alone
+            import json as _json
+            rx, ry = nm.extra['world']
+            for (gx, gy) in _json.load(open(sp2)):
+                x_, y_ = gx - rx * SW, gy - ry * SH
+                if 0 <= x_ < sm.w and 0 <= y_ < sm.h and sm.col[y_ * sm.w + x_] == M.OPEN:
+                    sm.put('deco', M.CV, 5, 4, x_, y_); sm.col[y_ * sm.w + x_] = M.SOLID
         for k, t in nm.signs.items():          # lookout towers stand in the shadow too
             if 'tower' in t.split('.')[0].lower() or 'lookout' in t.split('.')[0].lower():
                 sm.signs[k] = 'A burnt-out watchtower. Someone has scratched into the stone: "Still no clear days."'
@@ -1063,6 +1074,75 @@ def fountain_cave(M, m, x, y, fid):
     return f
 
 
+def build_castle(M, m, x0, y0, W_, H_):
+    """Ashford Castle: an outer wall two tiles thick with a round tower at each corner and a gatehouse in the south
+    wall; a paved courtyard; the great keep in the middle with towers either side of its door and banners on its face.
+    Walls use the generated pale castle stone (rounded, outlined, with a brick face wherever ground lies below)."""
+    wall = set()
+    def box(ax, ay, w, h):
+        for y in range(ay, ay + h):
+            for x in range(ax, ax + w):
+                wall.add((x, y))
+    mid = x0 + W_ // 2
+    box(x0, y0, W_, 3)                               # north wall (with the wall walk)
+    box(x0, y0, 2, H_)                               # west and east walls
+    box(x0 + W_ - 2, y0, 2, H_)
+    box(x0, y0 + H_ - 3, W_, 3)                      # south wall
+    for x in range(mid - 2, mid + 2):                # its gateway
+        for y in range(y0 + H_ - 3, y0 + H_):
+            wall.discard((x, y))
+    kx, kw, ky, kh = x0 + 8, W_ - 16, y0 + 4, 7      # the keep
+    box(kx, ky, kw, kh)
+    # ground: paved courtyard, a grass lawn either side
+    for y in range(y0, y0 + H_):
+        for x in range(x0, x0 + W_):
+            i = y * m.w + x
+            m.layers['deco'][i] = -1; m.layers['over'][i] = -1
+            if (x, y) in wall:
+                continue
+            paved = abs(x - mid + 0.5) <= 2.5 or y == ky + kh or y == ky + kh + 1
+            if paved:
+                m.put('ground', M.OW, 8, 23, x, y)
+            else:
+                M.grass(m, x, y, x, y)
+            m.col[i] = M.OPEN
+    p = M.WALLMATS.index('pale')
+    isw = lambda x, y: (x, y) in wall
+    for (x, y) in wall:
+        k = M.BLEND.mask(isw, x, y)
+        m.layers['ground'][y * m.w + x] = M.ref(M.DW, k & 15, p * 16 + (k >> 4))
+        m.col[y * m.w + x] = M.SOLID
+    # round towers at the corners, conical towers flanking the keep door, banners on the keep's face
+    for (tx, ty) in ((x0 - 1, y0 - 2), (x0 + W_ - 2, y0 - 2), (x0 - 1, y0 + H_ - 6), (x0 + W_ - 2, y0 + H_ - 6)):
+        tx, ty = max(0, min(m.w - 3, tx)), max(0, min(m.h - 5, ty + 1))
+        m.stamp(M.OW, 3, 22, tx, ty, 3, 5, layer='over')
+        m.solid(tx, ty + 3, 3, 2, M.SOLID)
+    for tx in (mid - 6, mid + 3):
+        m.stamp(M.OW, 3, 22, tx, ky + kh - 5, 3, 5, layer='over')
+        m.solid(tx, ky + kh - 2, 3, 2, M.SOLID)
+    m.stamp(M.OW, 7, 27, mid - 1, ky + kh - 2, 2, 2, col=M.SOLID)        # the great door
+    m.warp(mid - 1, ky + kh - 1, 'castle', 23, 25, 0)
+    m.warp(mid, ky + kh - 1, 'castle', 24, 25, 0)
+    m.col[(ky + kh - 1) * m.w + mid - 1] = M.OPEN; m.col[(ky + kh - 1) * m.w + mid] = M.OPEN
+    for x in range(mid - 2, mid + 2):                # Vex's barrier: only the Dawnblade breaks it
+        m.col[(ky + kh) * m.w + x] = M.BARRIER
+    for bx in (kx + 2, kx + kw - 3, mid - 3, mid + 2):
+        m.stamp(M.OW, 5 + (bx % 2), 27, bx, ky + kh - 3, 1, 2)
+    # the gatehouse: banners either side of the gateway, a sign, guards
+    m.stamp(M.OW, 5, 27, mid - 3, y0 + H_ - 4, 1, 2)
+    m.stamp(M.OW, 6, 27, mid + 2, y0 + H_ - 4, 1, 2)
+    m.sign(mid + 3, y0 + H_ - 1, 'ASHFORD CASTLE|Seat of Chancellor Vex. Visitors will be fined. Complaints will be fined twice.')
+    for (k, x, y) in [('captain', mid - 5, ky + kh + 3), ('soldierBlue', mid + 5, ky + kh + 3), ('archer', x0 + 4, y0 + 5), ('archer', x0 + W_ - 5, y0 + 5), ('soldier', mid - 8, y0 + H_ - 5), ('soldier', mid + 8, y0 + H_ - 5)]:
+        m.spawn(k, x, y)
+    MOVED_AT['castle'] = (m.id, mid, ky + kh + 1)
+    MOVED_AT['keep'] = ('s_' + m.id, mid, ky + kh + 1)
+    CASTLE_DOOR[:] = [mid - 1, ky + kh - 1]
+
+
+CASTLE_DOOR = []   # the keep door's left tile (x, y) in its region map
+MOVED_AT = {}      # moved dungeon -> (overworld map, x, y): where you come out (read by tools/maps.py)
+
+
 def place_features(new, shadows, M, shadow):
     """Towns, homes, landmarks, caves, people, quests, fairy fountains and new dungeons go in after the land is sliced
     (their ground was cleared by the generator). Light-world things go in first, so the Shadow world inherits their shapes."""
@@ -1157,6 +1237,56 @@ def place_features(new, shadows, M, shadow):
         if not reg.startswith('s_'):
             d.extra['shadow'] = False
         out.append(d)
+    if not shadow:
+        build_castle(M, *local(every, CASTLE[0], CASTLE[1]), CASTLE[2], CASTLE[3])
+    elif CASTLE_DOOR:
+        # the Shadow Keep: Ashford Castle's dark twin. Its door stays shut until all seven Crystals are held
+        m = next(x for x in every if x.id == 's_' + CASTLE[0])
+        dx, dy = CASTLE_DOOR
+        for i, c in enumerate(m.col):
+            if c == M.BARRIER:
+                m.col[i] = M.SOLID
+        for x in (dx, dx + 1):
+            m.col[dy * m.w + x] = M.SOLID
+            m.signs.pop('%d,%d' % (x, dy), None)
+        before = m.snapshot()
+        for x in (dx, dx + 1):
+            m.col[dy * m.w + x] = M.OPEN
+            m.col[(dy + 1) * m.w + x] = M.OPEN
+        m.warp(dx, dy, 'keep', 23, 25, 0)
+        m.warp(dx + 1, dy, 'keep', 24, 25, 0)
+        m.variant('crystals', before)
+        m.sign(dx + 3, dy + 2, 'SHADOW KEEP|Seven crystal-shaped hollows are set into the gate.')
+    for (did, reg, at) in (MOVED_DUNGEONS if not shadow else []):
+        m, x, y = local(every, reg, at)
+        if did == 'ruins1':
+            m.stamp(M.OW, 4, 31, x, y, 4, 3, col=M.SOLID)        # the ruined gate
+            m.warp(x + 1, y + 2, did, 23, 25, 0)
+            m.warp(x + 2, y + 2, did, 24, 25, 0)
+            m.sign(x + 3, y + 3, 'MEADOW RUINS|Keep out. By order of Chancellor Vex.')
+            MOVED_AT[did] = (m.id, x + 2, y + 3)
+        else:
+            # a reedy pool in the lake shallows: the Sunken Shrine's gate lies under it until the sluice upstream is shut
+            for j in range(7):
+                for i in range(10):
+                    X, Y = x + i, y + j
+                    edge = i in (0, 9) or j in (0, 6)
+                    if edge:
+                        M.grass(m, X, Y, X, Y); m.layers['deco'][Y * m.w + X] = -1; m.col[Y * m.w + X] = M.OPEN
+                    else:
+                        m.layers['deco'][Y * m.w + X] = -1; m.layers['over'][Y * m.w + X] = -1
+                        m.put('ground', M.NW, 1, 7, X, Y); m.col[Y * m.w + X] = M.DEEP
+            m.sign(x + 1, y + 6, 'MIRROR POOL|They say a shrine sleeps under here. They also say the water drops when the sluice upstream is shut.')
+            before = m.snapshot()
+            for j in range(1, 6):
+                for i in range(1, 9):
+                    X, Y = x + i, y + j
+                    m.put('ground', M.OW, 12, 13, X, Y); m.col[Y * m.w + X] = M.OPEN
+            m.stamp(M.OW, 4, 31, x + 3, y + 1, 4, 3, col=M.SOLID)
+            m.warp(x + 4, y + 3, did, 23, 25, 0)
+            m.warp(x + 5, y + 3, did, 24, 25, 0)
+            m.variant('sluice', before)
+            MOVED_AT[did] = (m.id, x + 5, y + 6)      # out on the rim (dry even before the pool drains)
     for i, (reg, at, sh_) in enumerate(FOUNTAINS):
         if not mine(reg):
             continue
