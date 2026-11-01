@@ -225,10 +225,14 @@ const { chromium } = require('playwright');
     step(1, [], ['item']); step(20, []); const back = g.world.id; place('meadow', 3, 5, 2); g.actors = []; H().y = 7 * 16 + 4; step(1, [], ['item']); step(20, []); const ok2 = g.world.id; g.dialog = null;
     place('home', 7, 10, 0); step(1, [], ['item']); const indoor = !!g.dialog; g.dialog = null; return { a, x, back, ok2, indoor }; });
   check('twin mirror crosses worlds at the same spot', r.a === 's_meadow' && r.x === 8 && r.back === 'meadow' && r.indoor, r);
-  // 50. Flippers: swim in deep water (no falling); without them you fall in
-  r = await p.evaluate(() => { const g = LV.game; delete g.save.items.fins; place('s_meadow', 36, 8, 1); g.actors = []; H().hp = 12; step(40, ['right']); step(60, []); const fell = H().hp < 12;
-    g.save.items.fins = 1; place('s_meadow', 36, 8, 1); g.actors = []; step(80, ['right']); return { fell, swim: H().swimming, x: Math.floor(H().x / 16) }; });
-  check('flippers let you swim', r.fell && r.swim && r.x >= 39, r);
+  // 50. Flippers: swim in deep water; without them the water's edge stops you like a wall (no falling in, no damage)
+  r = await p.evaluate(() => { const g = LV.game; delete g.save.items.fins; place('s_meadow', 36, 8, 1); g.actors = []; H().hp = 12; step(80, ['right']); step(20, []);
+    const kept = H().hp === 12 && H().state === 'walk' && g.world.cAt(H().x, H().y - 3) !== LV.C.DEEP;
+    g.save.items.fins = 1; place('s_meadow', 36, 8, 1); g.actors = []; step(80, ['right']); return { kept, swim: H().swimming, x: Math.floor(H().x / 16) }; });
+  check('no Flippers: the water stops you; with them you swim', r.kept && r.swim && r.x >= 39, r);
+  // 50b. Keys: F talks/lifts/opens, Space uses the item (as X does)
+  r = await p.evaluate(() => { const i = new LV.Input(); i.key('KeyF', true); i.key('Space', true); i.beginStep(); return { f: !!i.pressed.action, sp: !!i.pressed.item }; });
+  check('F is interact, Space is the item button', r.f && r.sp, r);
   // 51. Power Glove: boulders refuse bare hands, lift and throw with the glove
   r = await p.evaluate(() => { const g = LV.game; delete g.save.items.glove; place('quarry', 20, 20, 0); g.actors = []; step(1, [], ['action']); const refused = !!g.dialog && g.world.c(20, 19) === 7; g.dialog = null;
     g.save.items.glove = 1; step(1, [], ['action']); const carry = H().carry; step(1, [], ['action']); step(30, []); return { refused, carry, cleared: g.world.c(20, 19) }; });

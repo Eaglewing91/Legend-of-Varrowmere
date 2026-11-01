@@ -1,11 +1,12 @@
 /* ================= Space, the mouse, and a touch pad =================
-   - Space talks, reads, lifts and opens (as C does); a mouse click (or a tap on the picture) swings the sword, and
+   - F talks, reads, lifts and opens (C and L still work too). Space uses the equipped item (as X does), like the
+     second attack button: throw the Ricochet Dice, fire the bow, drop a bomb. A mouse click (or a tap on the picture) swings the sword, and
      holding it charges a Spin Attack.
    - The touch pad, like Tornies': a D-pad on the left, the sword, item and talk buttons on the right, and Menu, Map and
      Dash across the top. Turned on from the 🎮 button (Torn Arcade's app bar, or beside Close in the window). */
 LV.Input.prototype.key = (function (orig) {
   return function (code, isDown) {
-    if (code === 'Space') { if (isDown) this.down('action'); else this.up('action'); return true; }
+    if (code === 'Space') { if (isDown) this.down('item'); else this.up('item'); return true; }
     return orig.call(this, code, isDown);
   };
 })(LV.Input.prototype.key);
@@ -39,7 +40,7 @@ LV.Input.prototype.key = (function (orig) {
     '@media (max-width:520px){.lv-root.lv-under{padding:6px}.lv-pad.lv-under{gap:6px}.lv-pad.lv-under .lv-dpad{grid-template-columns:repeat(3,42px);grid-template-rows:repeat(3,42px)}.lv-pad.lv-under .lv-ab{width:128px;height:128px}.lv-pad.lv-under .lv-ab .lv-k{width:52px;height:52px;font-size:18px}.lv-pad.lv-under .lv-ab [data-b="attack"]{top:38px}.lv-pad.lv-under .lv-ab [data-b="item"]{top:70px}.lv-pad.lv-under .lv-ab [data-b="action"]{left:36px}.lv-pad.lv-under .lv-top .lv-k{padding:6px 10px;font-size:11px}}'
   ].join('\n');
   const HTML = '<div class="lv-dpad"><span></span><b class="lv-k" data-b="up">▲</b><span></span><b class="lv-k" data-b="left">◀</b><span></span><b class="lv-k" data-b="right">▶</b><span></span><b class="lv-k" data-b="down">▼</b><span></span></div>' +
-    '<div class="lv-ab"><b class="lv-k" data-b="action" title="Talk, lift, open (C or Space)">✋</b><b class="lv-k" data-b="attack" title="Sword (Z or click)">⚔️</b><b class="lv-k" data-b="item" title="Item (X)">✦</b></div>' +
+    '<div class="lv-ab"><b class="lv-k" data-b="action" title="Talk, lift, open (F)">✋</b><b class="lv-k" data-b="attack" title="Sword (Z or click)">⚔️</b><b class="lv-k" data-b="item" title="Item: dice, bow, bombs (Space or X)">✦</b></div>' +
     '<div class="lv-top"><b class="lv-k" data-b="dash">DASH</b><b class="lv-k" data-b="map">MAP</b><b class="lv-k" data-b="menu">MENU</b></div>';
   const DIRS = ['up', 'down', 'left', 'right'];
   function build() {

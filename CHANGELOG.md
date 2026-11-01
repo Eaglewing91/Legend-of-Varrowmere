@@ -6,6 +6,11 @@ Dates are in TCT (Torn City Time).
 
 ---
 
+## 1.0.13 — 2026-11-01
+### Changed
+- **No more falling into water.** Deep water is now the edge of the land, as in Zelda 1991: you simply stop at the shore. Once you have the Flippers, you walk straight in and swim as before. (Pits still drop you, as in the original.)
+- **New keys:** **F** talks, reads, lifts and opens (C still works too). **Space** now uses your item, like a second attack button: throw the Ricochet Dice, fire the bow, drop a bomb (X still works too). Any of the buttons moves dialogue on.
+
 ## 1.0.12 — 2026-11-01
 ### Changed
 - **The countryside is laid out like Zelda 1991's.** Every screen is framed by trees, rock or water, and you move between screens through proper gateways that line up on both sides. Roads run straight with square corners and cross from screen to screen through those gateways.

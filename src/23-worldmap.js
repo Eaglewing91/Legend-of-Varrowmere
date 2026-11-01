@@ -1,7 +1,7 @@
 /* ================= The world map: a cleanly drawn map of Varrowmere (or its shadow) =================
    The land is read tile by tile (water, forest, rock, path, sand, snow, buildings, grass), tidied so single trees and
    pebbles don't speckle it, and painted in flat colours with soft shorelines. Towns are named; dungeon doors are marked.
-   Z zooms in round you (arrows look around); M, Enter or C closes. */
+   Z zooms in round you (arrows look around); M, Enter or F closes. */
 LV.MAPCOL = { light: ['#4aa8d8', '#3f7a32', '#8c7b66', '#c79a5e', '#f0d49a', '#eef3f8', '#b8573a', '#7fb547', '#2b2b2b'],
               shadow: ['#3a3a8a', '#2e4a2a', '#5c5048', '#7a5a3a', '#a08a5a', '#a8aab8', '#7a3a2a', '#4f6a30', '#141414'] };
 LV.classifyWorld = function (shadow) {

@@ -43,7 +43,7 @@ LV.Game.prototype.update = function (dt) {
   this.input.beginStep(); this.t += dt; this.save.time += dt;
   if (this.fadeTo) { this.fade += dt * 4; if (this.fade >= 1) { const f = this.fadeTo; this.fadeTo = null; f(); } return; }
   if (this.fade > 0) { this.fade = Math.max(0, this.fade - dt * 4); }
-  if (this.dialog) { if (this.input.pressed.attack || this.input.pressed.action) this.nextDialog(); return; }
+  if (this.dialog) { if (this.input.pressed.attack || this.input.pressed.action || this.input.pressed.item) this.nextDialog(); return; }
   if (this.paused) { this.menuUpdate(); return; }
   if (this.input.pressed.menu) { this.paused = true; this.menu = null; this.sfx('door'); return; }
   if (this.shake > 0) this.shake -= dt;

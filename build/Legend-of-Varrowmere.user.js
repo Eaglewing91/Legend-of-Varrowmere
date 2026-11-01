@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Legend of Varrowmere
 // @namespace    eaglewing.legend-of-varrowmere
-// @version      1.0.12
+// @version      1.0.13
 // @description  A top-down action-adventure in the style of the 16-bit classics, for Torn. Opens in its own window over the Torn page (from the Torn Arcade phone or the Tampermonkey menu). Makes no requests.
 // @author       Eaglewing [571041]
 // @copyright    2026, Eaglewing [571041]. All rights reserved.
@@ -89,7 +89,7 @@ LV.Input = function () {
   this.held = {}; this.pressed = {}; this._queue = [];
   this.map = {
     ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down', ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right',
-    KeyZ: 'attack', KeyJ: 'attack', KeyX: 'item', KeyK: 'item', KeyC: 'action', KeyL: 'action', KeyM: 'map', Enter: 'menu', Escape: 'menu'
+    KeyZ: 'attack', KeyJ: 'attack', KeyX: 'item', KeyK: 'item', KeyF: 'action', KeyC: 'action', KeyL: 'action', KeyM: 'map', Enter: 'menu', Escape: 'menu'
   };
 };
 LV.Input.prototype.down = function (b) { if (!this.held[b]) this._queue.push(b); this.held[b] = true; };
@@ -144,7 +144,8 @@ LV.World.prototype.blocks = function (code, mode) {
   if (code === C.SOLID || code === C.BUSH || code === C.ROCK) return true;
   if (code === C.LOW) return mode !== 'shot';
   if (code === C.LEDGE) return mode === 'enemy';
-  if (code === C.DEEP || code === C.PIT) return mode === 'enemy';
+  if (code === C.DEEP) return mode === 'enemy' || (mode === 'hero' && !(LV.game && LV.game.save && LV.game.save.items && LV.game.save.items.fins));   // no Flippers: water is the edge
+  if (code === C.PIT) return mode === 'enemy';
   return false;
 };
 LV.World.prototype.boxBlocked = function (b, mode) {
@@ -451,7 +452,7 @@ LV.Game.prototype.update = function (dt) {
   this.input.beginStep(); this.t += dt; this.save.time += dt;
   if (this.fadeTo) { this.fade += dt * 4; if (this.fade >= 1) { const f = this.fadeTo; this.fadeTo = null; f(); } return; }
   if (this.fade > 0) { this.fade = Math.max(0, this.fade - dt * 4); }
-  if (this.dialog) { if (this.input.pressed.attack || this.input.pressed.action) this.nextDialog(); return; }
+  if (this.dialog) { if (this.input.pressed.attack || this.input.pressed.action || this.input.pressed.item) this.nextDialog(); return; }
   if (this.paused) { this.menuUpdate(); return; }
   if (this.input.pressed.menu) { this.paused = true; this.menu = null; this.sfx('door'); return; }
   if (this.shake > 0) this.shake -= dt;
@@ -773,7 +774,7 @@ LV.open = function (opts) {
   const cv = document.createElement('canvas'); cv.width = LV.VIEW_W * LV.RES; cv.height = LV.VIEW_H * LV.RES; LV.canvas = cv;
   cv.style.cssText = 'image-rendering:pixelated;image-rendering:crisp-edges;box-shadow:0 0 0 2px #333';
   const bar = document.createElement('div'); bar.style.cssText = 'color:#ccc;font:12px sans-serif;margin-top:8px';
-  bar.textContent = 'Arrows/WASD move · Z or click: sword (hold for Spin) · X item · C or Space: talk/lift/open · Enter items · M map · N music · Esc close';
+  bar.textContent = 'Arrows/WASD move · Z or click: sword (hold for Spin) · Space or X: item (dice, bow...) · F: talk/lift/open · Enter items · M map · N music · Esc close';
   root.appendChild(cv); root.appendChild(bar); LV.bar = bar;
   if (!opts.noClose) {   // a close button too, for anyone who opened it with the mouse
     const x = document.createElement('button'); x.type = 'button'; x.textContent = '✕ Close'; x.title = 'Close (your game is saved)';
@@ -3317,7 +3318,7 @@ LV.itemIcon = (function (orig) {
 /* ================= The world map: a cleanly drawn map of Varrowmere (or its shadow) =================
    The land is read tile by tile (water, forest, rock, path, sand, snow, buildings, grass), tidied so single trees and
    pebbles don't speckle it, and painted in flat colours with soft shorelines. Towns are named; dungeon doors are marked.
-   Z zooms in round you (arrows look around); M, Enter or C closes. */
+   Z zooms in round you (arrows look around); M, Enter or F closes. */
 LV.MAPCOL = { light: ['#4aa8d8', '#3f7a32', '#8c7b66', '#c79a5e', '#f0d49a', '#eef3f8', '#b8573a', '#7fb547', '#2b2b2b'],
               shadow: ['#3a3a8a', '#2e4a2a', '#5c5048', '#7a5a3a', '#a08a5a', '#a8aab8', '#7a3a2a', '#4f6a30', '#141414'] };
 LV.classifyWorld = function (shadow) {
@@ -6139,13 +6140,14 @@ LV.UI = { head: '#ffd56a', text: '#ffffff', soft: '#b8c0e0', dim: '#7880a8', goo
 })();
 
 /* ================= Space, the mouse, and a touch pad =================
-   - Space talks, reads, lifts and opens (as C does); a mouse click (or a tap on the picture) swings the sword, and
+   - F talks, reads, lifts and opens (C and L still work too). Space uses the equipped item (as X does), like the
+     second attack button: throw the Ricochet Dice, fire the bow, drop a bomb. A mouse click (or a tap on the picture) swings the sword, and
      holding it charges a Spin Attack.
    - The touch pad, like Tornies': a D-pad on the left, the sword, item and talk buttons on the right, and Menu, Map and
      Dash across the top. Turned on from the 🎮 button (Torn Arcade's app bar, or beside Close in the window). */
 LV.Input.prototype.key = (function (orig) {
   return function (code, isDown) {
-    if (code === 'Space') { if (isDown) this.down('action'); else this.up('action'); return true; }
+    if (code === 'Space') { if (isDown) this.down('item'); else this.up('item'); return true; }
     return orig.call(this, code, isDown);
   };
 })(LV.Input.prototype.key);
@@ -6179,7 +6181,7 @@ LV.Input.prototype.key = (function (orig) {
     '@media (max-width:520px){.lv-root.lv-under{padding:6px}.lv-pad.lv-under{gap:6px}.lv-pad.lv-under .lv-dpad{grid-template-columns:repeat(3,42px);grid-template-rows:repeat(3,42px)}.lv-pad.lv-under .lv-ab{width:128px;height:128px}.lv-pad.lv-under .lv-ab .lv-k{width:52px;height:52px;font-size:18px}.lv-pad.lv-under .lv-ab [data-b="attack"]{top:38px}.lv-pad.lv-under .lv-ab [data-b="item"]{top:70px}.lv-pad.lv-under .lv-ab [data-b="action"]{left:36px}.lv-pad.lv-under .lv-top .lv-k{padding:6px 10px;font-size:11px}}'
   ].join('\n');
   const HTML = '<div class="lv-dpad"><span></span><b class="lv-k" data-b="up">▲</b><span></span><b class="lv-k" data-b="left">◀</b><span></span><b class="lv-k" data-b="right">▶</b><span></span><b class="lv-k" data-b="down">▼</b><span></span></div>' +
-    '<div class="lv-ab"><b class="lv-k" data-b="action" title="Talk, lift, open (C or Space)">✋</b><b class="lv-k" data-b="attack" title="Sword (Z or click)">⚔️</b><b class="lv-k" data-b="item" title="Item (X)">✦</b></div>' +
+    '<div class="lv-ab"><b class="lv-k" data-b="action" title="Talk, lift, open (F)">✋</b><b class="lv-k" data-b="attack" title="Sword (Z or click)">⚔️</b><b class="lv-k" data-b="item" title="Item: dice, bow, bombs (Space or X)">✦</b></div>' +
     '<div class="lv-top"><b class="lv-k" data-b="dash">DASH</b><b class="lv-k" data-b="map">MAP</b><b class="lv-k" data-b="menu">MENU</b></div>';
   const DIRS = ['up', 'down', 'left', 'right'];
   function build() {
@@ -6800,7 +6802,7 @@ if (typeof GM_registerMenuCommand === 'function') GM_registerMenuCommand('Play L
 //                                      are the leaderboard numbers saved when the game last closed: { time, completion, kills })
 //   When the game window closes it also sends 'varrowmere:scores' with those numbers.
 //   Arcade sends 'varrowmere:open'  -> the game opens; when it closes, 'varrowmere:closed' goes back
-document.addEventListener('varrowmere:ping', function () { document.dispatchEvent(new CustomEvent('varrowmere:here', { detail: JSON.stringify({ version: '1.0.12', music: document.documentElement.dataset.varrowmereMusic || '', music2: document.documentElement.dataset.varrowmereMusic2 || '', scores: (function () { try { return JSON.parse(GM_getValue('lv_scores', 'null')); } catch (e) { return null; } })() }) })); });
+document.addEventListener('varrowmere:ping', function () { document.dispatchEvent(new CustomEvent('varrowmere:here', { detail: JSON.stringify({ version: '1.0.13', music: document.documentElement.dataset.varrowmereMusic || '', music2: document.documentElement.dataset.varrowmereMusic2 || '', scores: (function () { try { return JSON.parse(GM_getValue('lv_scores', 'null')); } catch (e) { return null; } })() }) })); });
 //   Arcade sends 'varrowmere:preload' (only if you turned on Preload Legend) -> the game unpacks itself when the page is idle
 document.addEventListener('varrowmere:preload', function () { const go = function () { ready().catch(function () {}); }; if (typeof requestIdleCallback === 'function') requestIdleCallback(go, { timeout: 3000 }); else setTimeout(go, 500); });
 //   (with detail { host: id } the game opens inside that element on the page, i.e. inside the phone, instead of over the page)
@@ -6817,6 +6819,6 @@ document.addEventListener('varrowmere:volume', function (e) { let v = 100; try {
 //   Arcade sends 'varrowmere:pad' { on } -> the touch pad turns on or off (the phone's 🎮 button)
 document.addEventListener('varrowmere:pad', function (e) { let on = false; try { on = !!JSON.parse(e.detail).on; } catch (x) {} if (readying) readying.then(function (LV) { if (LV.setPad) LV.setPad(on); }); });
 document.addEventListener('varrowmere:close', function () { if (readying) readying.then(function (LV) { if (LV.root && LV.root.style.display !== 'none') LV.close(); }); });
-document.documentElement.dataset.varrowmere = '1.0.12';
+document.documentElement.dataset.varrowmere = '1.0.13';
 
 })();

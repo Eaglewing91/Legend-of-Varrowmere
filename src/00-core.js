@@ -36,7 +36,7 @@ LV.Input = function () {
   this.held = {}; this.pressed = {}; this._queue = [];
   this.map = {
     ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down', ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right',
-    KeyZ: 'attack', KeyJ: 'attack', KeyX: 'item', KeyK: 'item', KeyC: 'action', KeyL: 'action', KeyM: 'map', Enter: 'menu', Escape: 'menu'
+    KeyZ: 'attack', KeyJ: 'attack', KeyX: 'item', KeyK: 'item', KeyF: 'action', KeyC: 'action', KeyL: 'action', KeyM: 'map', Enter: 'menu', Escape: 'menu'
   };
 };
 LV.Input.prototype.down = function (b) { if (!this.held[b]) this._queue.push(b); this.held[b] = true; };

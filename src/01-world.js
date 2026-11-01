@@ -20,7 +20,8 @@ LV.World.prototype.blocks = function (code, mode) {
   if (code === C.SOLID || code === C.BUSH || code === C.ROCK) return true;
   if (code === C.LOW) return mode !== 'shot';
   if (code === C.LEDGE) return mode === 'enemy';
-  if (code === C.DEEP || code === C.PIT) return mode === 'enemy';
+  if (code === C.DEEP) return mode === 'enemy' || (mode === 'hero' && !(LV.game && LV.game.save && LV.game.save.items && LV.game.save.items.fins));   // no Flippers: water is the edge
+  if (code === C.PIT) return mode === 'enemy';
   return false;
 };
 LV.World.prototype.boxBlocked = function (b, mode) {
