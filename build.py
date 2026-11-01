@@ -5,9 +5,9 @@ Art sheets are embedded as base64 PNG; maps come from tools/maps.py.
 """
 import base64, glob, json, os, subprocess
 
-VERSION = '1.0.11'
+VERSION = '1.0.12'
 os.makedirs('build', exist_ok=True)
-subprocess.run(['python3', 'tools/maps.py'], check=True)
+subprocess.run(['python3', 'tools/maps.py'], check=True, env=dict(os.environ, PYTHONHASHSEED='0'))   # the same world every build
 subprocess.run(['python3', 'tools/patch_sheets.py'], check=True)
 subprocess.run(['python3', 'tools/manaseed.py'], check=True)   # townsfolk from Mana Seed (private art; skipped when absent)
 

@@ -6,6 +6,17 @@ Dates are in TCT (Torn City Time).
 
 ---
 
+## 1.0.12 — 2026-11-01
+### Changed
+- **The countryside is laid out like Zelda 1991's.** Every screen is framed by trees, rock or water, and you move between screens through proper gateways that line up on both sides. Roads run straight with square corners and cross from screen to screen through those gateways.
+- Every screen is joined to its neighbours (no screen is cut off), and almost every screen has at least two ways in or out.
+- Each screen now reads as one kind of land (woods, fields, snow, desert) instead of patches of everything.
+- No more one-tile squeezes between trees and rocks: paths are at least two tiles wide.
+### Fixed
+- **No more dead ends when you cross onto a new screen.** Every gap across a screen edge now leads somewhere: on into that screen, to another gap, or to something to find (a door, a cave, a chest, a dig spot, someone to talk to, a sign). Checked by a new test on every screen of both worlds.
+- Lookout towers have a sign to read when you reach the end of their road.
+- In the Shadow world, doors of buildings with no Shadow twin are shut, and light-world chests and cracked boulders no longer leave little nooks behind.
+
 ## 1.0.11 — 2026-10-31
 ### Changed
 - **On phones (Torn PDA)** Legend of Varrowmere is laid out like Tornies: the picture at the top, the same width as Tornies' screen, in the same frame, with the touch pad underneath it instead of squeezed in at the sides. Desktop and sideways play are unchanged.

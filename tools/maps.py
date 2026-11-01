@@ -1607,14 +1607,35 @@ def shadowize(m, name):
     s.extra.pop('variants', None)
     s.spawns, s.chests, s.signs = [], {}, {}
     s.warps = [dict(w, to='s_' + w['to']) for w in m.warps if w['to'] in ('meadow', 'highlands', 'grove', 'riverhead')]
+    # doors whose building has no shadow twin are shut (their doorway would be a nook that leads nowhere)
+    kept = {(w['x'], w['y']) for w in s.warps}
+    for w in m.warps:
+        if (w['x'], w['y']) not in kept and not str(w['to']).startswith('grotto') and s.extra.get('world') and not s.indoor:
+            if 0 < w['y'] < s.h - 1 and 0 < w['x'] < s.w - 1:
+                s.col[w['y'] * s.w + w['x']] = SOLID
     for k in ('digs', 'oldscript'):
         s.extra.pop(k, None)
-    s.col = [SOLID if c == CRACK else c for c in s.col]      # light-world secret caves don't exist here
-    # chests from the light world are gone in the shadow: put the floor back where they stood
+    # light-world secret caves don't exist here: their cracked boulders are gone (open ground, so no nook is left
+    # in front of a dead rock), and any other cracked wall is plain rock
+    for w in m.warps:
+        if str(w['to']).startswith('grotto') and m.col[w['y'] * m.w + w['x']] == CRACK:
+            for (i, j) in ((0, -1), (1, -1), (0, 0), (1, 0)):
+                X, Y = w['x'] + i, w['y'] + j
+                if 0 <= X < s.w and 0 <= Y < s.h:
+                    s.col[Y * s.w + X] = OPEN
+                    s.layers['deco'][Y * s.w + X] = -1
+                    s.layers['over'][Y * s.w + X] = -1
+    s.col = [SOLID if c == CRACK else c for c in s.col]
+    # chests from the light world are gone in the shadow: a plain stone stands where each one was (so a chest tucked
+    # into a corner never leaves a little nook that leads nowhere)
     for k in m.chests:
         x, y = map(int, k.split(','))
         s.layers['deco'][y * s.w + x] = -1
-        s.col[y * s.w + x] = OPEN
+        if s.extra.get('world') and not s.indoor:
+            s.put('deco', CV, 5, 4, x, y)
+            s.col[y * s.w + x] = SOLID
+        else:
+            s.col[y * s.w + x] = OPEN
     return s
 
 
@@ -1644,6 +1665,7 @@ def shadow_world():
     rocks(m, [(0, 9), (1, 8), (2, 9), (1, 10), (0, 10), (2, 10)])
     m.chest(1, 9, 'heart_shard')
     secret_cave(m, 14, 9, 'grotto3', ['heart_shard'], 'The walls are scratched with tally marks. Thousands of them.')
+    rocks(m, [(14, 8), (15, 8)])        # the gap beside the cracked boulder only led back the way you came
     m.sign(5, 9, 'A sign, half rotted:|"HOLLOWDOWN. Population: fewer every year."')
     for (k, x, y) in [('captain', 5, 8), ('wisp', 12, 11), ('soldierBlue', 21, 9), ('archer', 26, 4), ('wisp', 24, 7), ('captain', 34, 7), ('snapjaw', 40, 6), ('snapjaw', 45, 9)]:
         m.spawn(k, x, y)
@@ -1664,6 +1686,7 @@ def shadow_world():
     m.warp(23, 5, 'quarry', 23, 25, 0)
     m.warp(24, 5, 'quarry', 24, 25, 0)
     rocks(m, [(21, 6), (22, 6), (23, 6), (24, 6), (25, 6), (26, 6), (21, 7), (26, 7)])
+    rocks(m, [(0, 9)])                  # the light world's cracked boulder is solid here: no nook at the west edge
     m.sign(20, 6, 'HOLLOW QUARRY|Abandoned. The rocks are too heavy for anyone without a good glove.')
     m.spawn('villager', 4, 25, look='elder', roam=8, ghost=True, talk=[
         [None, ['You are from the other side, are you not? Your colours are too bright.', 'Vex built this place in his own image. Two of his vaults hold what you will need: one under the black water, one in the quarry.']]])
@@ -2116,6 +2139,11 @@ def shadow_regions():
                's_frostspire': [(19, 5, 'turtleback'), (20, 5, 'turtleback')]}.get(s_.id, [])
         for (x, y, to) in ent:
             s_.warp(x, y, to, 23 if x % 2 == 0 else 24, 25, 0)
+        for k, t in m.signs.items():        # lookout towers stand in the shadow too, with their own words
+            if 'Tower' in t.split('.')[0] or 'tower' in t.split('.')[0] or 'lookout' in t.split('.')[0]:
+                s_.signs[k] = 'A burnt-out watchtower. Someone has scratched into the stone: "Still no clear days."'
+        if s_.id == 's_whisperwood':      # the Old Stump and the Hidden Glade are dead ends: something is buried there in the shadow too
+            s_.extra.setdefault('digs', {}).update({'40,35': 'cash50', '7,6': 'cash20'})
         out.append(s_)
     return out
 
@@ -2406,6 +2434,12 @@ if __name__ == '__main__':
                 p = near(t, ex[1], ex[2], 4)
                 if p:
                     ex[1], ex[2] = p
+    # a shut shadow doorway that later got a door of its own (a shadow dungeon's entrance) opens again
+    for m in built:
+        if m.extra.get('shadow'):
+            for w in m.warps:
+                if m.col[w['y'] * m.w + w['x']] == SOLID:
+                    m.col[w['y'] * m.w + w['x']] = OPEN
     out = {m.id: m.json() for m in built}
     out.update({g.id: g.json() for g in GROTTOS})
     os.makedirs('src/data', exist_ok=True)

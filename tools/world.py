@@ -39,7 +39,8 @@ class Noise:
 
 def biome_at(x, y, n1, n2):
     """The plan's biome under tile (x, y), with wavy borders between biomes."""
-    jx, jy = (n1(x, y) - 0.5) * 40 + (n2(x * 3, y * 3) - 0.5) * 12, (n2(x, y) - 0.5) * 34 + (n1(x * 3 + 50, y * 3) - 0.5) * 12
+    # biome borders wobble a little but keep close to screen edges, so each screen reads as one kind of land (as in Zelda 1991)
+    jx, jy = (n1(x, y) - 0.5) * 9 + (n2(x * 3, y * 3) - 0.5) * 4, (n2(x, y) - 0.5) * 8 + (n1(x * 3 + 50, y * 3) - 0.5) * 4
     sx, sy = int(min(GW - 1, max(0, (x + jx) // SW))), int(min(GH - 1, max(0, (y + jy) // SH)))
     return BIOME[sy][sx]
 
@@ -67,11 +68,11 @@ def generate(reserved, anchors, openings, wet=(), lakes=()):
             c = gr
             f, r, s = nf(x, y), nr(x, y), ns(x, y)
             if b == 'W':
-                c = 'F' if f > 0.38 else ('T' if s > 0.86 else gr)
+                c = 'F' if f > 0.52 else ('T' if s > 0.86 else gr)
             elif b == 'M':
-                c = 'Q' if r > 0.47 else ('r' if s > 0.88 else gr)
+                c = 'Q' if r > 0.56 else ('r' if s > 0.88 else gr)
             elif b == 'S':
-                c = 'Q' if r > 0.52 else ('T' if s > 0.86 else ('r' if s < 0.05 else gr))
+                c = 'Q' if r > 0.62 else ('T' if s > 0.86 else ('r' if s < 0.05 else gr))
             elif b == 'I':
                 c = '~' if nw(x, y) * 0.6 + lake_bowl(x, y) > 0.78 else ('T' if s > 0.93 else gr)
             elif b == 'H':
@@ -91,7 +92,7 @@ def generate(reserved, anchors, openings, wet=(), lakes=()):
             # clusters that break up open land: groves, flower meadows, rocky outcrops, frozen ponds, rock formations
             if c == gr:
                 gv, mf, oc = ng(x, y), nm(x, y), no(x, y)
-                if b in 'FKTH' and gv > 0.8:
+                if b in 'FKTH' and gv > 0.84:
                     c = 'F'
                 elif b in 'FKT' and mf > 0.74 and ns(x * 2, y * 2) > 0.55:
                     c = '*'
@@ -255,6 +256,13 @@ def generate(reserved, anchors, openings, wet=(), lakes=()):
                 if y >= 0 and g[y][x] != '#': g[y][x] = '.'
     # everything must be reachable: carve from any cut-off carried place to the land that is reached
     reach_all(g, anchors, openings, n1, n2)
+    # Zelda-style screens: framed by trees or rock, with real gateways between them (see frame_screens),
+    # and every way onto a screen leads somewhere (see tidy_seams)
+    widen_lanes(g, n1, n2)
+    frame_screens(g, n1, n2)
+    widen_lanes(g, n1, n2)
+    tidy_seams(g, n1, n2, openings)
+    reach_all(g, anchors, openings, n1, n2)
     if os.environ.get('ROADSTAT'):
         r = edge_runs(g, anchors); print('roads along edges: runs>=6: %d  runs>=8: %d  longest %d' % (sum(1 for t in r if t[2] >= 6), sum(1 for t in r if t[2] >= 8), max([t[2] for t in r] or [0])), [t for t in r if t[2] >= 6])
     # nothing walks off the edge of the world
@@ -262,7 +270,376 @@ def generate(reserved, anchors, openings, wet=(), lakes=()):
         for x in range(W):
             if (x in (0, W - 1) or y in (0, H - 1)) and g[y][x] in WALK:
                 g[y][x] = '~' if y == H - 1 else 'Q'
+    # openings the game's own screen check found still leading nowhere (tests/screens.js -> tools/seals.json): wall them
+    sp = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'seals.json')
+    if os.path.exists(sp):
+        import json as _json
+        def reached():
+            # ground Wren can reach on foot (hand-built areas counted as open ground), from the middle of Thistledown
+            from collections import deque
+            sx_, sy_ = SETPIECES['meadow']
+            start = next(((x, y) for y in range(sy_ * SH, sy_ * SH + SH) for x in range(sx_ * SW, sx_ * SW + SW) if g[y][x] in WALK or g[y][x] == '#'), None)
+            seen = {start}; dq = deque([start])
+            while dq:
+                x, y = dq.popleft()
+                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                    X, Y = x + dx, y + dy
+                    if 0 <= X < W and 0 <= Y < H and (X, Y) not in seen and (g[Y][X] in WALK or g[Y][X] == '#' or g[Y][X] == 'T'):
+                        seen.add((X, Y)); dq.append((X, Y))
+            return seen
+        def matters(tiles):          # cutting this off loses something: a hand-built place, or more than a dead-end corner
+            return len(tiles) > 120 or any(g[y][x] in '#X-' for (x, y) in tiles)
+        before = reached()
+        undo = {}
+        for (x, y) in _json.load(open(sp)):
+            if 0 <= x < W and 0 <= y < H and g[y][x] != '#':
+                undo[(x, y)] = g[y][x]
+                g[y][x] = 'Q' if BIOME[y // SH][x // SW] in 'MSD' else 'F'
+        # a seal must never cut off anything that matters: put back, one opening at a time, any seal that did
+        lost = before - reached()
+        if lost and matters(lost):
+            groups = []
+            for t, c in undo.items():
+                for gr in groups:
+                    if any(abs(t[0] - u[0][0]) + abs(t[1] - u[0][1]) <= 1 for u in gr):
+                        gr.append((t, c)); break
+                else:
+                    groups.append([(t, c)])
+            near = {(x // SW + i, y // SH + j) for (x, y) in lost for i in (-1, 0, 1) for j in (-1, 0, 1)}
+            for gr in groups:
+                if not (lost and matters(lost)):
+                    break
+                if not any((t[0] // SW, t[1] // SH) in near for t, _ in gr):
+                    continue
+                sealed = [(t, g[t[1]][t[0]]) for t, _ in gr]
+                for t, c in gr:
+                    g[t[1]][t[0]] = c
+                now = before - reached()
+                back = lost - now
+                if back and matters(back):
+                    lost = now
+                else:
+                    for t, c in sealed:
+                        g[t[1]][t[0]] = c
+    if os.environ.get("GRIDDUMP"): open(os.environ["GRIDDUMP"], "w").write("\n".join("".join(r) for r in g))
     return g
+
+
+def widen_lanes(g, n1, n2):
+    """No one-tile squeezes: wherever open ground runs between two obstacles one tile apart, the obstacle on one
+    side gives way (trees and rock first; water, hand-built areas and roads stay). Zelda's paths are at least two
+    tiles wide, and Wren is wide enough that one-tile gaps feel like a trap."""
+    for _ in range(3):
+        n = 0
+        for y in range(2, H - 2):
+            for x in range(2, W - 2):
+                if g[y][x] not in WALK or g[y][x] == 'X':
+                    continue
+                for (dx, dy) in ((1, 0), (0, 1)):
+                    A, B = g[y - dy][x - dx], g[y + dy][x + dx]
+                    if A in WALK or B in WALK or A == '_' and B == '_':
+                        continue
+                    for (X, Y) in ((x + dx, y + dy), (x - dx, y - dy)):
+                        c = g[Y][X]
+                        if c in '~#X-h' or not (2 <= X < W - 2 and 2 <= Y < H - 2):
+                            continue
+                        if c in 'Tg_':
+                            for j in (0, -1):
+                                for i in (0, -1):
+                                    XX, YY = X + i, Y + j
+                                    if g[YY][XX] in 'Tg':
+                                        for (p_, q_) in ((0, 0), (1, 0), (0, 1), (1, 1)):
+                                            if g[YY + q_][XX + p_] in 'Tg_': g[YY + q_][XX + p_] = ground_here(XX + p_, YY + q_, n1, n2)
+                        if g[Y][X] not in WALK:
+                            g[Y][X] = ground_here(X, Y, n1, n2)
+                        n += 1
+                        break
+        if not n:
+            break
+
+
+def frame_screens(g, n1, n2):
+    """Zelda 1991's overworld is a grid of screens joined at deliberate gateways: each screen's edge is a wall of
+    trees, cliff or water, broken only where a path leads on to the next screen, and the gateway lines up on both
+    sides. This does the same for the generated land:
+      - every screen edge gets a wall one or two tiles deep on each side (trees, or rock in rocky and snowy land);
+      - an edge stays open (a gateway 3 to 4 tiles wide, cleared two tiles deep both sides) where a road crosses it,
+        along a spanning tree that joins every land screen, and on about a third of the other edges for loops;
+      - edges that touch a hand-built area are left exactly as built."""
+    R = random.Random(1991)
+    fixed = lambda c: c in '#X'
+    def scr_land(sx, sy):
+        n = sum(1 for y in range(sy * SH, sy * SH + SH) for x in range(sx * SW, sx * SW + SW) if g[y][x] in WALK or g[y][x] in 'Fb*T_r')
+        return n >= SW * SH * 0.3
+    def blocker_for(sx, sy):
+        return 'Q' if BIOME[sy][sx] in 'MSD' else 'F'
+    edges = []                                # (sx, sy, 'E'|'S'): the edge on that screen's east or south side
+    for sy in range(GH):
+        for sx in range(GW):
+            if sx + 1 < GW: edges.append((sx, sy, 'E'))
+            if sy + 1 < GH: edges.append((sx, sy, 'S'))
+    def line(e):
+        sx, sy, d = e
+        if d == 'E':
+            X = sx * SW + SW - 1
+            return [((X, y), (X + 1, y)) for y in range(sy * SH, sy * SH + SH)], (sx + 1, sy)
+        Y = sy * SH + SH - 1
+        return [((x, Y), (x, Y + 1)) for x in range(sx * SW, sx * SW + SW)], (sx, sy + 1)
+    def inward(e):                             # steps away from the edge, into screen A and into screen B
+        return ((-1, 0), (1, 0)) if e[2] == 'E' else ((0, -1), (0, 1))
+    touches_set = {}
+    for e in edges:
+        L, _ = line(e)
+        di = inward(e)
+        touches_set[e] = any(fixed(g[a[1] + di[0][1] * k][a[0] + di[0][0] * k]) or fixed(g[b[1] + di[1][1] * k][b[0] + di[1][0] * k]) for (a, b) in L for k in range(3))
+    road = {e: [i for i, (a, b) in enumerate(line(e)[0]) if g[a[1]][a[0]] in '-h' and g[b[1]][b[0]] in '-h'] for e in edges}
+    # which edges are gateways: roads first, then a spanning tree over the land screens, then some loops
+    parent = {}
+    def find(a):
+        while parent.setdefault(a, a) != a:
+            parent[a] = parent[parent[a]]; a = parent[a]
+        return a
+    open_e = set()
+    rest = [e for e in edges if not road[e]]
+    for e in [e for e in edges if road[e]] + R.sample(rest, len(rest)):
+        a, b = (e[0], e[1]), line(e)[1]
+        if touches_set[e] or not (scr_land(*a) and scr_land(*b)):
+            continue
+        if road[e] or find(a) != find(b):
+            open_e.add(e); parent[find(a)] = find(b)
+    for e in edges:
+        if e not in open_e and not touches_set[e] and scr_land(e[0], e[1]) and scr_land(*line(e)[1]) and R.random() < 0.33:
+            open_e.add(e)
+    # no screen is a cul-de-sac: one with a single way in gets a second (as Zelda's screens nearly all have)
+    def deg(sc):
+        return sum(1 for e in open_e if (e[0], e[1]) == sc or line(e)[1] == sc)
+    for sy in range(GH):
+        for sx in range(GW):
+            if not scr_land(sx, sy) or deg((sx, sy)) != 1:
+                continue
+            cand = [e for e in edges if e not in open_e and not touches_set[e] and ((e[0], e[1]) == (sx, sy) or line(e)[1] == (sx, sy)) and scr_land(e[0], e[1]) and scr_land(*line(e)[1])]
+            if cand:
+                open_e.add(R.choice(cand))
+    def clear_tile(X, Y):
+        for j in (0, -1):                      # a 2 x 2 tree or headstone goes whole
+            for ii in (0, -1):
+                XX, YY = X + ii, Y + j
+                if 0 <= XX < W and 0 <= YY < H and g[YY][XX] in 'Tg':
+                    for (p_, q_) in ((0, 0), (1, 0), (0, 1), (1, 1)):
+                        if g[YY + q_][XX + p_] in 'Tg_': g[YY + q_][XX + p_] = ground_here(XX + p_, YY + q_, n1, n2)
+        if g[Y][X] == '~':
+            g[Y][X] = 'h'
+        elif g[Y][X] not in WALK:
+            g[Y][X] = ground_here(X, Y, n1, n2)
+    for e in edges:
+        if touches_set[e]:
+            continue
+        L, other = line(e)
+        di = inward(e)
+        n = len(L)
+        gate = set()
+        if e in open_e:
+            if road[e]:
+                lo, hi = min(road[e]) - 1, max(road[e]) + 1
+            else:
+                def bad(i):
+                    a, b = L[i]
+                    return sum(1 for t in (a, b) for k in range(2) if g[t[1] + (di[0] if t is a else di[1])[1] * k][t[0] + (di[0] if t is a else di[1])[0] * k] in '~Q#X') * 3 + abs(i - n / 2) * 0.15
+                best = min(range(3, n - 5), key=lambda i: sum(bad(i + k) for k in range(3)) + R.random() * 0.4)
+                lo, hi = best, best + 2
+            lo, hi = max(2, lo), min(n - 3, hi)
+            gate = set(range(lo, hi + 1))
+        for i, (a, b) in enumerate(L):
+            for side, (t, (dx, dy)) in enumerate(((a, di[0]), (b, di[1]))):
+                scr = (e[0], e[1]) if side == 0 else other
+                depth = 2 if i in gate else (1 + (1 if HALO_NOISE and HALO_NOISE(t[0] * 3, t[1] * 3) > 0.55 else 0))
+                for k in range(depth):
+                    X, Y = t[0] + dx * k, t[1] + dy * k
+                    c = g[Y][X]
+                    if fixed(c):
+                        continue
+                    if i in gate:
+                        clear_tile(X, Y)
+                    elif c != '~' and c not in '-h':
+                        if c in 'T_g':
+                            clear_tile(X, Y)            # a tree half in the band: take it out whole, then wall the band
+                        g[Y][X] = blocker_for(*scr)
+
+
+def tidy_seams(g, n1, n2, doors=()):
+    """Make the land navigable screen by screen, as in Zelda 1991: the overworld is a grid of screens, and walking
+    off one edge slides you onto the next. Every opening across a screen edge must land on ground that leads
+    somewhere: on to the rest of that screen, or to another opening. Openings that land in a small pocket
+    (hemmed in by trees, rock or water) are either joined to the rest of the screen by clearing a short way
+    through, or closed off on both sides. One-tile gaps are widened to two."""
+    W_, H_ = W, H
+    walk0 = lambda c: c in WALK
+    def walkxy(x, y):
+        c = g[y][x]
+        return c in WALK or c == 'T' or (c == '_' and x > 0 and g[y][x - 1] == 'T')
+    walk = walk0
+    fixed = lambda c: c in '#X'
+    def clear(x, y):
+        """Turn a tile to open ground (a 2 x 2 tree or headstone goes whole)."""
+        for j in (0, -1):
+            for i in (0, -1):
+                X_, Y_ = x + i, y + j
+                if 0 <= X_ < W_ and 0 <= Y_ < H_ and g[Y_][X_] in 'Tg':
+                    for (a, b) in ((0, 0), (1, 0), (0, 1), (1, 1)):
+                        if 0 <= X_ + a < W_ and 0 <= Y_ + b < H_ and g[Y_ + b][X_ + a] in 'Tg_':
+                            g[Y_ + b][X_ + a] = ground_here(X_ + a, Y_ + b, n1, n2)
+        if g[y][x] == '~':
+            g[y][x] = 'h'
+        elif not walk(g[y][x]) and not fixed(g[y][x]):
+            g[y][x] = ground_here(x, y, n1, n2)
+    def blocker(x, y):
+        from collections import Counter
+        near = Counter(g[y + j][x + i] for i in (-1, 0, 1) for j in (-1, 0, 1) if 0 <= x + i < W_ and 0 <= y + j < H_ and g[y + j][x + i] in 'FQ~')
+        return near.most_common(1)[0][0] if near else 'F'
+    for _round in range(8):
+        # the walkable pieces of each screen
+        pid = [[-1] * W_ for _ in range(H_)]
+        pieces = []
+        for sy in range(GH):
+            for sx in range(GW):
+                x0, y0 = sx * SW, sy * SH
+                for y in range(y0, y0 + SH):
+                    for x in range(x0, x0 + SW):
+                        if pid[y][x] >= 0 or not walkxy(x, y):
+                            continue
+                        k = len(pieces); P = {'tiles': [], 'open': [], 'road': False, 'fixed': False, 'scr': (sx, sy)}; pieces.append(P)
+                        st = [(x, y)]; pid[y][x] = k
+                        while st:
+                            cx, cy = st.pop(); P['tiles'].append((cx, cy))
+                            if g[cy][cx] in '-h': P['road'] = True
+                            if g[cy][cx] == 'X': P['fixed'] = True
+                            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                                nx, ny = cx + dx, cy + dy
+                                if x0 <= nx < x0 + SW and y0 <= ny < y0 + SH and pid[ny][nx] < 0 and walkxy(nx, ny):
+                                    pid[ny][nx] = k; st.append((nx, ny))
+        # openings: runs of tiles open on both sides of a screen edge
+        runs = []
+        for sy in range(GH):
+            for sx in range(GW):
+                x0, y0 = sx * SW, sy * SH
+                lines = []
+                if sx + 1 < GW: lines.append([((x0 + SW - 1, y), (x0 + SW, y)) for y in range(y0, y0 + SH)])
+                if sy + 1 < GH: lines.append([((x, y0 + SH - 1), (x, y0 + SH)) for x in range(x0, x0 + SW)])
+                for line in lines:
+                    run = None
+                    for pair in line + [None]:
+                        a, b = pair if pair else (None, None)
+                        if a and walkxy(*a) and walkxy(*b):
+                            if run is None: run = {'pairs': []}; runs.append(run)
+                            run['pairs'].append((a, b))
+                        else:
+                            run = None
+        for r in runs:
+            a, b = r['pairs'][0]
+            r['pa'], r['pb'] = pid[a[1]][a[0]], pid[b[1]][b[0]]
+            pieces[r['pa']]['open'].append(r); pieces[r['pb']]['open'].append(r)
+        # a hand-built area's doorway counts as a way in or out of the piece it opens onto
+        for (dx_, dy_) in doors:
+            for (i, j) in ((0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)):
+                X_, Y_ = dx_ + i, dy_ + j
+                if 0 <= X_ < W_ and 0 <= Y_ < H_ and pid[Y_][X_] >= 0:
+                    P_ = pieces[pid[Y_][X_]]
+                    if not any(o.get('door') for o in P_['open']):
+                        P_['open'].append({'door': True}); P_['door'] = True
+                    break
+        changed = 0
+        # one-tile gaps: widen to two where both sides allow it
+        for r in runs:
+            if len(r['pairs']) != 1: continue
+            (ax, ay), (bx, by) = r['pairs'][0]
+            along = (0, 1) if ax != bx else (1, 0)
+            for s_ in (1, -1):
+                A = (ax + along[0] * s_, ay + along[1] * s_); B = (bx + along[0] * s_, by + along[1] * s_)
+                if not (0 <= A[0] < W_ and 0 <= A[1] < H_ and 0 <= B[0] < W_ and 0 <= B[1] < H_): continue
+                if (A[0] // SW, A[1] // SH) != (ax // SW, ay // SH) or (B[0] // SW, B[1] // SH) != (bx // SW, by // SH): continue
+                if any(g[t[1]][t[0]] in '#X~Q' for t in (A, B)): continue
+                clear(*A); clear(*B); changed += 1; break
+        def second_exit(P):
+            """Open a new two-wide gap across this piece's screen edge to open ground just over it (at most two tiles
+            of trees, bushes or loose rock to clear on each side). True if one was made."""
+            sx, sy = P['scr']; x0, y0 = sx * SW, sy * SH
+            mine = set(P['tiles'])
+            best = None
+            for (ex, ey, dx, dy, along) in ((x0, None, -1, 0, 'y'), (x0 + SW - 1, None, 1, 0, 'y'), (None, y0, 0, -1, 'x'), (None, y0 + SH - 1, 0, 1, 'x')):
+                for k in range(2, (SH if along == 'y' else SW) - 3):
+                    cost, path, ok = 0, [], False
+                    for w_ in (0, 1):
+                        X0 = ex if along == 'y' else x0 + k + w_
+                        Y0 = y0 + k + w_ if along == 'y' else ey
+                        if not (0 <= X0 + dx < W_ and 0 <= Y0 + dy < H_): break
+                        # from the piece outwards: back up to 2 tiles inside, then across up to 3 tiles beyond the edge
+                        line_ = [(X0 - dx * i, Y0 - dy * i) for i in (2, 1, 0)] + [(X0 + dx * i, Y0 + dy * i) for i in (1, 2, 3)]
+                        start = max((i for i, t in enumerate(line_[:3]) if t in mine), default=None)
+                        if start is None: break
+                        end = next((i for i, t in enumerate(line_[3:], 3) if walkxy(*t) and (t[0] // SW, t[1] // SH) != (sx, sy)), None)
+                        if end is None: break
+                        seg = line_[start + 1:end]
+                        if any(g[t[1]][t[0]] in '#X~Q' for t in seg): break
+                        cost += sum(0 if walkxy(*t) else 1 for t in seg); path += seg
+                    else:
+                        ok = True
+                    if ok and (best is None or cost < best[0]):
+                        best = (cost, path)
+            if best is None:
+                return False
+            for t in best[1]:
+                clear(*t)
+            return True
+        # dead-end landings: a piece whose only way in or out is one opening
+        for k, P in enumerate(pieces):
+            if len(P['open']) != 1: continue
+            if P.get('door') and len(P['tiles']) >= SW * SH * 0.5: continue
+            sx, sy = P['scr']; x0, y0 = sx * SW, sy * SH
+            others = [Q for Q in pieces if Q is not P and Q['scr'] == P['scr']]
+            if not others:
+                # the whole screen is one piece with a single way in: give it a second way out if there is one
+                if second_exit(P): changed += 1
+                continue
+            main = max(others, key=lambda Q: (len(Q['open']) > 0 or Q['road'] or Q['fixed'], len(Q['tiles'])))
+            if len(P['tiles']) > len(main['tiles']):
+                continue
+            # a short way through to the rest of the screen?
+            import heapq
+            target = set(main['tiles'])
+            cost = lambda c: 0 if walk(c) else 1 if c in 'Fb*_T' else 2 if c in 'rQgx' else 3 if c == '~' else None
+            best = {t: 0 for t in P['tiles']}; prev = {}; pq = [(0, t) for t in P['tiles']]; heapq.heapify(pq); hit = None
+            while pq:
+                d, (cx, cy) = heapq.heappop(pq)
+                if (cx, cy) in target: hit = (cx, cy); break
+                if d > best.get((cx, cy), 99): continue
+                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                    nx, ny = cx + dx, cy + dy
+                    if not (x0 <= nx < x0 + SW and y0 <= ny < y0 + SH): continue
+                    c = cost(g[ny][nx])
+                    if c is None: continue
+                    nd = d + c
+                    if nd < best.get((nx, ny), 99) and nd <= 24:
+                        best[(nx, ny)] = nd; prev[(nx, ny)] = (cx, cy); heapq.heappush(pq, (nd, (nx, ny)))
+            if hit:
+                t = hit
+                while t in prev:
+                    clear(*t); t = prev[t]
+                changed += 1
+                continue
+            # no: a second way out over the screen edge, then?
+            if second_exit(P):
+                changed += 1
+                continue
+            # no: close the opening on both sides (never inside a hand-built area, never a set-piece door)
+            if P['fixed'] or P.get('door'):
+                continue
+            r = P['open'][0]
+            for (a, b) in r['pairs']:
+                for t in (a, b):
+                    if not fixed(g[t[1]][t[0]]): g[t[1]][t[0]] = blocker(*t)
+            changed += 1
+        if not changed:
+            break
 
 
 def edge_runs(g, anchors=()):
@@ -328,14 +705,14 @@ def road(g, a, b, n1, n2, width=2):
             break
         if d > best.get((x, y), 1e18):
             continue
-        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1)):
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):          # square routes: no diagonals
             X, Y = x + dx, y + dy
             if not (0 <= X < W and 0 <= Y < H):
                 continue
             if dx and dy and (cost(g[y][X]) >= 1e9 or cost(g[Y][x]) >= 1e9):
                 continue
             c = cost(g[Y][X]) * (1.41 if dx and dy else 1)
-            c += MEANDER(X, Y) * 1.6
+            c += MEANDER(X, Y) * 0.6
             # keep roads off the screen edges: crossing one is fine, running along one is not
             if min(X % SW, SW - 1 - X % SW) <= 1 or min(Y % SH, SH - 1 - Y % SH) <= 1:
                 c += 8
@@ -344,7 +721,7 @@ def road(g, a, b, n1, n2, width=2):
             if c < 1e9 and any(0 <= X + i < W and 0 <= Y + j < H and g[Y + j][X + i] == '#' for i, j in ((1, 0), (-1, 0), (0, 1), (0, -1))):
                 c += 3
             c += ((X * 7919 + Y * 104729) % 7) * 0.08
-            nd = d + min(c, 60) + (0.25 if (prev.get((x, y)) and (x - prev[(x, y)][0], y - prev[(x, y)][1]) != (dx, dy)) else 0)
+            nd = d + min(c, 60) + (2.5 if (prev.get((x, y)) and (x - prev[(x, y)][0], y - prev[(x, y)][1]) != (dx, dy)) else 0)
             if nd < best.get((X, Y), 1e18):
                 best[(X, Y)] = nd
                 prev[(X, Y)] = (x, y)
@@ -554,6 +931,9 @@ def rebuild(maps, M):
         sm.extra['tier'] = round(nm.extra.get('tier', 1) + 0.5, 2)
         sm.warps = []
         sm.spawns = []
+        for k, t in nm.signs.items():          # lookout towers stand in the shadow too
+            if 'tower' in t.split('.')[0].lower() or 'lookout' in t.split('.')[0].lower():
+                sm.signs[k] = 'A burnt-out watchtower. Someone has scratched into the stone: "Still no clear days."'
         old = idx.get('s_' + nm.id)
         if old:
             carry(old, sm, T['s_' + nm.id], windows.get('s_' + nm.id, []), M)
@@ -712,6 +1092,11 @@ def place_features(new, shadows, M, shadow):
             m.stamp(M.LM, 10, 0, x + 8, y, 5, 4, col=M.SOLID)
         elif kind == 'tower':
             m.stamp(M.LM, 15 if (x + y) % 2 else 17, 0, x, y, 2, 2, col=M.SOLID)
+            # a lookout at the end of its road: something to read when you get there
+            m.sign(x, y + 1, {'stoneheath': 'An old watchtower. Carved by the door: "On a clear day you can see the castle. There are no clear days."',
+                              'cinderpass': 'A signal tower. Its brazier went out years ago. Somebody has left a very small sandwich in it.',
+                              'eastgate': 'The Eastgate lookout. A notice reads: "Lookout closed. Lookout has gone to look at something else."',
+                              'cliffside': 'Cliffside Tower. From up here the sea goes on forever, which the keeper found very discouraging.'}.get(reg, 'An old watchtower, long empty.'))
         elif kind == 'ruin':
             m.stamp(M.LM, 19, 0, x, y, 4, 2, col=M.SOLID)
     if not shadow:
