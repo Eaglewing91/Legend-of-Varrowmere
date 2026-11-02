@@ -13,6 +13,8 @@ Dates are in TCT (Torn City Time).
   - bosses hit a quarter softer;
   - defeated enemies drop hearts more often when you're hurt.
   From the first Pendant on, everything is as before. Your own damage and your own bombs are unchanged.
+### Fixed
+- **Monsters can no longer knock you back through a door.** Getting hit next to a dungeon entrance, a doorway or stairs used to bounce you straight back outside or into the previous room. Now a hit stops you short of any door and at the edge of the room or screen you're in. As in the original, only walking takes you through.
 
 ## 1.0.13 — 2026-11-01
 ### Changed

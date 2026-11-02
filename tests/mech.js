@@ -235,6 +235,12 @@ const { chromium } = require('playwright');
     const hit = () => { h.inv = 0; h.hp = 12; LV.applyHit(g, new LV.Hit({ team: 'enemy', kind: 'contact', power: 4, from: { x: h.x, y: h.y - 20 }, box: h.hurtBox() }), h); return 12 - h.hp; };
     const early = hit(); g.save.items.pendant_ruins1 = 1; const later = hit(); if (!had) delete g.save.items.pendant_ruins1; h.inv = 0; return { early, later }; });
   check('gentler start: half a heart per hit until the first Pendant', r.early === 2 && r.later >= 4, r);
+  // 50d. Knockback never carries you through a door: a hit from inside a dungeon entrance leaves you in the dungeon
+  r = await p.evaluate(() => { const g = LV.game; const d = LV.MAPS.ruins1_1f || LV.MAPS.ruins1; const id = LV.MAPS.ruins1_1f ? 'ruins1_1f' : 'ruins1';
+    const w = d.warps.find(w => !/^ruins1/.test(w.to)); place(id, w.x, w.y - 1, 0); g.actors = []; const h = H(); h.inv = 0; h.hp = 12;
+    LV.applyHit(g, new LV.Hit({ team: 'enemy', kind: 'contact', power: 2, from: { x: h.x, y: h.y - 24 }, box: h.hurtBox() }), h); step(40, []);
+    return { map: g.world.id, fade: !!g.fadeTo, want: id }; });
+  check('knockback never pushes you out through the door', r.map === r.want && !r.fade, r);
   // 50b. Keys: F talks/lifts/opens, Space uses the item (as X does)
   r = await p.evaluate(() => { const i = new LV.Input(); i.key('KeyF', true); i.key('Space', true); i.beginStep(); return { f: !!i.pressed.action, sp: !!i.pressed.item }; });
   check('F is interact, Space is the item button', r.f && r.sp, r);

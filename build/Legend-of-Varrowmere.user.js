@@ -6789,6 +6789,26 @@ LV.earlyGame = function (g) { return !!(g && g.save && g.save.items && !g.save.i
   };
 })();
 
+/* ---------- Knockback never throws you through a door or off the screen ----------
+   As in the original, only walking takes you through a doorway, down stairs or across to the next screen. A hit that
+   knocks Wren back stops short of any warp tile and at the edge of the current screen (room), so a monster by the
+   entrance can no longer bounce you straight back outside or into the previous room. */
+(function () {
+  const upd = LV.Hero.prototype.update;
+  LV.Hero.prototype.update = function (g, dt) {
+    const knocked = this.kb > 0, x0 = this.x, y0 = this.y;
+    upd.call(this, g, dt);
+    if (!knocked || !g.world || g.scroll) return;
+    const w = g.world, tile = function (x, y) { return w.warpAt(Math.floor(x / 16), Math.floor((y - 3) / 16)); };
+    if (tile(this.x, this.y) && !tile(x0, y0)) { this.x = x0; this.y = y0; }
+    const a = g.area, T = LV.TILE;
+    if (a) { this.x = LV.clamp(this.x, a[0] * T + 4, (a[0] + a[2]) * T - 4); this.y = LV.clamp(this.y, a[1] * T + 8, (a[1] + a[3]) * T - 3); }
+  };
+  // and a doorway you were knocked next to (or were already standing in) only takes you while you walk
+  const warp = LV.Game.prototype.checkWarp;
+  LV.Game.prototype.checkWarp = function () { if (this.hero && this.hero.kb > 0) return; return warp.call(this); };
+})();
+
 LV.MAPS = MAPS;
 const un = function (a) { const o = new Array(0); for (let i = 0; i < a.length; i += 2) { const v = a[i]; for (let k = a[i + 1]; k > 0; k--) o.push(v); } return o; }; Object.values(LV.MAPS).forEach(function (d) { if (!d.rle) return; Object.keys(d.layers).forEach(function (k) { d.layers[k] = un(d.layers[k]); }); d.col = un(d.col); delete d.rle; });
 LV.ART = DATA.art; LV.SOUNDS = DATA.sounds; LV.MUSIC = MUSIC(); LV.WORLDPLAN = DATA.plan; LV.MS = DATA.ms;
