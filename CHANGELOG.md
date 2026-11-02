@@ -6,6 +6,14 @@ Dates are in TCT (Torn City Time).
 
 ---
 
+## 1.0.14 — 2026-11-02
+### Changed
+- **A gentler start.** Until you win your first Pendant (in the Meadow Ruins):
+  - no ordinary enemy takes more than half a heart per hit. That includes blue soldiers, which used to take a whole heart;
+  - bosses hit a quarter softer;
+  - defeated enemies drop hearts more often when you're hurt.
+  From the first Pendant on, everything is as before. Your own damage and your own bombs are unchanged.
+
 ## 1.0.13 — 2026-11-01
 ### Changed
 - **No more falling into water.** Deep water is now the edge of the land, as in Zelda 1991: you simply stop at the shore. Once you have the Flippers, you walk straight in and swim as before. (Pits still drop you, as in the original.)

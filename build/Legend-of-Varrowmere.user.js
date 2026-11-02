@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Legend of Varrowmere
 // @namespace    eaglewing.legend-of-varrowmere
-// @version      1.0.13
+// @version      1.0.14
 // @description  A top-down action-adventure in the style of the 16-bit classics, for Torn. Opens in its own window over the Torn page (from the Torn Arcade phone or the Tampermonkey menu). Makes no requests.
 // @author       Eaglewing [571041]
 // @copyright    2026, Eaglewing [571041]. All rights reserved.
@@ -6764,6 +6764,31 @@ LV.rankIn = function (slot) {
   };
 })();
 
+/* ================= A gentler start =================
+   Until Wren wins her first Pendant (the Meadow Ruins), she has only a few hearts and no armour, so the first hours
+   were a little too punishing. Until then:
+   - an ordinary enemy's hit costs at most half a heart (a blue soldier's sword, a big monster's bite);
+   - a boss's hits cost a quarter less (never under half a heart);
+   - a defeated enemy leaves a heart more often when she is hurt.
+   Everything is back to normal from the first Pendant on. Only damage to Wren changes, never what she deals. */
+LV.earlyGame = function (g) { return !!(g && g.save && g.save.items && !g.save.items.pendant_ruins1); };
+(function () {
+  const ah = LV.applyHit;
+  LV.applyHit = function (game, hit, t) {
+    if (!t || !t.isHero || hit.team === 'hero' || hit.kind === 'bomb' || !LV.earlyGame(game) || (game.world && game.world.def.shadow)) return ah(game, hit, t);
+    const was = hit.power, boss = game.actors && game.actors.some(function (a) { return a.boss && !a.dead; });
+    hit.power = boss ? Math.max(Math.min(was, 2), Math.round(was * 0.75)) : Math.min(was, 2);
+    try { return ah(game, hit, t); } finally { hit.power = was; }
+  };
+  const drop = LV.Game.prototype.dropLoot;
+  LV.Game.prototype.dropLoot = function (x, y, chance) {
+    if (LV.earlyGame(this) && this.hero && this.hero.hp < this.hero.maxHp && this.rng() < 0.35) {   // a heart, on top of the usual roll
+      this.pickups.push(new LV.Pickup(x, y, 'heart')); return;
+    }
+    return drop.call(this, x, y, chance);
+  };
+})();
+
 LV.MAPS = MAPS;
 const un = function (a) { const o = new Array(0); for (let i = 0; i < a.length; i += 2) { const v = a[i]; for (let k = a[i + 1]; k > 0; k--) o.push(v); } return o; }; Object.values(LV.MAPS).forEach(function (d) { if (!d.rle) return; Object.keys(d.layers).forEach(function (k) { d.layers[k] = un(d.layers[k]); }); d.col = un(d.col); delete d.rle; });
 LV.ART = DATA.art; LV.SOUNDS = DATA.sounds; LV.MUSIC = MUSIC(); LV.WORLDPLAN = DATA.plan; LV.MS = DATA.ms;
@@ -6802,7 +6827,7 @@ if (typeof GM_registerMenuCommand === 'function') GM_registerMenuCommand('Play L
 //                                      are the leaderboard numbers saved when the game last closed: { time, completion, kills })
 //   When the game window closes it also sends 'varrowmere:scores' with those numbers.
 //   Arcade sends 'varrowmere:open'  -> the game opens; when it closes, 'varrowmere:closed' goes back
-document.addEventListener('varrowmere:ping', function () { document.dispatchEvent(new CustomEvent('varrowmere:here', { detail: JSON.stringify({ version: '1.0.13', music: document.documentElement.dataset.varrowmereMusic || '', music2: document.documentElement.dataset.varrowmereMusic2 || '', scores: (function () { try { return JSON.parse(GM_getValue('lv_scores', 'null')); } catch (e) { return null; } })() }) })); });
+document.addEventListener('varrowmere:ping', function () { document.dispatchEvent(new CustomEvent('varrowmere:here', { detail: JSON.stringify({ version: '1.0.14', music: document.documentElement.dataset.varrowmereMusic || '', music2: document.documentElement.dataset.varrowmereMusic2 || '', scores: (function () { try { return JSON.parse(GM_getValue('lv_scores', 'null')); } catch (e) { return null; } })() }) })); });
 //   Arcade sends 'varrowmere:preload' (only if you turned on Preload Legend) -> the game unpacks itself when the page is idle
 document.addEventListener('varrowmere:preload', function () { const go = function () { ready().catch(function () {}); }; if (typeof requestIdleCallback === 'function') requestIdleCallback(go, { timeout: 3000 }); else setTimeout(go, 500); });
 //   (with detail { host: id } the game opens inside that element on the page, i.e. inside the phone, instead of over the page)
@@ -6819,6 +6844,6 @@ document.addEventListener('varrowmere:volume', function (e) { let v = 100; try {
 //   Arcade sends 'varrowmere:pad' { on } -> the touch pad turns on or off (the phone's 🎮 button)
 document.addEventListener('varrowmere:pad', function (e) { let on = false; try { on = !!JSON.parse(e.detail).on; } catch (x) {} if (readying) readying.then(function (LV) { if (LV.setPad) LV.setPad(on); }); });
 document.addEventListener('varrowmere:close', function () { if (readying) readying.then(function (LV) { if (LV.root && LV.root.style.display !== 'none') LV.close(); }); });
-document.documentElement.dataset.varrowmere = '1.0.13';
+document.documentElement.dataset.varrowmere = '1.0.14';
 
 })();

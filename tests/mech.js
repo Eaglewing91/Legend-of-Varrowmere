@@ -230,6 +230,11 @@ const { chromium } = require('playwright');
     const kept = H().hp === 12 && H().state === 'walk' && g.world.cAt(H().x, H().y - 3) !== LV.C.DEEP;
     g.save.items.fins = 1; place('s_meadow', 36, 8, 1); g.actors = []; step(80, ['right']); return { kept, swim: H().swimming, x: Math.floor(H().x / 16) }; });
   check('no Flippers: the water stops you; with them you swim', r.kept && r.swim && r.x >= 39, r);
+  // 50c. A gentler start: before the first Pendant an ordinary hit costs at most half a heart; after it, full damage
+  r = await p.evaluate(() => { const g = LV.game; const had = g.save.items.pendant_ruins1; delete g.save.items.pendant_ruins1; place('meadow', 20, 10, 2); g.actors = []; const h = H();
+    const hit = () => { h.inv = 0; h.hp = 12; LV.applyHit(g, new LV.Hit({ team: 'enemy', kind: 'contact', power: 4, from: { x: h.x, y: h.y - 20 }, box: h.hurtBox() }), h); return 12 - h.hp; };
+    const early = hit(); g.save.items.pendant_ruins1 = 1; const later = hit(); if (!had) delete g.save.items.pendant_ruins1; h.inv = 0; return { early, later }; });
+  check('gentler start: half a heart per hit until the first Pendant', r.early === 2 && r.later >= 4, r);
   // 50b. Keys: F talks/lifts/opens, Space uses the item (as X does)
   r = await p.evaluate(() => { const i = new LV.Input(); i.key('KeyF', true); i.key('Space', true); i.beginStep(); return { f: !!i.pressed.action, sp: !!i.pressed.item }; });
   check('F is interact, Space is the item button', r.f && r.sp, r);
