@@ -6,6 +6,10 @@ Dates are in TCT (Torn City Time).
 
 ---
 
+## 1.0.15 — 2026-11-02
+### Fixed
+- **The windmills open.** All four windmills (two in Westfold, one each in Eastvale and Greenmarch) had a door you couldn't use. Now each one has a miller inside to talk to, and one of them has hidden their savings in a chest.
+
 ## 1.0.14 — 2026-11-02
 ### Changed
 - **A gentler start.** Until you win your first Pendant (in the Meadow Ruins):

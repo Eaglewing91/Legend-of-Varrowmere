@@ -1140,6 +1140,13 @@ def build_castle(M, m, x0, y0, W_, H_):
 
 
 CASTLE_DOOR = []   # the keep door's left tile (x, y) in its region map
+MILLS = [0]        # windmills built so far (each gets its own interior)
+MILL_TALK = [
+    ['MILLER: Mind the stones. They go round all day and they have never once said sorry.', 'The sails turn when the wind blows. The wind blows when it feels like it. We have that in common.'],
+    ['MILLER: Flour, flour, flour. I sneeze it. I dream it.', 'I keep my savings in that chest. Nobody would ever think to look in a chest.'],
+    ['MILLER: The Gilded Hand tax every sack I grind. Then they tax the tax.', 'Chancellor Vex says the wind belongs to the crown now. I asked him to stop it blowing, then.'],
+    ['MILLER: You can see three counties from the top. Two of them owe me money.', 'If you are heading out, take a sandwich. The bread is very fresh. I made it from scratch. Literally scratch.']
+]
 MOVED_AT = {}      # moved dungeon -> (overworld map, x, y): where you come out (read by tools/maps.py)
 
 
@@ -1165,8 +1172,16 @@ def place_features(new, shadows, M, shadow):
                 sx, sy = x + 5 + int(round(math.cos(a) * 4.5)), y + 4 + int(round(math.sin(a) * 3.6))
                 m.stamp(M.NN, 16, 8, sx, sy, 2, 2, col=M.SOLID)
         elif kind == 'mill':
-            M.house(m, x, y)
+            # every windmill has a way in, with its miller inside (and in one of them, the miller's savings)
+            MILLS[0] += 1
+            k = MILLS[0]
+            hid = 'mill_%s_%d' % (reg, k)
+            M.house(m, x, y, (hid, 7, 12, 0))
             m.extra.setdefault('mills', []).append([(x + 3) * 16, (y + 2) * 16])
+            lines = MILL_TALK[(k - 1) % len(MILL_TALK)]
+            out.append(M.interior(hid, 'Windmill', (m.id, x + 2, y + 5), 'house',
+                                  npcs=[(7, 6, dict(look='farmer', roam=0, dir=2, talk=[[None, lines]]))],
+                                  chests=[(12, 4, 'cash50')] if k == 2 else ()))
         elif kind == 'wreck':
             m.stamp(M.LM, 0, 0, x, y + 1, 10, 4, col=M.SOLID)
             m.stamp(M.LM, 10, 0, x + 8, y, 5, 4, col=M.SOLID)
