@@ -6,6 +6,10 @@ Dates are in TCT (Torn City Time).
 
 ---
 
+## 1.1.0 — 2026-11-03
+### Paused
+- **Legend of Varrowmere is temporarily down while Torn staff review it** (together with Torn Arcade), to make sure it fully complies with Torn's scripting and advertising rules. This version only shows a notice from its Tampermonkey menu entry. It runs no game, makes no requests of any kind and stores nothing. Your saved files are kept on your device and will be there when the game returns. The full game (1.0.15) is kept in this repository's history.
+
 ## 1.0.15 — 2026-11-02
 ### Fixed
 - **The windmills open.** All four windmills (two in Westfold, one each in Eastvale and Greenmarch) had a door you couldn't use. Now each one has a miller inside to talk to, and one of them has hidden their savings in a chest.

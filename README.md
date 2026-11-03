@@ -1,5 +1,8 @@
 # ⚔️ Legend of Varrowmere
 
+> ⏸️ **Legend of Varrowmere is temporarily down while Torn staff review it**, to make sure it fully complies with Torn's scripting and advertising rules. The current version (1.1.0) only shows a notice: it runs no game and makes no requests. Your saved files are kept on your device. It will be back once the review is finished.
+
+
 **A top-down action-adventure for [Torn](https://www.torn.com), by Eaglewing [571041].**
 
 > ⚠️ **For use on Torn only.** Legend of Varrowmere is licensed solely for use on [torn.com](https://www.torn.com) through a userscript manager. Copying, modifying, redistributing or reusing it is not allowed without written permission from the author. See [Licence](#-licence).
